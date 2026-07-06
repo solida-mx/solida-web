@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Brasa & Maíz · Cocina de humo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --char:#1c1512;--char-2:#2a201b;--ember:#d5622d;--ember-2:#e8853f;
+    --cream:#f6efe4;--cream-2:#efe4d2;--sage:#6b7a52;--gold:#c99a4b;
+    --ink:#2a201b;--muted:#7c6c5f;--line:#e3d6c3;--card:#fffdf9;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Manrope",sans-serif;color:var(--ink);background:var(--cream);line-height:1.55;-webkit-text-size-adjust:100%}
+  h1,h2,h3,.disp{font-family:"Fraunces",serif}
+
+  header{position:sticky;top:0;z-index:40;background:rgba(28,21,18,.96);backdrop-filter:blur(8px);
+    color:var(--cream);padding:12px 18px;display:flex;align-items:center;gap:12px}
+  .logo{font-family:"Fraunces";font-weight:600;font-size:17px;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+  .logo .fire{color:var(--ember-2)}
+  .status{margin-left:auto;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;display:flex;align-items:center;gap:6px}
+  .status .dot{width:7px;height:7px;border-radius:50%}
+  .status.open{background:rgba(107,122,82,.22);color:#bcd39a}.status.open .dot{background:#8fce5a;box-shadow:0 0 0 3px rgba(143,206,90,.25)}
+  .status.closed{background:rgba(213,98,45,.2);color:#f0a878}.status.closed .dot{background:var(--ember-2)}
+
+  .hero{position:relative;background:linear-gradient(180deg,var(--char) 0%,var(--char-2) 100%);color:var(--cream);
+    padding:48px 22px 54px;text-align:center;overflow:hidden}
+  .hero::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:34px;background:var(--cream);
+    border-radius:100% 100% 0 0/100% 100% 0 0}
+  .smoke{position:absolute;inset:0;opacity:.5;background:
+    radial-gradient(40% 30% at 20% 15%,rgba(213,98,45,.35),transparent),
+    radial-gradient(45% 35% at 85% 25%,rgba(201,154,75,.25),transparent)}
+  .hero-in{position:relative;z-index:1}
+  .kick{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--ember-2);font-weight:700}
+  .hero h1{font-size:clamp(40px,13vw,64px);font-weight:600;line-height:.98;margin:14px 0 6px;letter-spacing:-.5px}
+  .hero .amp{font-style:italic;color:var(--ember-2)}
+  .hero .tag{font-family:"Fraunces";font-style:italic;font-size:18px;color:var(--cream-2)}
+  .hero-meta{margin-top:20px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;font-size:12.5px}
+  .chip{background:rgba(246,239,228,.1);border:1px solid rgba(246,239,228,.2);padding:6px 13px;border-radius:999px;font-weight:600}
+
+  .wrap{max-width:620px;margin:0 auto;padding:0 16px}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 26px;position:relative;z-index:2}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:14px;
+    font-weight:700;font-size:14px;text-decoration:none;cursor:pointer;border:none;font-family:inherit}
+  .btn-primary{background:var(--ember);color:#fff;box-shadow:0 8px 20px rgba(213,98,45,.32)}
+  .btn-ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+  .btn:active{transform:translateY(1px)}
+
+  .menu-nav{position:sticky;top:52px;z-index:30;background:var(--cream);padding:12px 0 10px;
+    display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .menu-nav::-webkit-scrollbar{display:none}
+  .menu-nav button{flex:none;background:var(--card);border:1.5px solid var(--line);color:var(--muted);
+    padding:8px 15px;border-radius:999px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+  .menu-nav button.active{background:var(--char);color:var(--cream);border-color:var(--char)}
+
+  .cat{padding-top:14px;scroll-margin-top:104px}
+  .cat-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+  .cat-head h2{font-size:26px;font-weight:600}
+  .cat-head .ln{flex:1;height:1px;background:var(--line)}
+  .cat-head .em{font-size:20px}
+
+  .dish{display:flex;gap:14px;padding:15px 0;border-bottom:1px dashed var(--line)}
+  .dish:last-child{border-bottom:none}
+  .dish-img{width:66px;height:66px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;
+    font-size:30px;background:linear-gradient(135deg,var(--cream-2),#e6d3b8)}
+  .dish-body{flex:1;min-width:0}
+  .dish-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .dish-name{font-family:"Fraunces";font-weight:600;font-size:16.5px;line-height:1.2}
+  .dish-price{font-family:"Fraunces";font-weight:600;font-size:16px;color:var(--ember);white-space:nowrap}
+  .dish-desc{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.45}
+  .tagline{display:inline-block;margin-top:7px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--sage);background:rgba(107,122,82,.12);padding:3px 8px;border-radius:6px}
+  .tagline.pop{color:var(--ember);background:rgba(213,98,45,.12)}
+
+  .infocard{margin:30px 0 0;background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:20px}
+  .infocard h3{font-size:20px;font-weight:600;margin-bottom:12px}
+  .inforow{display:flex;gap:12px;padding:9px 0;font-size:13.5px;align-items:flex-start}
+  .inforow svg{flex:none;margin-top:2px;color:var(--ember)}
+  .inforow b{font-weight:700}
+  .hours-today{color:var(--sage);font-weight:700}
+
+  .made{background:var(--char);color:var(--cream);text-align:center;padding:26px 20px 30px;margin-top:34px}
+  .made p{font-size:13px;color:var(--cream-2);max-width:34ch;margin:0 auto 14px;line-height:1.5}
+  .made .disp{font-size:15px;color:#fff;margin-bottom:4px}
+  .made a{display:inline-flex;align-items:center;gap:8px;background:var(--ember);color:#fff;text-decoration:none;
+    font-weight:700;font-size:13.5px;padding:11px 20px;border-radius:999px}
+  .made .demo-hint{margin-top:16px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#8a7568}
+
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><span class="fire">🔥</span> Brasa &amp; Maíz</div>
+  <div class="status" id="status"><span class="dot"></span><span id="statusText">—</span></div>
+</header>
+
+<section class="hero">
+  <div class="smoke"></div>
+  <div class="hero-in">
+    <div class="kick">Cocina de humo · Saltillo</div>
+    <h1>Brasa <span class="amp">&amp;</span> Maíz</h1>
+    <p class="tag">Del comal a tu mesa</p>
+    <div class="hero-meta">
+      <span class="chip">🌽 Maíz nixtamalizado</span>
+      <span class="chip">🔥 Leña de mezquite</span>
+      <span class="chip">⭐ 4.9</span>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="actions">
+    <a class="btn btn-primary" id="reservar">Reservar mesa</a>
+    <a class="btn btn-ghost" id="ubicacion" target="_blank" rel="noopener">Cómo llegar</a>
+  </div>
+
+  <nav class="menu-nav" id="menuNav"></nav>
+  <div id="menu"></div>
+
+  <div class="infocard">
+    <h3>Visítanos</h3>
+    <div class="inforow">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      <div><b>Blvd. Venustiano Carranza 2200</b><br>Col. República, Saltillo, Coah.</div>
+    </div>
+    <div class="inforow">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <div id="hoursBlock"></div>
+    </div>
+    <div class="inforow">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>
+      <div><b>Reservas y pedidos</b><br>WhatsApp 844 360 4349</div>
+    </div>
+  </div>
+</div>
+
+<div class="made">
+  <div class="disp">Menú digital · versión Intermedia</div>
+  <p>Esta es una demostración. Así puede verse el menú de tu restaurante: siempre actualizado y con tu propio código QR.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20demo%20del%20men%C3%BA%20de%20restaurante%20y%20me%20gust%C3%B3.%20Quiero%20una%20p%C3%A1gina%20as%C3%AD%20para%20mi%20negocio.">Quiero una página así</a>
+  <div class="demo-hint">▸ Demostración interactiva ◂</div>
+</div>
+
+<script>
+const WA="528443604349";
+const MAPS="https://maps.google.com/?q=Blvd.+Venustiano+Carranza+2200+Saltillo";
+document.getElementById('ubicacion').href=MAPS;
+document.getElementById('reservar').href="https://wa.me/"+WA+"?text="+encodeURIComponent("Hola Solida Aplicaciones 👋 Vi la demo de restaurante y me gustó. Quiero una página así para mi negocio.");
+
+const MENU={
+  "Para empezar":{em:"🫓",items:[
+    {n:"Guacamole al molcajete",d:"Aguacate, chile de árbol tatemado, cilantro y totopos de maíz azul.",p:"$135",t:"Favorito",pop:true,img:"🥑"},
+    {n:"Esquites de la casa",d:"Elote, epazote, mayonesa de chipotle, queso cotija y limón.",p:"$95",img:"🌽"},
+    {n:"Tuétano a la leña",d:"Hueso asado al mezquite, salsa verde cruda y tortillas hechas a mano.",p:"$165",t:"De temporada",img:"🍖"}
+  ]},
+  "Del comal":{em:"🔥",items:[
+    {n:"Tacos de arrachera",d:"Res marinada al carbón, cebollita de cambray y guacamole. Orden de 3.",p:"$185",t:"Favorito",pop:true,img:"🌮"},
+    {n:"Costra de chorizo",d:"Queso dorado, chorizo artesanal y salsa martajada.",p:"$145",img:"🧀"},
+    {n:"Gringa al pastor",d:"Pastor de trompo, piña asada, queso y salsa de morita.",p:"$130",img:"🌮"}
+  ]},
+  "Principales":{em:"🍽️",items:[
+    {n:"Rib eye al mezquite",d:"400 g madurado, papa rústica y esquites cremosos.",p:"$395",t:"La estrella",pop:true,img:"🥩"},
+    {n:"Pollo al carbón",d:"Medio pollo marinado en achiote, arroz rojo y frijoles charros.",p:"$220",img:"🍗"},
+    {n:"Trucha a la talla",d:"Filete al comal con adobo de guajillo y verduras asadas.",p:"$265",img:"🐟"}
+  ]},
+  "Bebidas":{em:"🥤",items:[
+    {n:"Agua de horchata",d:"Arroz, canela y un toque de vainilla. Jarra o vaso.",p:"$45",img:"🥛"},
+    {n:"Michelada de la casa",d:"Clamato, especias, chamoy y escarchado de tajín.",p:"$95",img:"🍺"},
+    {n:"Café de olla",d:"Piloncillo, canela y café de Veracruz.",p:"$50",img:"☕"}
+  ]},
+  "Postres":{em:"🍮",items:[
+    {n:"Flan de cajeta",d:"Cremoso, con cajeta de Celaya y nuez garapiñada.",p:"$85",t:"Favorito",pop:true,img:"🍮"},
+    {n:"Churros rellenos",d:"Con cajeta o chocolate, azúcar con canela.",p:"$75",img:"🥖"}
+  ]}
+};
+
+// Horarios
+const HOURS=[["Lun","Cerrado",null,null],["Mar","1:00 – 11:00 pm",13,23],["Mié","1:00 – 11:00 pm",13,23],
+  ["Jue","1:00 – 11:00 pm",13,23],["Vie","1:00 pm – 12:00 am",13,24],["Sáb","12:00 pm – 12:00 am",12,24],["Dom","12:00 – 6:00 pm",12,18]];
+const now=new Date();const dow=(now.getDay()+6)%7;const h=now.getHours()+now.getMinutes()/60;
+const today=HOURS[dow];const isOpen=today[2]!==null&&h>=today[2]&&h<today[3];
+const st=document.getElementById('status');
+st.className='status '+(isOpen?'open':'closed');
+document.getElementById('statusText').textContent=isOpen?'Abierto ahora':'Cerrado';
+document.getElementById('hoursBlock').innerHTML='<b>Hoy ('+today[0]+'):</b> <span class="hours-today">'+today[1]+'</span><br>'+
+  HOURS.filter((_,i)=>i!==dow).map(r=>r[0]+' · '+r[1]).join('<br>');
+
+// Render menu
+const nav=document.getElementById('menuNav');const menu=document.getElementById('menu');
+Object.entries(MENU).forEach(([cat,data],i)=>{
+  const id='cat-'+i;
+  const b=document.createElement('button');b.textContent=cat;b.dataset.target=id;if(i===0)b.classList.add('active');
+  b.onclick=()=>{document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'});};
+  nav.appendChild(b);
+  const sec=document.createElement('section');sec.className='cat';sec.id=id;
+  sec.innerHTML='<div class="cat-head"><span class="em">'+data.em+'</span><h2>'+cat+'</h2><span class="ln"></span></div>'+
+    data.items.map(it=>`<div class="dish"><div class="dish-img">${it.img}</div><div class="dish-body">
+      <div class="dish-top"><div class="dish-name">${it.n}</div><div class="dish-price">${it.p}</div></div>
+      <div class="dish-desc">${it.d}</div>${it.t?`<span class="tagline${it.pop?' pop':''}">${it.t}</span>`:''}</div></div>`).join('');
+  menu.appendChild(sec);
+});
+// Scroll spy
+const secs=[...document.querySelectorAll('.cat')];const btns=[...nav.querySelectorAll('button')];
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){
+  const id=e.target.id;btns.forEach(b=>b.classList.toggle('active',b.dataset.target===id));
+  const ab=btns.find(b=>b.dataset.target===id);if(ab)ab.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+}});},{rootMargin:'-45% 0px -50% 0px'});
+secs.forEach(s=>io.observe(s));
+</script>
+</body>
+</html>

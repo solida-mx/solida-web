@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Brasa & Maíz · Pide desde tu mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root{--char:#1c1512;--char-2:#2a201b;--ember:#d5622d;--ember-2:#e8853f;--cream:#f6efe4;--cream-2:#efe4d2;--muted:#7c6c5f;--line:#e3d6c3;--card:#fffdf9;--ink:#2a201b;--wa:#25d366;--sage:#6b7a52}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Manrope",sans-serif;color:var(--ink);background:var(--cream);line-height:1.5;-webkit-text-size-adjust:100%;padding-bottom:80px}
+  body.locked{position:fixed;width:100%;overflow:hidden}
+  h1,h2,h3,.disp{font-family:"Fraunces",serif}
+  header{position:sticky;top:0;z-index:40;background:rgba(28,21,18,.97);backdrop-filter:blur(8px);color:var(--cream);padding:11px 16px;display:flex;align-items:center;gap:10px}
+  .logo{font-family:"Fraunces";font-weight:600;font-size:16px;display:flex;align-items:center;gap:7px}
+  .logo .fire{color:var(--ember-2)}
+  .pill{margin-left:auto;font-size:10.5px;font-weight:700;background:rgba(213,98,45,.2);color:var(--ember-2);padding:5px 11px;border-radius:999px;letter-spacing:.04em}
+  .tmr{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:15px;background:rgba(246,239,228,.12);border:1px solid rgba(246,239,228,.22);color:var(--cream);padding:6px 13px;border-radius:999px;font-variant-numeric:tabular-nums}
+  .tmr b{color:var(--ember-2)}
+  .tmr.low{background:rgba(213,98,45,.3);border-color:var(--ember);color:#ffcbb0;animation:pulseT 1s infinite}
+  @keyframes pulseT{0%,100%{opacity:1}50%{opacity:.5}}
+  .tlimit{margin:12px auto 0;max-width:38ch;font-size:12.5px;color:var(--cream-2);background:rgba(246,239,228,.08);border:1px solid rgba(246,239,228,.16);padding:10px 14px;border-radius:12px;line-height:1.45}
+  .tlimit b{color:var(--ember-2)}
+  .hero{background:linear-gradient(180deg,var(--char),var(--char-2));color:var(--cream);padding:24px 20px 28px;text-align:center;position:relative;overflow:hidden}
+  .smoke{position:absolute;inset:0;opacity:.4;background:radial-gradient(40% 30% at 20% 15%,rgba(213,98,45,.35),transparent),radial-gradient(45% 35% at 85% 25%,rgba(201,154,75,.25),transparent)}
+  .hero-in{position:relative}
+  .hero h1{font-family:"Fraunces";font-weight:600;font-size:clamp(28px,9vw,40px);margin-bottom:4px}
+  .hero h1 .amp{font-style:italic;color:var(--ember-2)}
+  .hero p{font-size:13.5px;color:var(--cream-2)}
+  .table-tag{margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:var(--ember);color:#fff;font-weight:700;font-size:14px;padding:8px 16px;border-radius:999px}
+  .hero .note{margin-top:12px;display:inline-flex;align-items:center;gap:7px;background:rgba(246,239,228,.1);border:1px solid rgba(246,239,228,.18);font-size:12px;font-weight:600;padding:7px 13px;border-radius:10px}
+  .timer{margin-top:10px;font-size:11.5px;color:#cbb8a8;font-weight:600}
+  .timer b{color:var(--ember-2)}
+
+  .menu-nav{position:sticky;top:50px;z-index:30;background:var(--cream);padding:11px 12px 9px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+  .menu-nav::-webkit-scrollbar{display:none}
+  .menu-nav button{flex:none;background:var(--card);border:1.5px solid var(--line);color:var(--muted);padding:7px 14px;border-radius:999px;font-family:inherit;font-weight:700;font-size:12.5px;white-space:nowrap;cursor:pointer}
+  .menu-nav button.active{background:var(--char);color:var(--cream);border-color:var(--char)}
+
+  .wrap{max-width:600px;margin:0 auto;padding:0 16px}
+  .cat{padding-top:14px;scroll-margin-top:100px}
+  .cat-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .cat-head h2{font-size:24px;font-weight:600}.cat-head .ln{flex:1;height:1px;background:var(--line)}.cat-head .em{font-size:19px}
+  .dish{display:flex;gap:13px;padding:14px 0;border-bottom:1px dashed var(--line);align-items:center}
+  .dish:last-child{border-bottom:none}
+  .dimg{width:58px;height:58px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;font-size:27px;background:linear-gradient(135deg,var(--cream-2),#e6d3b8)}
+  .dbody{flex:1;min-width:0}
+  .dname{font-family:"Fraunces";font-weight:600;font-size:15.5px;line-height:1.15}
+  .ddesc{font-size:12px;color:var(--muted);margin-top:2px}
+  .dprice{font-family:"Fraunces";font-weight:600;font-size:15px;color:var(--ember);margin-top:4px}
+  .add{flex:none;background:var(--char);color:#fff;border:none;font-family:"Fraunces";font-weight:600;font-size:20px;width:40px;height:40px;border-radius:11px;cursor:pointer;line-height:1}
+  .add:active{transform:scale(.94)}
+  .qbox{flex:none;display:flex;align-items:center;border:1.5px solid var(--ember);border-radius:11px;overflow:hidden}
+  .qbox button{width:34px;height:38px;background:#fff;border:none;font-size:19px;font-weight:700;color:var(--ember);cursor:pointer}
+  .qbox button:active{background:#fbe9df}
+  .qbox .q{width:30px;text-align:center;font-weight:800;font-size:15px}
+
+  /* Admin (demo) */
+  .admin{margin:26px 0 6px;background:#20262b;color:#e7eaed;border-radius:18px;padding:18px;border:1px solid #333b42}
+  .admin h3{font-family:"Fraunces";font-weight:600;font-size:18px;color:#fff;display:flex;align-items:center;gap:8px}
+  .admin .tagx{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8aa0b0;font-weight:700;background:rgba(255,255,255,.06);padding:3px 8px;border-radius:6px}
+  .admin p{font-size:12.5px;color:#aeb9c2;margin:6px 0 12px}
+  .admin .row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+  .admin .fld{flex:1;min-width:90px}
+  .admin .fld label{display:block;font-size:11px;font-weight:700;margin-bottom:4px;color:#c7d0d7}
+  .admin .fld input{width:100%;border:1.5px solid #3a434b;border-radius:9px;padding:9px;background:#171b1f;color:#fff;font-family:inherit;font-size:15px}
+  .admin .fld input:focus{outline:none;border-color:var(--ember)}
+  .admin .gen2{background:var(--ember);color:#fff;border:none;font-family:"Manrope";font-weight:800;font-size:14px;padding:11px 16px;border-radius:10px;cursor:pointer}
+  .admin .gen2.alt{background:#39434b}
+  .admin .actions{display:flex;gap:8px;margin-top:10px}
+  .qgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
+  .psel{display:flex;gap:8px;margin-top:12px}
+  .psel .po{flex:1;border:1.5px solid #3a434b;border-radius:9px;padding:9px 6px;text-align:center;font-weight:700;font-size:12px;color:#c7d0d7;cursor:pointer;background:#171b1f}
+  .psel .po.active{border-color:var(--ember);background:rgba(213,98,45,.2);color:#fff}
+
+  /* ----- Etiqueta QR sobria y elegante (pantalla + impresión) ----- */
+  .plabel{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--cream);
+    padding:26px 22px 22px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
+  .plabel::before{content:"";position:absolute;inset:7px;border:1px solid rgba(213,98,45,.45);border-radius:8px;pointer-events:none}
+  .plabel .pscan{position:relative;font-family:"Fraunces",serif;font-weight:600;font-size:21px;font-style:italic;color:var(--ember);line-height:1.1}
+  .plabel .psub{position:relative;font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:6px 0 14px}
+  .pqr{position:relative;padding:0 6px}
+  .pqr canvas,.pqr img{width:100%;height:auto;display:block}
+  .plabel .pmesa{position:relative;font-family:"Fraunces",serif;font-weight:600;font-size:17px;color:var(--char);margin-top:14px}
+  .plabel .prule{position:relative;width:34px;height:2px;background:var(--ember);border-radius:2px;margin:9px auto 8px}
+  .plabel .pname{position:relative;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .grid .plabel{box-shadow:0 6px 18px rgba(28,21,18,.1)}
+
+  #printArea{display:none}
+  @media print{
+    body{background:#fff!important}
+    body>*:not(#printArea){display:none!important}
+    #printArea{display:block!important}
+    @page{size:letter;margin:10mm}
+    .psheet{height:255mm;overflow:hidden;display:grid;gap:5mm;page-break-after:always;break-after:page}
+    .psheet:last-child{page-break-after:auto;break-after:auto}
+    .psheet.sz-peq{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
+    .psheet.sz-med{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)}
+    .psheet.sz-gra{grid-template-columns:1fr;grid-template-rows:repeat(2,1fr)}
+    .psheet .plabel{height:100%;margin:0;padding:12px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:none;overflow:hidden}
+    .psheet.sz-gra .plabel{max-width:118mm;margin:0 auto}
+    .psheet .plabel::before{inset:5px}
+    .psheet .pscan{flex:none;font-size:15pt}
+    .psheet .psub{flex:none}
+    .psheet .pqr{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;width:100%;padding:6px 0}
+    .psheet .pqr img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+    .psheet .pmesa{flex:none;font-size:13pt;margin-top:8px}
+    .psheet .prule,.psheet .pname{flex:none}
+  }
+  .qc .plabel{box-shadow:0 6px 16px rgba(0,0,0,.14)}
+
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:45;background:rgba(28,21,18,.98);backdrop-filter:blur(10px);color:#fff;padding:11px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 -8px 24px rgba(0,0,0,.22);transform:translateY(120%);transition:transform .25s}
+  .bar.show{transform:none}
+  .bar .s .c{font-size:11.5px;color:#cbb8a8;font-weight:600}
+  .bar .s .t{font-family:"Fraunces";font-weight:700;font-size:20px}
+  .bar button{margin-left:auto;background:var(--ember);color:#fff;border:none;font-family:"Manrope";font-weight:800;font-size:14.5px;padding:13px 20px;border-radius:12px;cursor:pointer}
+  .bar button:active{transform:translateY(1px)}
+
+  .modal{position:fixed;inset:0;z-index:60;background:rgba(20,15,12,.72);backdrop-filter:blur(3px);display:none}
+  .modal.show{display:block}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--cream);width:100%;max-width:560px;margin:0 auto;border-radius:22px 22px 0 0;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px 18px calc(20px + env(safe-area-inset-bottom))}
+  .grip{width:44px;height:5px;background:var(--line);border-radius:3px;margin:2px auto 12px}
+  .sheet h3{font-size:21px;font-weight:700;margin-bottom:10px;text-align:center}
+  .citem{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+  .citem .nm{flex:1;font-size:14px;font-weight:600;line-height:1.2}
+  .citem .nm small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+  .citem .lp{font-family:"Fraunces";font-weight:600;font-size:14px;white-space:nowrap;min-width:56px;text-align:right}
+  .empty{text-align:center;color:var(--muted);font-size:14px;padding:18px}
+  .fields{margin-top:16px}
+  .frow{margin-bottom:14px}
+  .frow>label{display:block;font-size:12.5px;font-weight:700;margin-bottom:6px}
+  .frow input[type=text],.frow input[type=number],.frow input[type=time],.frow textarea{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:12px;font-family:inherit;font-size:16px;background:var(--card)}
+  .frow input:focus,.frow textarea:focus{outline:none;border-color:var(--ember)}
+  .seg{display:flex;gap:8px}
+  .seg .opt{flex:1;border:1.5px solid var(--line);border-radius:11px;padding:11px;text-align:center;font-size:13.5px;font-weight:700;cursor:pointer;background:var(--card)}
+  .seg .opt.active{border-color:var(--ember);background:#fbe9df;color:#a5451f}
+  .mesa-lock{display:flex;align-items:center;gap:10px;background:var(--sage);color:#fff;border-radius:12px;padding:13px 16px;font-weight:700;font-size:16px}
+  .mesa-lock .em{font-size:22px}
+  .warn{background:#fff4e5;border:1px solid #f0c987;border-radius:11px;padding:11px 13px;font-size:12.5px;color:#8a5a2a;font-weight:600;margin-top:8px}
+  .hidden{display:none}
+  .total-row{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 4px;padding-top:14px;border-top:2px solid var(--line)}
+  .total-row .l{font-family:"Fraunces";font-weight:600;font-size:19px}
+  .total-row .v{font-family:"Fraunces";font-weight:700;font-size:26px;color:var(--ember)}
+  .dest{text-align:center;font-size:12.5px;color:var(--muted);font-weight:600;margin:10px 0 8px}
+  .dest b{color:var(--ink)}
+  .gen{width:100%;background:var(--wa);color:#fff;border:none;font-family:"Manrope";font-weight:800;font-size:16px;padding:16px;border-radius:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px}
+  .gen:disabled{background:#cabfb2;cursor:not-allowed}
+  .gen:not(:disabled):active{transform:translateY(1px)}
+  .dl{width:100%;background:none;border:none;color:var(--muted);font-weight:700;padding:12px;font-size:13.5px;cursor:pointer;text-decoration:underline}
+  .close{width:100%;background:none;border:none;color:var(--muted);font-weight:600;padding:10px;font-size:14px;cursor:pointer}
+
+  .made{background:var(--char);color:var(--cream);text-align:center;padding:24px 20px 28px}
+  .made .disp{font-size:14px;color:var(--ember-2)}
+  .made p{font-size:12.5px;color:var(--cream-2);max-width:34ch;margin:6px auto 12px}
+  .made a{display:inline-block;background:var(--ember);color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:10px 18px;border-radius:999px}
+  .made .h{margin-top:12px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8a7568}
+  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;opacity:0;transition:all .25s;z-index:80;pointer-events:none;max-width:88%;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* Pantalla de caducidad */
+  .expired{position:fixed;inset:0;z-index:90;background:linear-gradient(180deg,var(--char),var(--char-2));color:var(--cream);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px}
+  .expired.show{display:flex}
+  .expired .ic{font-size:60px;margin-bottom:10px}
+  .expired h2{font-family:"Fraunces";font-size:28px;font-weight:600;margin-bottom:8px}
+  .expired p{font-size:15px;color:var(--cream-2);max-width:30ch;margin-bottom:22px}
+  .expired button{background:var(--ember);color:#fff;border:none;font-family:"Manrope";font-weight:800;font-size:15px;padding:14px 28px;border-radius:12px;cursor:pointer}
+  .expmsg{margin-top:16px;font-size:13.5px;color:var(--cream-2);max-width:30ch;min-height:16px;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><span class="fire">🔥</span> Brasa &amp; Maíz</div>
+  <div class="tmr" id="tmr">⏱️ --:--</div>
+</header>
+<section class="hero"><div class="smoke"></div><div class="hero-in">
+  <h1>Pide desde <span class="amp">tu</span> lugar</h1>
+  <p>Arma tu orden, revisa tu cuenta y envíala a cocina.</p>
+  <div id="heroTag"></div>
+  <div class="tlimit" id="tlimit"></div>
+</div></section>
+
+<nav class="menu-nav" id="menuNav"></nav>
+<div class="wrap" id="menu"></div>
+
+<!-- ADMIN (demo) : generador de QR por mesa integrado -->
+<div class="wrap">
+  <div class="admin">
+    <h3>🛠️ Administración <span class="tagx">demo · uso del dueño</span></h3>
+    <p>Así el restaurante genera e imprime el QR de cada mesa. Al escanear el de la Mesa 5, el menú abre con esa mesa ya capturada.</p>
+    <div class="row">
+      <div class="fld"><label>Desde</label><input type="number" id="adFrom" value="1" min="1" inputmode="numeric"></div>
+      <div class="fld"><label>Hasta</label><input type="number" id="adTo" value="4" min="1" inputmode="numeric"></div>
+      <button class="gen2" id="adGen">Generar</button>
+    </div>
+    <div class="qgrid" id="adGrid"></div>
+    <div style="font-size:11.5px;color:#8aa0b0;margin-top:12px;font-weight:600">Tamaño de etiqueta al imprimir:</div>
+    <div class="psel" id="adSize">
+      <div class="po" data-s="peq">Chica · 3 por fila</div>
+      <div class="po active" data-s="med">Mediana · 2 por fila</div>
+      <div class="po" data-s="gra">Grande · 1 por fila</div>
+    </div>
+    <div class="actions"><button class="gen2 alt" id="adPrint">🖨️ Imprimir QR de mesas</button></div>
+  </div>
+</div>
+
+<div class="made">
+  <div class="disp">Menú digital · versión Avanzada</div>
+  <p>Demostración por Solida Aplicaciones. En un restaurante real, las comandas llegan al WhatsApp de cocina.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20%F0%9F%91%8B%20Vi%20la%20demo%20avanzada%20del%20men%C3%BA%20y%20la%20quiero%20para%20mi%20restaurante.">Quiero una así</a>
+  <div class="h">▸ Demostración interactiva ◂</div>
+</div>
+
+<div class="bar" id="bar">
+  <div class="s"><div class="c" id="barCount">0 platillos</div><div class="t" id="barTotal">$0</div></div>
+  <button id="openCart">Ver mi orden</button>
+</div>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+<canvas id="cmdCanvas" style="display:none"></canvas>
+
+<!-- Pantalla de sesión caducada -->
+<div class="expired" id="expired">
+  <div class="ic">⌛</div>
+  <h2>Tu sesión expiró</h2>
+  <p>Para seguir pidiendo, vuelve a escanear el código QR de tu mesa con la cámara de tu celular.</p>
+  <button class="expbtn" id="closeBtn">Cerrar</button>
+  <div class="expmsg" id="closeMsg"></div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+/* ====== CONFIG ====== */
+const WA="528443604349";
+const WA_DISPLAY="844 360 4349";
+const SESION_MIN=20;               // minutos de vida de la sesión
+/* ==================== */
+
+const MESA_QR=new URLSearchParams(location.search).get("mesa");
+const BASE_MENU=location.origin+location.pathname; // para los QR de mesa
+
+const MENU={
+ "Para empezar":{em:"🫓",items:[
+   {id:"guac",n:"Guacamole al molcajete",d:"Chile de árbol, cilantro y totopos.",p:135,img:"🥑"},
+   {id:"esq",n:"Esquites de la casa",d:"Epazote, chipotle y cotija.",p:95,img:"🌽"}]},
+ "Del comal":{em:"🔥",items:[
+   {id:"arra",n:"Tacos de arrachera",d:"Res al carbón, orden de 3.",p:185,img:"🌮"},
+   {id:"grin",n:"Gringa al pastor",d:"Pastor, piña, queso y morita.",p:130,img:"🌮"},
+   {id:"cost",n:"Costra de chorizo",d:"Queso dorado y chorizo artesanal.",p:145,img:"🧀"}]},
+ "Principales":{em:"🍽️",items:[
+   {id:"ribe",n:"Rib eye al mezquite",d:"400 g, papa y esquites.",p:395,img:"🥩"},
+   {id:"poll",n:"Pollo al carbón",d:"Achiote, arroz y charros.",p:220,img:"🍗"}]},
+ "Bebidas":{em:"🥤",items:[
+   {id:"horc",n:"Agua de horchata",d:"Arroz, canela y vainilla.",p:45,img:"🥛"},
+   {id:"mich",n:"Michelada de la casa",d:"Clamato, chamoy y tajín.",p:95,img:"🍺"}]},
+ "Postres":{em:"🍮",items:[
+   {id:"flan",n:"Flan de cajeta",d:"Con nuez garapiñada.",p:85,img:"🍮"},
+   {id:"chur",n:"Churros rellenos",d:"Cajeta o chocolate.",p:75,img:"🥖"}]}
+};
+const ALL={};Object.values(MENU).forEach(c=>c.items.forEach(it=>ALL[it.id]=it));
+const cart={};
+let orderType="mesa",pago="Efectivo";
+const $=id=>document.getElementById(id);
+const fmt=n=>"$"+n.toLocaleString("es-MX");
+const count=()=>Object.values(cart).reduce((a,b)=>a+b,0);
+const total=()=>Object.entries(cart).reduce((a,[id,q])=>a+ALL[id].p*q,0);
+
+/* ---------- SESIÓN / CADUCIDAD ---------- */
+const SES_KEY = MESA_QR ? ("brasa_sesion_mesa_"+MESA_QR) : "brasa_sesion_generica";
+let sesionInicio;
+function nuevaSesion(){sesionInicio=Date.now();guardaSesion();}
+function guardaSesion(){try{localStorage.setItem(SES_KEY,String(sesionInicio));}catch(e){}}
+function cargaSesion(){try{const v=localStorage.getItem(SES_KEY);return v?parseInt(v):null;}catch(e){return null;}}
+function reiniciaContador(){sesionInicio=Date.now();guardaSesion();} // cada pedido reinicia
+function msRestante(){return SESION_MIN*60000-(Date.now()-sesionInicio);}
+function expira(){$("expired").classList.add("show");document.body.classList.add("locked");}
+function chequeaSesion(){if(msRestante()<=0){expira();return false;}return true;}
+function pintaTimer(){
+  const t=$("tmr");const ms=msRestante();
+  if(ms<=0){t.innerHTML='⌛ <b>0:00</b>';t.classList.add("low");expira();return;}
+  const min=Math.floor(ms/60000),seg=Math.floor((ms%60000)/1000);
+  t.innerHTML='⏱️ <b>'+min+':'+String(seg).padStart(2,'0')+'</b>';
+  t.classList.toggle("low", ms<=120000);
+}
+// arranque de sesión: si hay una previa válida, la continúa; si expiró, muestra pantalla
+(function initSesion(){
+  const prev=cargaSesion();
+  if(prev && (Date.now()-prev) < SESION_MIN*60000){ sesionInicio=prev; }
+  else if(prev){ sesionInicio=prev; /* expirada */ }
+  else { nuevaSesion(); }
+  if(msRestante()<=0) expira();
+})();
+setInterval(()=>{ if($("expired").classList.contains("show"))return; pintaTimer(); if(msRestante()<=0) expira(); },1000);
+
+/* ---------- HERO ---------- */
+if(MESA_QR){
+  $("heroTag").innerHTML='<div class="table-tag">🍽️ Estás en la Mesa '+MESA_QR+'</div>';
+}else{
+  $("heroTag").innerHTML='<div class="note">🍽️ Agrega platillos y abajo verás tu cuenta</div>';
+}
+$("tlimit").innerHTML='⏱️ Tienes <b>'+SESION_MIN+' minutos</b> para ordenar. Si se te acaba el tiempo y quieres pedir algo más, vuelve a escanear el código QR de tu mesa para continuar.';
+pintaTimer();
+
+/* ---------- MENÚ ---------- */
+const nav=$("menuNav"),menu=$("menu");
+Object.entries(MENU).forEach(([cat,data],i)=>{
+  const cid="c"+i;
+  const b=document.createElement("button");b.textContent=cat;if(i===0)b.classList.add("active");
+  b.onclick=()=>$(cid).scrollIntoView({behavior:"smooth",block:"start"});nav.appendChild(b);
+  const sec=document.createElement("section");sec.className="cat";sec.id=cid;
+  sec.innerHTML=`<div class="cat-head"><span class="em">${data.em}</span><h2>${cat}</h2><span class="ln"></span></div>`+
+    data.items.map(it=>`<div class="dish"><div class="dimg">${it.img}</div>
+      <div class="dbody"><div class="dname">${it.n}</div><div class="ddesc">${it.d}</div><div class="dprice">${fmt(it.p)}</div></div>
+      <div class="ctrl" id="ctrl-${it.id}"></div></div>`).join("");
+  menu.appendChild(sec);
+});
+function renderCtrl(id){
+  const el=$("ctrl-"+id);if(!el)return;const q=cart[id]||0;
+  el.innerHTML=q>0?`<div class="qbox"><button data-a="-1" data-id="${id}">−</button><span class="q">${q}</span><button data-a="1" data-id="${id}">+</button></div>`
+    :`<button class="add" data-a="1" data-id="${id}">+</button>`;
+}
+Object.keys(ALL).forEach(renderCtrl);
+menu.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;
+  if(!chequeaSesion())return;
+  const id=b.dataset.id;cart[id]=Math.max(0,(cart[id]||0)+(+b.dataset.a));if(cart[id]===0)delete cart[id];
+  renderCtrl(id);syncBar();});
+function syncBar(){const c=count();$("barCount").textContent=c+(c===1?" platillo":" platillos");
+  $("barTotal").textContent=fmt(total());$("bar").classList.toggle("show",c>0);}
+
+/* ---------- SHEET ---------- */
+let scrollY=0;
+$("openCart").onclick=openSheet;
+$("modal").addEventListener("click",e=>{if(e.target===$("modal"))closeSheet();});
+function openSheet(){ if(!chequeaSesion())return; renderSheet();
+  scrollY=window.scrollY; document.body.style.top=(-scrollY)+"px"; document.body.classList.add("locked");
+  $("modal").classList.add("show"); $("sheet").scrollTop=0; }
+function closeSheet(){ $("modal").classList.remove("show");
+  document.body.classList.remove("locked"); document.body.style.top=""; window.scrollTo(0,scrollY); }
+
+function itemRow(id){const it=ALL[id],q=cart[id];
+  return `<div class="citem" id="crow-${id}"><div class="nm">${it.n}<small>${fmt(it.p)} c/u</small></div>
+    <div class="qbox"><button data-sa="-1" data-id="${id}">−</button><span class="q" id="cq-${id}">${q}</span><button data-sa="1" data-id="${id}">+</button></div>
+    <div class="lp" id="cl-${id}">${fmt(it.p*q)}</div></div>`;
+}
+function renderSheet(){
+  const ids=Object.keys(cart);
+  const mesaBlock = MESA_QR
+    ? `<div class="mesa-lock"><span class="em">🍽️</span> Mesa ${MESA_QR} <span style="margin-left:auto;font-size:11px;opacity:.85">detectada por QR</span></div>`
+    : `<label>Número de mesa</label><input type="number" id="mesa" inputmode="numeric" placeholder="Ej. 7">
+       <div class="warn">⚠️ Lo ideal es escanear el QR de tu mesa. Sin él, la orden llegará marcada como "sin verificar".</div>`;
+  $("sheet").innerHTML=`<div class="grip"></div><h3>Tu orden</h3>
+    <div id="items">${ids.length?ids.map(itemRow).join(""):'<div class="empty">Tu orden está vacía.</div>'}</div>
+    <div class="fields">
+      <div class="frow"><label>Tipo de pedido</label>
+        <div class="seg" id="segType">
+          <div class="opt ${orderType==='mesa'?'active':''}" data-t="mesa">🍽️ En mesa</div>
+          <div class="opt ${orderType==='llevar'?'active':''}" data-t="llevar">🥡 Para llevar</div>
+        </div></div>
+      <div class="frow${orderType==='llevar'?' hidden':''}" id="blkMesa">${mesaBlock}</div>
+      <div class="frow${orderType==='mesa'?' hidden':''}" id="blkLlevar">
+        <label>Nombre para recoger</label><input type="text" id="nombre" placeholder="Tu nombre" autocomplete="name">
+        <label style="margin-top:12px">Hora de recogida</label><input type="time" id="hora"></div>
+      <div class="frow"><label>Forma de pago</label>
+        <div class="seg" id="segPago">
+          <div class="opt ${pago==='Efectivo'?'active':''}" data-p="Efectivo">💵 Efectivo</div>
+          <div class="opt ${pago==='Tarjeta'?'active':''}" data-p="Tarjeta">💳 Tarjeta</div>
+        </div></div>
+      <div class="frow"><label>Notas para cocina <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+        <textarea id="notas" placeholder="Ej. sin cebolla, término medio…"></textarea></div>
+    </div>
+    <div class="total-row"><span class="l">Total</span><span class="v" id="sheetTotal">${fmt(total())}</span></div>
+    <div class="dest">📲 Llega directo al WhatsApp del restaurante: <b>${WA_DISPLAY}</b></div>
+    <button class="gen" id="gen" ${ids.length?"":"disabled"}>Enviar a cocina por WhatsApp</button>
+    <button class="dl" id="dl">Descargar comanda (imagen)</button>
+    <button class="close" id="closeSheet">Seguir pidiendo</button>`;
+
+  $("segType").addEventListener("click",e=>{const o=e.target.closest("[data-t]");if(!o)return;
+    orderType=o.dataset.t;
+    $("segType").querySelectorAll(".opt").forEach(x=>x.classList.toggle("active",x.dataset.t===orderType));
+    $("blkMesa").classList.toggle("hidden",orderType==="llevar");
+    $("blkLlevar").classList.toggle("hidden",orderType==="mesa");});
+  $("segPago").addEventListener("click",e=>{const o=e.target.closest("[data-p]");if(!o)return;pago=o.dataset.p;
+    $("segPago").querySelectorAll(".opt").forEach(x=>x.classList.toggle("active",x.dataset.p===pago));});
+  $("items").addEventListener("click",e=>{const b=e.target.closest("[data-sa]");if(!b)return;
+    const id=b.dataset.id;cart[id]=Math.max(0,(cart[id]||0)+(+b.dataset.sa));
+    if(cart[id]===0){delete cart[id];const row=$("crow-"+id);if(row)row.remove();}
+    else{$("cq-"+id).textContent=cart[id];$("cl-"+id).textContent=fmt(ALL[id].p*cart[id]);}
+    $("sheetTotal").textContent=fmt(total());
+    if(count()===0){$("items").innerHTML='<div class="empty">Tu orden está vacía.</div>';$("gen").disabled=true;}
+    renderCtrl(id);syncBar();});
+  $("closeSheet").onclick=closeSheet;
+  $("gen").onclick=enviar;
+  $("dl").onclick=descargar;
+}
+
+const toast=$("toast");let tT;
+function showToast(m){toast.textContent=m;toast.classList.add("show");clearTimeout(tT);tT=setTimeout(()=>toast.classList.remove("show"),2400);}
+
+function folio(){return "CMD-"+Date.now().toString().slice(-5);}
+function destino(){
+  if(orderType==="llevar"){const nom=($("nombre")&&$("nombre").value.trim())||"";const h=($("hora")&&$("hora").value)||"";
+    return {ok:!!nom,label:"🥡 PARA LLEVAR"+(nom?" — "+nom:"")+(h?" (recoger "+h+")":""),warn:"Escribe un nombre para recoger"};}
+  if(MESA_QR) return {ok:true,label:"🍽️ MESA "+MESA_QR+" (QR)",warn:""};
+  const m=$("mesa")&&$("mesa").value?$("mesa").value:"";
+  return {ok:!!m,label:m?("🍽️ MESA "+m+" (sin verificar)"):"",warn:"Indica tu mesa o escanea el QR de tu mesa"};
+}
+function orderText(f){
+  const d=destino(),L=[];
+  L.push("🍽️ *COMANDA · Brasa & Maíz*");
+  L.push("Folio "+f+"  |  "+new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"}));
+  L.push("*"+d.label+"*");L.push("");
+  Object.entries(cart).forEach(([id,q])=>{const it=ALL[id];L.push(q+"×  "+it.n+"   "+fmt(it.p*q));});
+  L.push("");L.push("*TOTAL: "+fmt(total())+"*");L.push("Pago: "+pago);
+  const notas=$("notas")&&$("notas").value.trim();if(notas)L.push("Notas: "+notas);
+  L.push("");L.push("— Pedido enviado desde el menú digital");
+  return L.join("\n");
+}
+function enviar(){
+  if(!chequeaSesion())return;
+  if(count()===0){showToast("Tu orden está vacía");return;}
+  const d=destino();if(!d.ok){showToast(d.warn);return;}
+  reiniciaContador();               // cada pedido reinicia los 20 min
+  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(orderText(folio())),"_blank");
+  showToast("Abriendo WhatsApp… ✓");
+}
+function rr(x,px,py,w,h,r){x.beginPath();x.moveTo(px+r,py);x.arcTo(px+w,py,px+w,py+h,r);x.arcTo(px+w,py+h,px,py+h,r);x.arcTo(px,py+h,px,py,r);x.arcTo(px,py,px+w,py,r);x.closePath();}
+function descargar(){
+  if(count()===0){showToast("Tu orden está vacía");return;}
+  const d=destino();if(!d.ok){showToast(d.warn);return;}
+  const f=folio(),ids=Object.keys(cart),W=720,P=40;
+  const notas=$("notas")&&$("notas").value.trim();
+  let H=200+ids.length*44+(notas?70:0)+150;
+  const c=$("cmdCanvas");c.width=W;c.height=H;const x=c.getContext("2d");
+  x.fillStyle="#f6efe4";x.fillRect(0,0,W,H);x.fillStyle="#fffdf9";rr(x,18,18,W-36,H-36,20);x.fill();
+  x.fillStyle="#1c1512";rr(x,18,18,W-36,150,20);x.fill();x.fillRect(18,128,W-36,40);
+  x.fillStyle="#e8853f";x.font="800 18px Fraunces, serif";x.fillText("🔥 BRASA & MAÍZ",P,54);
+  x.fillStyle="#fff";x.font="800 30px Fraunces, serif";x.fillText("COMANDA",P,94);
+  x.fillStyle="#e8853f";x.font="700 16px Manrope, sans-serif";x.fillText(d.label,P,126);
+  x.fillStyle="#cbb8a8";x.font="600 13px Manrope";x.textAlign="right";x.fillText("Folio "+f+"  ·  "+new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"}),W-P,126);x.textAlign="left";
+  let y=196;x.font="700 15px Manrope";x.fillStyle="#7c6c5f";x.fillText("CANT.",P,y);x.fillText("PLATILLO",P+70,y);x.textAlign="right";x.fillText("IMPORTE",W-P,y);x.textAlign="left";y+=10;
+  x.strokeStyle="#e3d6c3";x.lineWidth=1.5;x.beginPath();x.moveTo(P,y);x.lineTo(W-P,y);x.stroke();y+=30;
+  ids.forEach(id=>{const it=ALL[id],q=cart[id];x.fillStyle="#d5622d";x.font="800 18px Fraunces";x.fillText(q+"×",P,y);
+    x.fillStyle="#2a201b";x.font="600 16px Manrope";x.fillText(it.n,P+70,y);x.textAlign="right";x.font="700 16px Manrope";x.fillText(fmt(it.p*q),W-P,y);x.textAlign="left";y+=44;});
+  y+=6;x.strokeStyle="#e3d6c3";x.lineWidth=2;x.beginPath();x.moveTo(P,y);x.lineTo(W-P,y);x.stroke();y+=34;
+  x.fillStyle="#1c1512";rr(x,P,y,W-2*P,70,14);x.fill();
+  x.fillStyle="#cbb8a8";x.font="600 14px Manrope";x.fillText("TOTAL",P+20,y+30);
+  x.fillStyle="#fff";x.font="800 30px Fraunces";x.fillText(fmt(total()),P+20,y+58);
+  x.textAlign="right";x.fillStyle="#e8853f";x.font="700 15px Manrope";x.fillText("Pago: "+pago,W-P-20,y+42);x.textAlign="left";y+=94;
+  if(notas){x.fillStyle="#7c6c5f";x.font="700 13px Manrope";x.fillText("NOTAS",P,y);y+=22;x.fillStyle="#3c3128";x.font="400 15px Manrope";x.fillText(notas.slice(0,70),P,y);}
+  const a=document.createElement("a");a.href=c.toDataURL("image/png");a.download=f+".png";a.click();
+  showToast("Comanda descargada ⬇️");
+}
+
+/* ---------- ADMIN: generador de QR por mesa ---------- */
+function qrCanvasMesa(text,px){
+  const cv=document.createElement("canvas");
+  if(typeof qrcode==="undefined"){cv.width=px;cv.height=px;return cv;}
+  const qr=qrcode(0,"H");qr.addData(text);qr.make();const n=qr.getModuleCount();
+  const margin=4,scale=Math.max(4,Math.floor(px/(n+margin*2)));
+  const size=(n+margin*2)*scale,off=margin*scale;
+  cv.width=size;cv.height=size;const ctx=cv.getContext("2d");
+  ctx.fillStyle="#fff";ctx.fillRect(0,0,size,size);ctx.fillStyle="#1B396B";
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(qr.isDark(r,c))ctx.fillRect(off+c*scale,off+r*scale,scale,scale);
+  // Logotipo Solida al centro (barras apiladas sobre azul marino)
+  const L=Math.round(size*0.20),lx=(size-L)/2,ly=(size-L)/2;
+  ctx.fillStyle="#ffffff";rrl(ctx,lx-7,ly-7,L+14,L+14,12);ctx.fill();
+  ctx.fillStyle="#1B396B";rrl(ctx,lx,ly,L,L,10);ctx.fill();
+  const bh=L*0.15,gap=L*0.12,bx=lx+L*0.5;
+  [[0.40,"#2A9D8E",ly+L*0.24],[0.56,"#E8F6F6",ly+L*0.24+bh+gap],[0.72,"#2A9D8E",ly+L*0.24+2*(bh+gap)]]
+    .forEach(([w,col,y])=>{const bw=L*w;ctx.fillStyle=col;rrl(ctx,bx-bw/2,y,bw,bh,bh/2);ctx.fill();});
+  return cv;
+}
+function rrl(x,px,py,w,h,r){x.beginPath();x.moveTo(px+r,py);x.arcTo(px+w,py,px+w,py+h,r);x.arcTo(px+w,py+h,px,py+h,r);x.arcTo(px,py+h,px,py,r);x.arcTo(px,py,px+w,py,r);x.closePath();}
+function labelHTML(m){
+  return '<div class="plabel">'+
+    '<div class="pscan">Escanea con tu teléfono</div>'+
+    '<div class="psub">para ver el menú y ordenar</div>'+
+    '<div class="pqr"></div>'+
+    '<div class="pmesa">Mesa '+m+'</div>'+
+    '<div class="prule"></div>'+
+    '<div class="pname">Brasa &amp; Maíz</div>'+
+  '</div>';
+}
+function generaMesas(){
+  let from=parseInt($("adFrom").value)||1, to=parseInt($("adTo").value)||from;
+  if(to<from){const t=from;from=to;to=t;} if(to-from>60)to=from+60;
+  const grid=$("adGrid");grid.innerHTML="";
+  for(let m=from;m<=to;m++){
+    const url=BASE_MENU+"?mesa="+m;
+    const card=document.createElement("div");card.className="qc";
+    card.innerHTML=labelHTML(m);
+    card.querySelector(".pqr").appendChild(qrCanvasMesa(url,300));
+    grid.appendChild(card);
+  }
+}
+$("adGen").onclick=generaMesas;
+let labelSize="med";
+$("adSize").addEventListener("click",e=>{const o=e.target.closest("[data-s]");if(!o)return;labelSize=o.dataset.s;
+  $("adSize").querySelectorAll(".po").forEach(x=>x.classList.toggle("active",x.dataset.s===labelSize));});
+function construyePrint(){
+  let from=parseInt($("adFrom").value)||1, to=parseInt($("adTo").value)||from;
+  if(to<from){const t=from;from=to;to=t;} if(to-from>120)to=from+120;
+  const perPage = labelSize==="gra"?2:(labelSize==="med"?4:9);
+  const px = labelSize==="gra"?600:(labelSize==="med"?480:360);
+  const pa=$("printArea");pa.innerHTML="";
+  let sheet=null,i=0;
+  for(let m=from;m<=to;m++,i++){
+    if(i%perPage===0){sheet=document.createElement("div");sheet.className="psheet sz-"+labelSize;pa.appendChild(sheet);}
+    const wrap=document.createElement("div");wrap.innerHTML=labelHTML(m);
+    const label=wrap.firstElementChild;
+    const img=document.createElement("img");img.src=qrCanvasMesa(BASE_MENU+"?mesa="+m,px).toDataURL("image/png");
+    label.querySelector(".pqr").appendChild(img);
+    sheet.appendChild(label);
+  }
+}
+$("adPrint").onclick=()=>{construyePrint();setTimeout(()=>window.print(),80);};
+generaMesas();
+
+/* ---------- Cerrar la pestaña al expirar ---------- */
+$("closeBtn").onclick=function(){
+  try{window.open("","_self");window.close();}catch(e){}
+  setTimeout(function(){$("closeMsg").textContent="Ya puedes cerrar esta pestaña. ¡Gracias! 👋";},250);
+};
+
+syncBar();
+</script>
+</body>
+</html>

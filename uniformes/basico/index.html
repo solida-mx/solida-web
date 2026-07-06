@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bordados del Norte · Catálogo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--char:#262a2e;--char-2:#1b1e21;--copper:#c67b46;--copper-2:#dd9256;--copper-soft:#f5e7da;--cream:#f6f2ea;--muted:#807872;--line:#e6ddd0;--card:#fff;--ink:#23262b;--wa:#25d366}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Inter",sans-serif;color:var(--ink);background:var(--cream);line-height:1.5;-webkit-text-size-adjust:100%}
+  h1,h2,.disp{font-family:"Archivo",sans-serif}
+  header{position:sticky;top:0;z-index:30;background:rgba(38,42,46,.97);backdrop-filter:blur(8px);color:var(--cream);padding:11px 16px;display:flex;align-items:center;gap:9px}
+  .logo{display:flex;align-items:center;gap:8px}
+  .logo .b{width:32px;height:32px;border-radius:8px;background:var(--copper);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+  .logo b{font-family:"Archivo";font-weight:800;font-size:14.5px;line-height:1}
+  .logo small{display:block;font-size:8.5px;letter-spacing:.16em;color:var(--copper-2);text-transform:uppercase}
+  .hcta{margin-left:auto;background:var(--copper);color:#fff;text-decoration:none;font-family:"Archivo";font-weight:700;font-size:12.5px;padding:8px 13px;border-radius:8px}
+  .hero{background:linear-gradient(155deg,var(--char),var(--char-2));color:var(--cream);padding:26px 20px 30px;text-align:center}
+  .hero h1{font-family:"Archivo";font-weight:800;font-size:clamp(26px,8vw,36px);line-height:1.02}
+  .hero p{font-size:14px;color:#cfc7bd;max-width:36ch;margin:8px auto 0}
+  .wrap{max-width:600px;margin:0 auto;padding:22px 16px 0}
+  .sec-head{display:flex;align-items:center;gap:10px;margin:22px 0 14px}
+  .sec-head .bar{width:5px;height:24px;background:var(--copper);border-radius:3px}
+  .sec-head h2{font-size:22px;font-weight:700}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .card{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:16px 12px;text-align:center}
+  .card .em{font-size:34px}
+  .card .n{font-family:"Archivo";font-weight:700;font-size:14.5px;margin-top:6px;line-height:1.15}
+  .card .p{font-size:12.5px;color:var(--copper);font-weight:700;margin-top:4px}
+  .colors{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+  .sw{text-align:center;width:58px}
+  .sw .dot{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);margin:0 auto 5px}
+  .sw span{font-size:11px;color:var(--muted);font-weight:600}
+  .fabrics{display:flex;flex-wrap:wrap;gap:9px}
+  .chip{background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:9px 15px;font-size:13px;font-weight:600}
+  .tech{display:flex;flex-wrap:wrap;gap:9px}
+  .tech .t{background:var(--copper-soft);color:#8a5a34;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700}
+  .info{margin:24px 0 0;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:16px;font-size:13.5px}
+  .info .r{display:flex;gap:10px;padding:7px 0}.info svg{flex:none;color:var(--copper)}
+  .made{background:var(--char-2);color:var(--cream);text-align:center;padding:24px 20px 28px;margin-top:26px}
+  .made .disp{font-size:14px;color:var(--copper-2)}
+  .made p{font-size:12.5px;color:#b9b0a6;max-width:32ch;margin:6px auto 12px}
+  .made a{display:inline-block;background:var(--copper);color:#fff;text-decoration:none;font-family:"Archivo";font-weight:700;font-size:13px;padding:10px 18px;border-radius:999px}
+  .made .h{margin-top:12px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#6a635b}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="b">🪡</div><div><b>Bordados del Norte</b><small>Uniformes a tu medida</small></div></div>
+  <a class="hcta" id="hcta">Cotizar</a>
+</header>
+<section class="hero">
+  <h1>Nuestro catálogo</h1>
+  <p>Prendas, colores y acabados para el uniforme de tu equipo o negocio.</p>
+</section>
+<div class="wrap">
+  <div class="sec-head"><span class="bar"></span><h2>Prendas</h2></div>
+  <div class="grid" id="garments"></div>
+
+  <div class="sec-head"><span class="bar"></span><h2>Colores disponibles</h2></div>
+  <div class="colors" id="colors"></div>
+
+  <div class="sec-head"><span class="bar"></span><h2>Telas</h2></div>
+  <div class="fabrics" id="fabrics"></div>
+
+  <div class="sec-head"><span class="bar"></span><h2>Técnicas de decorado</h2></div>
+  <div class="tech" id="tech"></div>
+
+  <div class="info">
+    <div class="r"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><div>Zona Industrial, Saltillo, Coah.</div></div>
+    <div class="r"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div>Lun a Vie · 9:00 am – 6:00 pm · Sáb · 9:00 am – 1:00 pm</div></div>
+  </div>
+</div>
+<div class="made">
+  <div class="disp">Catálogo · versión Básica</div>
+  <p>Demostración por Solida Aplicaciones. La versión más sencilla para empezar.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20%F0%9F%91%8B%20Vi%20la%20demo%20de%20catálogo%20de%20uniformes%20(b%C3%A1sico)%20y%20me%20interesa.">Quiero una así</a>
+  <div class="h">▸ Demostración ◂</div>
+</div>
+<script>
+document.getElementById('hcta').href="https://wa.me/528443604349?text="+encodeURIComponent("Hola, quiero cotizar uniformes. Les comparto qué necesito: ");
+const G=[["👕","Playera polo","desde $180"],["👚","Cuello redondo","desde $130"],["👔","Camisa de vestir","desde $320"],["👨‍🍳","Filipina / Chef","desde $360"],["🥼","Bata médica","desde $340"],["🧥","Chamarra","desde $520"],["👖","Pantalón","desde $380"],["🧢","Gorra","desde $120"]];
+document.getElementById('garments').innerHTML=G.map(([e,n,p])=>`<div class="card"><div class="em">${e}</div><div class="n">${n}</div><div class="p">${p}</div></div>`).join('');
+const C=[["Blanco","#ffffff"],["Negro","#1a1a1a"],["Marino","#1c2b4a"],["Rojo","#b5322f"],["Gris Oxford","#6b6f76"],["Verde botella","#26463a"],["Vino","#5a2233"],["Azul cielo","#6ea8d8"],["Beige","#d9cbb2"],["Naranja","#d9702e"]];
+document.getElementById('colors').innerHTML=C.map(([n,h])=>`<div class="sw"><div class="dot" style="background:${h}"></div><span>${n}</span></div>`).join('');
+document.getElementById('fabrics').innerHTML=["Piqué","Algodón 100%","Dry-fit","Gabardina","Mezclilla","Antifluido"].map(f=>`<span class="chip">${f}</span>`).join('');
+document.getElementById('tech').innerHTML=["Bordado","Estampado DTF","Vinil textil","Sublimado"].map(t=>`<span class="t">${t}</span>`).join('');
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+╔══════════════════════════════════════════════════════════════════╗
+║   SOLIDA APLICACIONES — Carpeta única del sitio (todo incluido)    ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Esta es la ÚNICA carpeta que necesitas. Para actualizar tu sitio,
+siempre reemplazas/usas esta carpeta completa. Nada más.
+
+
+┌───────────────────────────────────────────────────────────┐
+│  ACTUALIZAR EN NETLIFY (3 pasos)                            │
+└───────────────────────────────────────────────────────────┘
+
+  1. Descomprime este ZIP. Te queda la carpeta "Solida-Web".
+  2. Entra a Netlify → tu sitio → pestaña "Deploys".
+  3. Arrastra la carpeta "Solida-Web" COMPLETA a la zona de
+     "Drag and drop your site folder here".
+
+  Netlify reemplaza todo el sitio con esta versión. Listo.
+
+
+┌───────────────────────────────────────────────────────────┐
+│  MUY IMPORTANTE: si ves la versión vieja                    │
+└───────────────────────────────────────────────────────────┘
+
+  Después de subir, tu navegador puede seguir mostrando la
+  versión anterior (guardada en memoria). Para ver la nueva:
+
+  • Abre solidaaplicaciones.com en una VENTANA DE INCÓGNITO, o
+  • Haz "recarga forzada": Ctrl+Shift+R (Windows) / Cmd+Shift+R (Mac).
+
+  Prueba rápida para confirmar que sí se actualizó:
+  abre directo  ->  solidaaplicaciones.com/nutriologo
+  Debe aparecer el SELECTOR con Básico / Intermedio / Premium.
+
+
+┌───────────────────────────────────────────────────────────┐
+│  QUÉ HAY ADENTRO                                            │
+└───────────────────────────────────────────────────────────┘
+
+  index.html .................. Tabulador de precios (página principal)
+
+  restaurante/ ................ Selector + 3 niveles
+     restaurante/basico
+     restaurante/intermedio
+     restaurante/avanzado ...... Pedidos desde la mesa + comanda
+
+  uniformes/ .................. Selector + 3 niveles
+     uniformes/basico
+     uniformes/intermedio
+     uniformes/avanzado ........ Configurador con Orden de Trabajo
+
+  profesional/ ................ Demo (nivel único, por ahora)
+  taller/ ..................... Demo (nivel único, por ahora)
+  nutriologo/ ................. Selector + 3 niveles
+     nutriologo/basico ......... Plan Esencial (plan del día + agua)
+     nutriologo/intermedio ..... Plan Pro (macros + mandado con
+                                 equivalencias + meal prep)
+     nutriologo/avanzado ....... Coach Total (mandado inteligente,
+                                 rutina con progresión y descarga,
+                                 antojos y progreso guardado)
+  invitacion/ ................. Demo (nivel único, por ahora)
+
+  qr-imprimir/ ................ Todos los códigos QR con tu logo
+                               (listos para imprimir)
+
+
+┌───────────────────────────────────────────────────────────┐
+│  CÓMO SE ABREN LAS DEMOS                                    │
+└───────────────────────────────────────────────────────────┘
+
+  En el tabulador, al elegir un giro verás:
+   • Un botón "▸ Ver ejemplo" en cada paquete (abre esa demo), y
+   • Un código QR para escanear con otro celular.
+
+  Ambos ya están conectados a las páginas reales.
+
+
+┌───────────────────────────────────────────────────────────┐
+│  NUTRIÓLOGO PREMIUM: cosas que debes saber                  │
+└───────────────────────────────────────────────────────────┘
+
+  1. GUARDADO DE DATOS (peso, antojos, comidas marcadas)
+     Se guarda en el propio celular/navegador del paciente
+     (localStorage). NO hay base de datos en la nube:
+     • Cada dispositivo guarda lo suyo.
+     • Si el paciente borra datos del navegador, se reinicia.
+     El REPORTE SEMANAL (ver punto 4) es el puente: convierte
+     esos datos en una imagen que el paciente te manda por
+     WhatsApp, así el seguimiento sí llega hasta ti.
+
+  2. CONFIGURAR EL PLAN DE UN PACIENTE
+     Abre  nutriologo/avanzado/app.js  con cualquier editor
+     de texto. Hasta arriba está el bloque CONFIG:
+     nombre del cliente, coach, WhatsApp del coach (coachWa),
+     macros, fecha de inicio del ciclo (inicioCiclo),
+     presupuesto de antojos y minutos de cardio. Cambias esos
+     valores, guardas y vuelves a subir la carpeta a Netlify.
+
+     IMPORTANTE: coachWa es el número a donde el paciente
+     envía su reporte. Ponlo en formato país+número sin signos
+     (ej. 528441234567).
+
+  3. LA SEMANA DE DESCARGA ES AUTOMÁTICA
+     La app cuenta las semanas desde "inicioCiclo" en ciclos
+     de 4 (3 de carga + 1 de descarga). En semana 4 muestra
+     los pesos al 60-65% solos.
+
+  4. REPORTE SEMANAL (el "seguimiento" sin base de datos)
+     En la pestaña PROGRESO, el paciente:
+       • marca sus entrenamientos con "entrené hoy" (en Rutina),
+       • escribe una nota para el coach,
+       • toca "Generar reporte de la semana".
+     La app crea una IMAGEN con: peso y cambio, entrenamientos
+     de la semana, cumplimiento de dieta, antojos usados, en qué
+     ejercicios subió de peso, y su nota. El paciente la comparte
+     por WhatsApp contigo (con la imagen adjunta).
+     Cada semana la app le recuerda que "toca reportarse".
+
+     NOTA: por seguridad, WhatsApp no deja adjuntar la imagen
+     de forma 100% automática desde un enlace. En celular, el
+     botón "Compartir imagen" abre WhatsApp con la foto lista
+     para elegir el chat; si no, se descarga y se adjunta a mano.
+     El texto resumen sí va prellenado.
+
+  ── Hecho con Solida Aplicaciones ──

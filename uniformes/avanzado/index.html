@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bordados del Norte · Arma tu uniforme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --char:#262a2e;--char-2:#1b1e21;--copper:#c67b46;--copper-2:#dd9256;--copper-soft:#f5e7da;
+    --cream:#f6f2ea;--ink:#23262b;--muted:#807872;--line:#e6ddd0;--card:#ffffff;--wa:#25d366;--ok:#3f9d6b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Inter",sans-serif;color:var(--ink);background:var(--cream);line-height:1.5;-webkit-text-size-adjust:100%;padding-bottom:88px}
+  h1,h2,h3,.disp{font-family:"Archivo",sans-serif}
+
+  header{position:sticky;top:0;z-index:40;background:rgba(38,42,46,.97);backdrop-filter:blur(8px);color:var(--cream);
+    padding:12px 16px;display:flex;align-items:center;gap:10px}
+  .logo{display:flex;align-items:center;gap:9px}
+  .logo .b{width:34px;height:34px;border-radius:9px;background:var(--copper);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;font-size:18px}
+  .logo b{font-family:"Archivo";font-weight:800;font-size:15px;line-height:1;letter-spacing:.2px}
+  .logo small{display:block;font-size:9px;letter-spacing:.18em;color:var(--copper-2);text-transform:uppercase;margin-top:2px}
+  .step-count{margin-left:auto;font-size:11px;color:var(--copper-2);font-weight:700}
+
+  .hero{background:linear-gradient(155deg,var(--char),var(--char-2));color:var(--cream);padding:30px 20px 34px;position:relative;overflow:hidden}
+  .hero::after{content:"🧵";position:absolute;right:-8px;bottom:-16px;font-size:120px;opacity:.08;transform:rotate(-12deg)}
+  .hero-in{position:relative;max-width:620px;margin:0 auto}
+  .hero .kick{font-family:"Archivo";font-weight:600;letter-spacing:.2em;color:var(--copper-2);font-size:11px;text-transform:uppercase}
+  .hero h1{font-size:clamp(28px,8vw,40px);font-weight:800;line-height:1.02;margin:8px 0 8px}
+  .hero p{font-size:14.5px;color:#cfc7bd;max-width:40ch}
+
+  .wrap{max-width:620px;margin:0 auto;padding:0 16px}
+  .block{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}
+  .block:first-of-type{margin-top:20px}
+  .blabel{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .bnum{width:26px;height:26px;border-radius:8px;background:var(--char);color:#fff;font-family:"Archivo";font-weight:700;
+    font-size:13px;display:flex;align-items:center;justify-content:center;flex:none}
+  .blabel h2{font-size:17px;font-weight:700}
+  .blabel .opt{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600}
+
+  /* option grids */
+  .opts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .opts.three{grid-template-columns:repeat(3,1fr)}
+  .op{border:1.5px solid var(--line);border-radius:13px;padding:13px 10px;cursor:pointer;text-align:center;
+    background:var(--card);transition:border-color .15s,background .15s;font-family:inherit}
+  .op:active{transform:scale(.98)}
+  .op .em{font-size:26px;display:block;margin-bottom:5px}
+  .op .nm{font-size:13px;font-weight:600;line-height:1.2}
+  .op .pr{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:600}
+  .op[aria-pressed="true"]{border-color:var(--copper);background:var(--copper-soft)}
+  .op[aria-pressed="true"] .pr{color:var(--copper)}
+
+  /* colors */
+  .colors{display:flex;flex-wrap:wrap;gap:11px}
+  .sw{width:46px;text-align:center;cursor:pointer}
+  .sw .dot{width:42px;height:42px;border-radius:50%;border:2px solid var(--line);margin:0 auto 5px;position:relative;transition:transform .1s}
+  .sw:active .dot{transform:scale(.92)}
+  .sw[aria-pressed="true"] .dot{border-color:var(--copper);box-shadow:0 0 0 3px var(--copper-soth,rgba(198,123,70,.25))}
+  .sw[aria-pressed="true"] .dot::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+  .sw span{font-size:10.5px;color:var(--muted);font-weight:600}
+
+  /* chips (placement) */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;background:var(--card);font-family:inherit}
+  .chip[aria-pressed="true"]{border-color:var(--copper);background:var(--copper-soft);color:var(--copper)}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px}
+
+  /* logo upload */
+  .drop{border:1.8px dashed var(--copper);border-radius:14px;padding:20px;text-align:center;cursor:pointer;background:var(--copper-soft)}
+  .drop .em{font-size:30px}
+  .drop p{font-size:13px;color:#8a6a4d;font-weight:600;margin-top:6px}
+  .drop small{font-size:11px;color:var(--muted)}
+  .logo-prev{display:none;align-items:center;gap:12px;margin-top:12px;background:var(--cream);border-radius:12px;padding:10px}
+  .logo-prev img{width:54px;height:54px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid var(--line)}
+  .logo-prev .rm{margin-left:auto;background:none;border:none;color:var(--copper);font-weight:700;cursor:pointer;font-size:13px}
+  .or-note{margin-top:10px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .or-note input{accent-color:var(--copper);width:16px;height:16px}
+
+  /* sizes */
+  .sizes{display:flex;flex-direction:column;gap:10px}
+  .srow{display:flex;align-items:center;gap:12px}
+  .srow .sz{width:52px;font-family:"Archivo";font-weight:700;font-size:15px}
+  .stepper{margin-left:auto;display:flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+  .stepper button{width:38px;height:38px;background:var(--cream);border:none;font-size:20px;font-weight:700;color:var(--char);cursor:pointer;font-family:inherit}
+  .stepper button:active{background:var(--copper-soft)}
+  .stepper .qv{width:44px;text-align:center;font-weight:700;font-size:15px}
+
+  /* inputs */
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--char);margin-bottom:5px}
+  .field input,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:12px;font-family:inherit;
+    font-size:14px;background:var(--card);color:var(--ink)}
+  .field input:focus,.field textarea:focus{outline:none;border-color:var(--copper)}
+  .field textarea{resize:vertical;min-height:64px}
+
+  /* sticky summary bar */
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:45;background:rgba(38,42,46,.98);backdrop-filter:blur(10px);
+    color:#fff;padding:12px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 -8px 24px rgba(0,0,0,.2)}
+  .bar-sum{line-height:1.15}
+  .bar-sum .pieces{font-size:12px;color:#b9b0a6;font-weight:600}
+  .bar-sum .est{font-family:"Archivo";font-weight:800;font-size:20px}
+  .bar-sum .est small{font-size:11px;color:var(--copper-2);font-weight:600}
+  .bar button{margin-left:auto;background:var(--copper);color:#fff;border:none;font-family:"Archivo";font-weight:700;
+    font-size:15px;padding:14px 20px;border-radius:12px;cursor:pointer;white-space:nowrap}
+  .bar button:disabled{background:#4a4d51;color:#8a8f94;cursor:not-allowed}
+  .bar button:not(:disabled):active{transform:translateY(1px)}
+
+  /* modal OT */
+  .modal{position:fixed;inset:0;z-index:60;background:rgba(20,22,24,.72);backdrop-filter:blur(3px);display:none;
+    align-items:flex-end;justify-content:center}
+  .modal.show{display:flex}
+  .sheet{background:var(--cream);width:100%;max-width:560px;border-radius:22px 22px 0 0;max-height:92vh;overflow-y:auto;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom))}
+  .sheet .grip{width:44px;height:5px;background:var(--line);border-radius:3px;margin:0 auto 14px}
+  .sheet h3{font-size:20px;font-weight:800;text-align:center;margin-bottom:4px}
+  .sheet .sub{text-align:center;font-size:13px;color:var(--muted);margin-bottom:16px}
+  .ot-img{width:100%;border-radius:14px;border:1.5px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.15);display:block}
+  .sheet-actions{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+  .act{display:flex;align-items:center;justify-content:center;gap:9px;padding:15px;border-radius:13px;font-family:"Archivo";
+    font-weight:700;font-size:15px;border:none;cursor:pointer;text-decoration:none;font-family:inherit}
+  .act-wa{background:var(--wa);color:#fff}
+  .act-dl{background:var(--card);color:var(--char);border:1.5px solid var(--line)}
+  .act-close{background:none;color:var(--muted);font-weight:600;padding:10px}
+  .act:active{transform:translateY(1px)}
+
+  .made{background:var(--char-2);color:var(--cream);text-align:center;padding:26px 20px 30px;margin-top:22px}
+  .made .disp{font-size:16px;color:var(--copper-2);margin-bottom:6px;font-weight:700}
+  .made p{font-size:13px;color:#b9b0a6;max-width:36ch;margin:0 auto 14px}
+  .made a{display:inline-flex;align-items:center;gap:8px;background:var(--copper);color:#fff;text-decoration:none;
+    font-family:"Archivo";font-weight:700;font-size:13.5px;padding:12px 22px;border-radius:999px}
+  .made .demo-hint{margin-top:14px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#6a635b}
+
+  .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+    padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;opacity:0;transition:all .25s;z-index:80;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="b">🪡</div><div><b>Bordados del Norte</b><small>Uniformes a tu medida</small></div></div>
+  <div class="step-count" id="stepCount"></div>
+</header>
+
+<section class="hero"><div class="hero-in">
+  <div class="kick">Cotizador en línea</div>
+  <h1>Arma tu uniforme</h1>
+  <p>Elige prenda, color, tela y bordado. Te damos un estimado al instante y enviamos tu orden lista por WhatsApp.</p>
+</div></section>
+
+<div class="wrap">
+  <!-- 1 prenda -->
+  <div class="block">
+    <div class="blabel"><span class="bnum">1</span><h2>Tipo de prenda</h2></div>
+    <div class="opts" id="garments"></div>
+  </div>
+  <!-- 2 color -->
+  <div class="block">
+    <div class="blabel"><span class="bnum">2</span><h2>Color</h2></div>
+    <div class="colors" id="colors"></div>
+  </div>
+  <!-- 3 tela -->
+  <div class="block">
+    <div class="blabel"><span class="bnum">3</span><h2>Tela</h2></div>
+    <div class="opts three" id="fabrics"></div>
+  </div>
+  <!-- 4 tecnica -->
+  <div class="block">
+    <div class="blabel"><span class="bnum">4</span><h2>Decorado</h2></div>
+    <div class="opts three" id="techniques"></div>
+    <div class="hint" style="margin-top:14px;font-weight:700;color:var(--char)">¿Dónde lo quieres? (elige una o varias)</div>
+    <div class="chips" id="placements" style="margin-top:10px"></div>
+  </div>
+  <!-- 5 logo -->
+  <div class="block">
+    <div class="blabel"><span class="bnum">5</span><h2>Tu logotipo</h2><span class="opt">opcional</span></div>
+    <div class="drop" id="drop"><span class="em">🖼️</span><p>Toca para subir tu logo</p><small>PNG, JPG · o envíalo después</small></div>
+    <input type="file" id="logoInput" accept="image/*" hidden>
+    <div class="logo-prev" id="logoPrev"><img id="logoImg" alt="logo"><span style="font-size:13px;font-weight:600">Logo cargado</span><button class="rm" id="logoRm">Quitar</button></div>
+    <div class="or-note"><input type="checkbox" id="logoLater"><label for="logoLater" style="cursor:pointer">Enviaré mi logo por WhatsApp después</label></div>
+  </div>
+  <!-- vista previa -->
+  <div class="block">
+    <div class="blabel"><span class="bnum" style="background:var(--copper);font-size:14px">👁</span><h2>Vista previa</h2><span class="opt">se actualiza sola</span></div>
+    <canvas id="previewCanvas" style="width:100%;display:block"></canvas>
+    <div class="hint" style="text-align:center;margin-top:8px">Así se verá tu prenda con el logo en la ubicación que elegiste.</div>
+  </div>
+  <!-- 6 tallas -->
+  <div class="block">
+    <div class="blabel"><span class="bnum">6</span><h2>Tallas y cantidades</h2></div>
+    <div class="sizes" id="sizes"></div>
+  </div>
+  <!-- 7 datos -->
+  <div class="block">
+    <div class="blabel"><span class="bnum">7</span><h2>Tus datos</h2></div>
+    <div class="field"><label>Nombre</label><input id="cName" placeholder="Tu nombre" autocomplete="name"></div>
+    <div class="field"><label>Empresa / equipo <span style="color:var(--muted);font-weight:400">(opcional)</span></label><input id="cCompany" placeholder="Ej. Taller Los Pinos"></div>
+    <div class="field"><label>Notas <span style="color:var(--muted);font-weight:400">(opcional)</span></label><textarea id="cNotes" placeholder="Fecha en que lo necesitas, detalles del logo, etc."></textarea></div>
+  </div>
+</div>
+
+<div class="made">
+  <div class="disp">Configurador · versión Avanzada</div>
+  <p>Demostración. Así tus clientes pueden armar su uniforme y mandarte la orden lista, sin malentendidos.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20demo%20del%20configurador%20de%20uniformes%20y%20me%20encant%C3%B3.%20Quiero%20una%20herramienta%20as%C3%AD%20para%20mi%20negocio.">Quiero una herramienta así</a>
+  <div class="demo-hint">▸ Demostración interactiva ◂</div>
+</div>
+
+<!-- sticky bar -->
+<div class="bar">
+  <div class="bar-sum"><div class="pieces" id="barPieces">0 piezas</div><div class="est" id="barEst">$0 <small>estimado</small></div></div>
+  <button id="generate" disabled>Generar orden</button>
+</div>
+
+<!-- modal OT -->
+<div class="modal" id="modal">
+  <div class="sheet">
+    <div class="grip"></div>
+    <h3>Tu orden de trabajo</h3>
+    <div class="sub">Revísala y envíala. Tú solo agregas el contacto.</div>
+    <img class="ot-img" id="otImg" alt="Orden de trabajo">
+    <div class="sheet-actions">
+      <button class="act act-wa" id="sendWa"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 .9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.1.1.3 0 .5l-.7.9c-.1.1-.3.3-.1.5.1.3.6 1 1.3 1.7.9.8 1.6 1 1.9 1.1.2.1.4.1.5-.1l.8-.9c.2-.3.4-.2.6-.1l1.7.9c.3.1.4.2.5.3.1.2.1.7-.1 1.3Z"/></svg> Enviar por WhatsApp</button>
+      <button class="act act-dl" id="download">⬇️ Descargar imagen de la OT</button>
+      <button class="act act-close" id="closeModal">Seguir editando</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<canvas id="otCanvas" style="display:none"></canvas>
+
+<script>
+const WA="528443604349"; // demo -> Solida. En proyecto real: número del negocio.
+const state={garment:null,color:null,fabric:null,technique:null,placements:[],logo:null,logoImg:null,logoLater:false,
+  sizes:{XS:0,S:0,M:0,L:0,XL:0,XXL:0},name:"",company:"",notes:""};
+
+const GARMENTS=[
+  {id:"polo",n:"Playera polo",b:180,e:"👕"},{id:"redonda",n:"Playera cuello redondo",b:130,e:"👚"},
+  {id:"camisa",n:"Camisa de vestir",b:320,e:"👔"},{id:"filipina",n:"Filipina / Chef",b:360,e:"👨‍🍳"},
+  {id:"bata",n:"Bata médica",b:340,e:"🥼"},{id:"chamarra",n:"Chamarra",b:520,e:"🧥"},
+  {id:"pantalon",n:"Pantalón de trabajo",b:380,e:"👖"},{id:"gorra",n:"Gorra",b:120,e:"🧢"}
+];
+const COLORS=[
+  {n:"Blanco",h:"#ffffff"},{n:"Negro",h:"#1a1a1a"},{n:"Marino",h:"#1c2b4a"},{n:"Rojo",h:"#b5322f"},
+  {n:"Gris Oxford",h:"#6b6f76"},{n:"Verde botella",h:"#26463a"},{n:"Vino",h:"#5a2233"},
+  {n:"Azul cielo",h:"#6ea8d8"},{n:"Beige",h:"#d9cbb2"},{n:"Naranja",h:"#d9702e"}
+];
+const FABRICS=[
+  {n:"Piqué",a:0},{n:"Algodón 100%",a:0},{n:"Dry-fit",a:25},{n:"Gabardina",a:40},{n:"Mezclilla",a:60},{n:"Antifluido",a:35}
+];
+const TECHNIQUES=[
+  {n:"Bordado",a:45},{n:"Estampado DTF",a:30},{n:"Vinil textil",a:25},{n:"Sublimado",a:40},{n:"Sin decorado",a:0}
+];
+const PLACEMENTS=["Pecho izq.","Pecho der.","Espalda","Manga izq.","Manga der.","Cuello/Nuca"];
+const SIZES=["XS","S","M","L","XL","XXL"];
+
+/* ---------- Render option UIs ---------- */
+const $=id=>document.getElementById(id);
+function optCard(em,nm,pr){return `<div class="op" role="button" aria-pressed="false"><span class="em">${em}</span><span class="nm">${nm}</span>${pr!==undefined?`<span class="pr">${pr}</span>`:''}</div>`;}
+
+$("garments").innerHTML=GARMENTS.map(g=>optCard(g.e,g.n,"desde $"+g.b)).join("");
+$("garments").querySelectorAll(".op").forEach((el,i)=>el.onclick=()=>{setPressed($("garments"),el);state.garment=GARMENTS[i];update();});
+
+$("colors").innerHTML=COLORS.map(c=>`<div class="sw" role="button" aria-pressed="false"><div class="dot" style="background:${c.h}"></div><span>${c.n}</span></div>`).join("");
+$("colors").querySelectorAll(".sw").forEach((el,i)=>el.onclick=()=>{setPressed($("colors"),el);state.color=COLORS[i];update();});
+
+$("fabrics").innerHTML=FABRICS.map(f=>optCard("🧵",f.n,f.a?("+$"+f.a):"incluido")).join("");
+$("fabrics").querySelectorAll(".op").forEach((el,i)=>el.onclick=()=>{setPressed($("fabrics"),el);state.fabric=FABRICS[i];update();});
+
+$("techniques").innerHTML=TECHNIQUES.map(t=>optCard("✨",t.n,t.a?("+$"+t.a):"—")).join("");
+$("techniques").querySelectorAll(".op").forEach((el,i)=>el.onclick=()=>{setPressed($("techniques"),el);state.technique=TECHNIQUES[i];update();});
+
+$("placements").innerHTML=PLACEMENTS.map(p=>`<div class="chip" role="button" aria-pressed="false">${p}</div>`).join("");
+$("placements").querySelectorAll(".chip").forEach((el,i)=>el.onclick=()=>{
+  const p=PLACEMENTS[i];const idx=state.placements.indexOf(p);
+  if(idx>=0){state.placements.splice(idx,1);el.setAttribute("aria-pressed","false");}
+  else{state.placements.push(p);el.setAttribute("aria-pressed","true");}update();});
+
+$("sizes").innerHTML=SIZES.map(s=>`<div class="srow"><div class="sz">${s}</div>
+  <div class="stepper"><button data-s="${s}" data-d="-1">−</button><div class="qv" id="qv-${s}">0</div><button data-s="${s}" data-d="1">+</button></div></div>`).join("");
+$("sizes").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+  const s=b.dataset.s;state.sizes[s]=Math.max(0,state.sizes[s]+(+b.dataset.d));$("qv-"+s).textContent=state.sizes[s];update();});
+
+function setPressed(container,el){container.querySelectorAll('[aria-pressed]').forEach(x=>x.setAttribute("aria-pressed","false"));el.setAttribute("aria-pressed","true");}
+
+/* ---------- Logo upload ---------- */
+$("drop").onclick=()=>$("logoInput").click();
+$("logoInput").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=ev=>{state.logo=ev.target.result;$("logoImg").src=state.logo;$("logoPrev").style.display="flex";
+    $("logoLater").checked=false;state.logoLater=false;
+    const im=new Image();im.onload=()=>{state.logoImg=im;renderPreview();};im.src=state.logo;
+    update();};r.readAsDataURL(f);};
+$("logoRm").onclick=()=>{state.logo=null;state.logoImg=null;$("logoInput").value="";$("logoPrev").style.display="none";update();};
+$("logoLater").onchange=e=>{state.logoLater=e.target.checked;if(e.target.checked){state.logo=null;state.logoImg=null;$("logoInput").value="";$("logoPrev").style.display="none";}update();};
+
+/* ---------- Inputs ---------- */
+$("cName").oninput=e=>state.name=e.target.value;
+$("cCompany").oninput=e=>state.company=e.target.value;
+$("cNotes").oninput=e=>state.notes=e.target.value;
+
+/* ---------- Motor de dibujo: prenda + logo en su ubicación ---------- */
+const BACK_PLACE=["Espalda","Cuello/Nuca"];
+function category(id){return id==="pantalon"?"pants":(id==="gorra"?"cap":"top");}
+function rr2(x,px,py,w,h,r){x.beginPath();x.moveTo(px+r,py);x.arcTo(px+w,py,px+w,py+h,r);x.arcTo(px+w,py+h,px,py+h,r);x.arcTo(px,py+h,px,py,r);x.arcTo(px,py,px+w,py,r);x.closePath();}
+function anchorTop(place,view){
+  if(view==="front")return ({"Pecho izq.":[0.37,0.44],"Pecho der.":[0.63,0.44],"Manga izq.":[0.115,0.34],"Manga der.":[0.885,0.34]})[place]||null;
+  return ({"Espalda":[0.5,0.52],"Cuello/Nuca":[0.5,0.20]})[place]||null;
+}
+function silTop(x,bx,by,bw,bh,view){const X=f=>bx+f*bw,Y=f=>by+f*bh;
+  x.beginPath();x.moveTo(X(0.30),Y(0.08));x.lineTo(X(0.12),Y(0.12));x.lineTo(X(0.02),Y(0.30));
+  x.lineTo(X(0.16),Y(0.44));x.lineTo(X(0.24),Y(0.33));x.lineTo(X(0.24),Y(0.94));x.lineTo(X(0.76),Y(0.94));
+  x.lineTo(X(0.76),Y(0.33));x.lineTo(X(0.84),Y(0.44));x.lineTo(X(0.98),Y(0.30));x.lineTo(X(0.88),Y(0.12));
+  x.lineTo(X(0.70),Y(0.08));x.quadraticCurveTo(X(0.50),Y(view==="front"?0.19:0.12),X(0.30),Y(0.08));x.closePath();}
+function silPants(x,bx,by,bw,bh){const X=f=>bx+f*bw,Y=f=>by+f*bh;
+  x.beginPath();x.moveTo(X(0.20),Y(0.05));x.lineTo(X(0.80),Y(0.05));x.lineTo(X(0.80),Y(0.95));
+  x.lineTo(X(0.56),Y(0.95));x.lineTo(X(0.50),Y(0.46));x.lineTo(X(0.44),Y(0.95));x.lineTo(X(0.20),Y(0.95));x.closePath();}
+function drawSil(x,bx,by,bw,bh,cat,view,color){
+  x.save();x.fillStyle=color;x.strokeStyle="rgba(40,42,46,.38)";x.lineWidth=2.5;x.lineJoin="round";
+  if(cat==="cap"){const X=f=>bx+f*bw,Y=f=>by+f*bh;
+    x.beginPath();x.ellipse(X(0.5),Y(0.58),bw*0.30,bh*0.32,0,Math.PI,2*Math.PI);x.closePath();x.fill();x.stroke();
+    x.beginPath();x.ellipse(X(0.60),Y(0.60),bw*0.36,bh*0.11,0,0,Math.PI);x.closePath();x.fill();x.stroke();
+  }else if(cat==="pants"){silPants(x,bx,by,bw,bh);x.fill();x.stroke();}
+  else{silTop(x,bx,by,bw,bh,view);x.fill();x.stroke();}
+  x.restore();
+}
+function drawLogoChip(x,px,py,L,logoImg,label){
+  x.save();x.fillStyle="#fff";x.strokeStyle="#c67b46";x.lineWidth=2.5;
+  rr2(x,px-L/2,py-L/2,L,L,L*0.2);x.fill();x.stroke();
+  if(logoImg&&logoImg.width){const s=Math.min((L*0.78)/logoImg.width,(L*0.78)/logoImg.height);
+    x.drawImage(logoImg,px-logoImg.width*s/2,py-logoImg.height*s/2,logoImg.width*s,logoImg.height*s);}
+  else{x.fillStyle="#c67b46";x.font="700 "+Math.round(L*0.24)+"px Inter, sans-serif";x.textAlign="center";x.textBaseline="middle";x.fillText("LOGO",px,py);x.textBaseline="alphabetic";x.textAlign="left";}
+  if(label){x.fillStyle="#5a544d";x.font="600 12px Inter, sans-serif";x.textAlign="center";x.fillText(label,px,py+L/2+15);x.textAlign="left";}
+  x.restore();
+}
+function activeLogos(){return (state.technique&&state.technique.a)?state.placements:[];}
+function drawGarmentView(x,bx,by,bw,bh,cat,color,view,places,logoImg,showLabels){
+  drawSil(x,bx,by,bw,bh,cat,view,color);
+  const L=Math.max(30,bw*0.19);
+  if(cat==="top"){
+    places.forEach(p=>{const a=anchorTop(p,view);if(a)drawLogoChip(x,bx+a[0]*bw,by+a[1]*bh,L,logoImg,showLabels?p:null);});
+  }else{
+    const n=places.length;places.forEach((p,i)=>{const fx=0.5+(i-(n-1)/2)*0.22,fy=cat==="cap"?0.56:0.4;
+      drawLogoChip(x,bx+fx*bw,by+fy*bh,L*0.9,logoImg,showLabels?p:null);});
+  }
+}
+function drawMockup(x,bx,by,bw,bh,logoImg,showLabels){
+  if(!state.garment)return;
+  const cat=category(state.garment.id),color=state.color?state.color.h:"#e0d8ca",logos=activeLogos();
+  const front=cat==="top"?logos.filter(p=>!BACK_PLACE.includes(p)):logos;
+  const back=cat==="top"?logos.filter(p=>BACK_PLACE.includes(p)):[];
+  const capH=22;
+  if(back.length>0){
+    const gap=20,vw=(bw-gap)/2,vh=bh-capH;
+    drawGarmentView(x,bx,by,vw,vh,cat,color,"front",front,logoImg,showLabels);
+    drawGarmentView(x,bx+vw+gap,by,vw,vh,cat,color,"back",back,logoImg,showLabels);
+    x.fillStyle="#807872";x.font="700 12px Inter, sans-serif";x.textAlign="center";
+    x.fillText("FRENTE",bx+vw/2,by+bh-4);x.fillText("ESPALDA",bx+vw+gap+vw/2,by+bh-4);x.textAlign="left";
+  }else{
+    const vw=Math.min(bw*0.62,270),vh=bh-capH,ox=bx+(bw-vw)/2;
+    drawGarmentView(x,ox,by,vw,vh,cat,color,"front",front,logoImg,showLabels);
+    x.fillStyle="#807872";x.font="700 12px Inter, sans-serif";x.textAlign="center";
+    x.fillText(cat==="top"?"FRENTE":"VISTA",ox+vw/2,by+bh-4);x.textAlign="left";
+  }
+}
+function renderPreview(){
+  const cv=$("previewCanvas");if(!cv)return;
+  const ctx=cv.getContext("2d");if(!ctx)return;
+  const cssW=cv.clientWidth||cv.parentNode.clientWidth||320,H=250,DPR=Math.min(2,window.devicePixelRatio||1);
+  cv.width=cssW*DPR;cv.height=H*DPR;cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,cssW,H);
+  if(!state.garment){ctx.fillStyle="#9a9186";ctx.font="600 14px Inter, sans-serif";ctx.textAlign="center";
+    ctx.fillText("Elige una prenda para ver la vista previa",cssW/2,H/2);ctx.textAlign="left";return;}
+  drawMockup(ctx,10,14,cssW-20,H-16,state.logoImg||null,false);
+}
+
+/* ---------- Calc + update ---------- */
+function totalPieces(){return SIZES.reduce((a,s)=>a+state.sizes[s],0);}
+function unitPrice(){if(!state.garment)return 0;const fa=state.fabric?state.fabric.a:0;
+  const ta=state.technique?state.technique.a*Math.max(1,state.placements.length):0;
+  return state.garment.b+fa+(state.technique&&state.technique.a?ta:0);}
+function totalEst(){return totalPieces()*unitPrice();}
+function fmt(n){return "$"+n.toLocaleString("es-MX");}
+
+function stepsDone(){let d=0;if(state.garment)d++;if(state.color)d++;if(state.fabric)d++;if(state.technique)d++;if(totalPieces()>0)d++;return d;}
+function update(){
+  const p=totalPieces();
+  $("barPieces").textContent=p+(p===1?" pieza":" piezas");
+  $("barEst").innerHTML=fmt(totalEst())+' <small>estimado</small>';
+  $("stepCount").textContent=stepsDone()+"/5 listos";
+  $("generate").disabled=!(state.garment&&state.color&&p>0);
+  renderPreview();
+}
+update();
+window.addEventListener("load",renderPreview);
+window.addEventListener("resize",renderPreview);
+
+/* ---------- Toast ---------- */
+const toast=$("toast");let tT;
+function showToast(m){toast.textContent=m;toast.classList.add("show");clearTimeout(tT);tT=setTimeout(()=>toast.classList.remove("show"),2200);}
+
+/* ---------- Build OT text ---------- */
+function folio(){return "OT-"+Date.now().toString().slice(-6);}
+let currentFolio="";
+function sizesLine(){return SIZES.filter(s=>state.sizes[s]>0).map(s=>s+" ×"+state.sizes[s]).join("  ·  ");}
+function costParts(){
+  const fa=state.fabric?state.fabric.a:0;
+  const nPlac=Math.max(1,state.placements.length);
+  const ta=(state.technique&&state.technique.a)?state.technique.a*nPlac:0;
+  return {base:state.garment?state.garment.b:0,fa,ta,nPlac,unit:unitPrice()};
+}
+function otText(f){
+  const c=costParts();
+  const L=[];
+  L.push("🧵 *NUEVA ORDEN DE TRABAJO*");
+  L.push("Folio: "+f+"   |   "+new Date().toLocaleDateString("es-MX"));
+  L.push("");
+  L.push("• Prenda: "+state.garment.n);
+  L.push("• Color: "+state.color.n);
+  if(state.fabric)L.push("• Tela: "+state.fabric.n);
+  if(state.technique)L.push("• Decorado: "+state.technique.n+(state.technique.a&&state.placements.length?" ("+state.placements.join(", ")+")":""));
+  L.push("• Logo: "+(state.logo?"se adjunta imagen":(state.logoLater?"lo enviaré por WhatsApp":"—")));
+  L.push("");
+  L.push("*Tallas:* "+(sizesLine()||"—"));
+  L.push("*Total piezas:* "+totalPieces());
+  L.push("");
+  L.push("*DESGLOSE DE COSTOS (estimado)*");
+  L.push("Prenda base: "+fmt(c.base));
+  if(c.fa)L.push("Tela ("+state.fabric.n+"): +"+fmt(c.fa));
+  if(c.ta)L.push("Decorado ("+state.technique.n+" ×"+c.nPlac+"): +"+fmt(c.ta));
+  L.push("Precio por pieza: "+fmt(c.unit));
+  L.push(totalPieces()+" piezas × "+fmt(c.unit)+" = *"+fmt(totalEst())+" MXN*");
+  L.push("_(sujeto a confirmación del taller)_");
+  L.push("");
+  if(state.name)L.push("Cliente: "+state.name);
+  if(state.company)L.push("Empresa: "+state.company);
+  if(state.notes)L.push("Notas: "+state.notes);
+  L.push("");
+  L.push("— Generado desde Bordados del Norte");
+  return L.join("\n");
+}
+
+/* ---------- Render OT image (canvas) ---------- */
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function loadImg(src){return new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});}
+
+async function renderOT(f){
+  const W=860,P=44;
+  const rows=state.filteredRows=[
+    ["Prenda",state.garment.n],["Color",state.color.n],
+    ["Tela",state.fabric?state.fabric.n:"—"],
+    ["Decorado",state.technique?state.technique.n:"—"],
+    ["Ubicación",(state.technique&&state.technique.a&&state.placements.length)?state.placements.join(", "):"—"],
+    ["Logo",state.logo?"Adjunto":(state.logoLater?"Se enviará aparte":"—")]
+  ];
+  const sz=SIZES.filter(s=>state.sizes[s]>0);
+  const cst=costParts();
+  const brk=[["Prenda base",fmt(cst.base)]];
+  if(cst.fa)brk.push(["Tela ("+state.fabric.n+")","+"+fmt(cst.fa)]);
+  if(cst.ta)brk.push(["Decorado ("+state.technique.n+" x"+cst.nPlac+")","+"+fmt(cst.ta)]);
+  brk.push(["Precio por pieza",fmt(cst.unit)]);
+  const notesLines=state.notes?wrapText(state.notes,64):[];
+  const logoImg=state.logo?await loadImg(state.logo):null;
+  // height calc
+  let h=200; // header
+  h+=rows.length*52+18;
+  h+=330; // mockup prenda
+  h+=54+ (sz.length? (44+sz.length*0): 0) +70; // sizes header+chips block
+  h+=44+brk.length*32+16; // desglose
+  h+=120; // totals
+  h+=64; // customer header
+  if(state.name||state.company)h+=52;
+  if(notesLines.length)h+=28+notesLines.length*26;
+  h+=70; // footer
+  const H=Math.max(1120,h);
+
+  const c=$("otCanvas");c.width=W;c.height=H;const x=c.getContext("2d");
+  x.fillStyle="#f6f2ea";x.fillRect(0,0,W,H);
+  x.fillStyle="#ffffff";rr(x,20,20,W-40,H-40,22);x.fill();
+
+  // header band
+  x.fillStyle="#262a2e";rr(x,20,20,W-40,150,22);x.fill();x.fillRect(20,120,W-40,50);
+  x.fillStyle="#c67b46";x.font="800 20px Archivo, sans-serif";x.fillText("🪡 BORDADOS DEL NORTE",P,64);
+  x.fillStyle="#ffffff";x.font="800 34px Archivo, sans-serif";x.fillText("ORDEN DE TRABAJO",P,110);
+  x.fillStyle="#b9b0a6";x.font="600 16px Inter, sans-serif";
+  x.fillText("Folio "+f,P,148);
+  x.textAlign="right";x.fillText(new Date().toLocaleDateString("es-MX"),W-P,148);x.textAlign="left";
+
+  let y=210;
+  // detail rows
+  x.font="700 15px Inter, sans-serif";
+  for(const [k,v] of rows){
+    x.fillStyle="#807872";x.font="600 14px Inter, sans-serif";x.fillText(k.toUpperCase(),P,y);
+    x.fillStyle="#23262b";x.font="700 19px Inter, sans-serif";
+    if(k==="Color"){const cw=x.measureText(v).width;x.fillStyle=state.color.h;rr(x,P,y+8,22,22,5);x.fill();
+      x.strokeStyle="#e6ddd0";x.lineWidth=1;rr(x,P,y+8,22,22,5);x.stroke();x.fillStyle="#23262b";x.fillText(v,P+32,y+26);}
+    else x.fillText(v,P,y+26);
+    y+=52;
+  }
+  // mockup prenda + logo en su ubicación
+  x.fillStyle="#807872";x.font="600 14px Inter, sans-serif";x.fillText("VISTA DE COLOCACIÓN",P,y);y+=12;
+  x.fillStyle="#faf7f1";rr(x,P,y,W-2*P,290,16);x.fill();
+  x.strokeStyle="#eadfce";x.lineWidth=1.5;rr(x,P,y,W-2*P,290,16);x.stroke();
+  drawMockup(x,P+24,y+18,W-2*P-48,254,logoImg,true);
+  y+=290+22;
+
+  // divider
+  y+=6;x.strokeStyle="#e6ddd0";x.lineWidth=2;x.beginPath();x.moveTo(P,y);x.lineTo(W-P,y);x.stroke();y+=34;
+
+  // sizes
+  x.fillStyle="#262a2e";x.font="800 20px Archivo";x.fillText("TALLAS Y CANTIDADES",P,y);y+=14;
+  let cx=P;y+=18;
+  sz.forEach(s=>{const label=s+" ×"+state.sizes[s];x.font="700 16px Inter";const w=x.measureText(label).width+30;
+    if(cx+w>W-P){cx=P;y+=48;}x.fillStyle="#f5e7da";rr(x,cx,y,w,38,10);x.fill();
+    x.fillStyle="#8a5a34";x.fillText(label,cx+15,y+25);cx+=w+10;});
+  if(!sz.length){x.fillStyle="#807872";x.font="600 16px Inter";x.fillText("—",P,y+24);}
+  y+=64;
+
+  // desglose de costos
+  x.fillStyle="#262a2e";x.font="800 20px Archivo";x.fillText("DESGLOSE (ESTIMADO)",P,y);y+=30;
+  brk.forEach(([k,v])=>{
+    x.fillStyle="#5a544d";x.font="500 15px Inter";x.fillText(k,P,y+6);
+    x.textAlign="right";x.fillStyle="#23262b";x.font="700 16px Inter";x.fillText(v,W-P,y+6);x.textAlign="left";
+    y+=32;
+  });
+  y+=16;
+
+  // totals box
+  x.fillStyle="#262a2e";rr(x,P,y,W-2*P,86,14);x.fill();
+  x.fillStyle="#b9b0a6";x.font="600 14px Inter";x.fillText("TOTAL DE PIEZAS",P+22,y+32);
+  x.fillStyle="#ffffff";x.font="800 30px Archivo";x.fillText(String(totalPieces()),P+22,y+68);
+  x.textAlign="right";
+  x.fillStyle="#dd9256";x.font="600 14px Inter";x.fillText("ESTIMADO (sujeto a confirmación)",W-P-22,y+32);
+  x.fillStyle="#ffffff";x.font="800 30px Archivo";x.fillText("~"+fmt(totalEst()),W-P-22,y+68);
+  x.textAlign="left";y+=120;
+
+  // customer
+  if(state.name||state.company||notesLines.length){
+    x.fillStyle="#262a2e";x.font="800 18px Archivo";x.fillText("CLIENTE",P,y);y+=30;
+    x.font="600 16px Inter";x.fillStyle="#23262b";
+    if(state.name){x.fillText(state.name+(state.company?"  ·  "+state.company:""),P,y);y+=28;}
+    else if(state.company){x.fillText(state.company,P,y);y+=28;}
+    if(notesLines.length){x.fillStyle="#807872";x.font="600 14px Inter";x.fillText("NOTAS",P,y);y+=22;
+      x.fillStyle="#3a3833";x.font="400 15px Inter";notesLines.forEach(l=>{x.fillText(l,P,y);y+=24;});}
+  }
+
+  // footer
+  x.fillStyle="#807872";x.font="500 13px Inter";x.textAlign="center";
+  x.fillText("Diseñado con Bordados del Norte  ·  hecho por Solida Aplicaciones",W/2,H-40);x.textAlign="left";
+
+  return c;
+}
+function wrapText(t,max){const words=t.split(/\s+/);const lines=[];let cur="";
+  words.forEach(w=>{if((cur+" "+w).trim().length>max){lines.push(cur.trim());cur=w;}else cur+=" "+w;});
+  if(cur.trim())lines.push(cur.trim());return lines.slice(0,6);}
+
+/* ---------- Generate / modal ---------- */
+let otBlob=null;
+$("generate").onclick=async()=>{
+  if(totalPieces()===0){showToast("Agrega al menos una talla y cantidad");return;}
+  currentFolio=folio();
+  showToast("Armando tu orden…");
+  const canvas=await renderOT(currentFolio);
+  const dataUrl=canvas.toDataURL("image/png");
+  $("otImg").src=dataUrl;
+  canvas.toBlob(b=>{otBlob=b;},"image/png");
+  $("modal").classList.add("show");
+};
+$("closeModal").onclick=()=>$("modal").classList.remove("show");
+$("modal").onclick=e=>{if(e.target===$("modal"))$("modal").classList.remove("show");};
+
+/* ---------- Send / download ---------- */
+$("download").onclick=()=>{const a=document.createElement("a");a.href=$("otImg").src;a.download=currentFolio+".png";a.click();showToast("Imagen descargada ⬇️");};
+
+$("sendWa").onclick=async()=>{
+  const text=otText(currentFolio);
+  // Intento 1: compartir imagen + texto (celular)
+  try{
+    if(otBlob&&navigator.canShare){
+      const file=new File([otBlob],currentFolio+".png",{type:"image/png"});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],text:text,title:"Orden de trabajo"});
+        return;
+      }
+    }
+  }catch(err){/* si cancela o falla, seguimos al respaldo */ if(err&&err.name==="AbortError")return;}
+  // Respaldo: descarga imagen + abre WhatsApp con el pedido en texto
+  const a=document.createElement("a");a.href=$("otImg").src;a.download=currentFolio+".png";a.click();
+  showToast("Imagen descargada. Abriendo WhatsApp…");
+  setTimeout(()=>{window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(text),"_blank");},600);
+};
+</script>
+</body>
+</html>

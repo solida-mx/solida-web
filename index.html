@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Solida Aplicaciones — Presencia digital para tu negocio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root{
+    --navy:#1B396B;
+    --navy-2:#12274a;
+    --navy-3:#0d1e3a;
+    --teal:#2A9D8E;
+    --teal-bright:#34b9a7;
+    --teal-deep:#1f7f73;
+    --mist:#E8F6F6;
+    --gold:#d8a544;
+    --ink:#0f1f38;
+    --ink-soft:#4a5c78;
+    --paper:#f5f9fb;
+    --card:#ffffff;
+    --line:#e2ebf0;
+    --shadow:0 18px 44px rgba(16,39,74,.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Manrope",system-ui,sans-serif;
+    color:var(--ink);background:var(--paper);
+    -webkit-text-size-adjust:100%;line-height:1.55;
+  }
+  h1,h2,h3,.font-display{font-family:"Sora",sans-serif}
+
+  /* ---------- HEADER ---------- */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(27,57,107,.92);backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    padding:11px 16px;display:flex;align-items:center;gap:11px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--navy-3);
+    display:flex;align-items:center;justify-content:center;flex:none;padding:6px}
+  .brand-name{display:flex;flex-direction:column;line-height:1.05;min-width:0}
+  .brand-name b{font-family:"Sora";font-weight:700;color:#fff;font-size:14px;letter-spacing:.2px}
+  .brand-name span{font-size:9.5px;letter-spacing:.22em;color:var(--teal-bright);text-transform:uppercase}
+  .wa-mini{margin-left:auto;flex:none;background:var(--teal);color:#fff;text-decoration:none;
+    font-weight:700;font-size:12.5px;padding:9px 14px;border-radius:999px;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;box-shadow:0 6px 14px rgba(42,157,142,.35)}
+  .wa-mini:active{transform:translateY(1px)}
+
+  /* ---------- HERO ---------- */
+  .hero{position:relative;overflow:hidden;color:#fff;
+    background:radial-gradient(120% 120% at 80% -10%, #244a86 0%, var(--navy) 45%, var(--navy-2) 100%);
+    padding:40px 20px 46px;text-align:center}
+  .hero-bars{position:absolute;inset:0;opacity:.06;pointer-events:none;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;gap:22px}
+  .hero-bars i{display:block;height:26px;border-radius:999px;background:#fff}
+  .hero-inner{position:relative;z-index:1;max-width:560px;margin:0 auto}
+  .hero-logo{width:82px;height:82px;margin:0 auto 20px;display:block}
+  .hero-logo rect{transform-origin:center}
+  .eyebrow-pill{display:inline-block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--mist);border:1px solid rgba(232,246,246,.35);border-radius:999px;
+    padding:6px 14px;margin-bottom:18px;font-weight:600}
+  .hero h1{font-size:clamp(28px,7.6vw,40px);font-weight:800;line-height:1.08;letter-spacing:-.5px}
+  .hero h1 .accent{color:var(--teal-bright)}
+  .hero p.sub{margin-top:14px;font-size:15px;color:#d4e2f2;font-weight:500;max-width:44ch;margin-left:auto;margin-right:auto}
+  .hero-note{margin-top:22px;display:inline-flex;align-items:center;gap:9px;font-size:12.5px;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+    padding:10px 15px;border-radius:12px;color:#eaf3ff;font-weight:600;text-align:left}
+  .hero-note svg{flex:none}
+  .scroll-cue{margin-top:26px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(232,246,246,.7);font-weight:600}
+  .scroll-cue span{display:block;margin-top:6px;animation:bob 1.8s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+
+  /* ---------- STEPS / SECTIONS ---------- */
+  .section{max-width:640px;margin:0 auto;padding:34px 18px 0}
+  .step-label{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .step-num{width:26px;height:26px;border-radius:8px;background:var(--navy);color:#fff;
+    font-family:"Sora";font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none}
+  .step-label h2{font-size:19px;font-weight:700;letter-spacing:-.2px}
+
+  /* ---------- SEGMENT SELECTOR ---------- */
+  .segments{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}
+  .seg-btn{background:var(--card);border:1.5px solid var(--line);border-radius:15px;
+    padding:16px 13px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:10px;
+    transition:border-color .18s,box-shadow .18s,transform .12s;font-family:inherit;color:var(--ink)}
+  .seg-btn:hover{border-color:var(--teal);box-shadow:0 8px 20px rgba(42,157,142,.14)}
+  .seg-btn:active{transform:scale(.985)}
+  .seg-ico{width:40px;height:40px;border-radius:11px;background:var(--mist);color:var(--teal-deep);
+    display:flex;align-items:center;justify-content:center;transition:background .18s,color .18s}
+  .seg-btn .seg-t{font-family:"Sora";font-weight:700;font-size:14.5px;line-height:1.15}
+  .seg-btn .seg-d{font-size:11.5px;color:var(--ink-soft);font-weight:500;line-height:1.35}
+  .seg-btn[aria-pressed="true"]{border-color:var(--teal);background:var(--navy);color:#fff;box-shadow:var(--shadow)}
+  .seg-btn[aria-pressed="true"] .seg-ico{background:var(--teal);color:#fff}
+  .seg-btn[aria-pressed="true"] .seg-d{color:#c6d6ec}
+  .seg-full{grid-column:1 / -1}
+
+  /* ---------- PRICING ---------- */
+  #pricing{scroll-margin-top:70px}
+  .seg-intro{margin-bottom:20px}
+  .seg-intro h3{font-size:21px;font-weight:800;letter-spacing:-.3px}
+  .seg-intro p{margin-top:6px;color:var(--ink-soft);font-size:14px;font-weight:500}
+  .tiers{display:flex;flex-direction:column;gap:16px}
+  .tier{position:relative;background:var(--card);border:1.5px solid var(--line);border-radius:18px;
+    padding:22px 20px;box-shadow:0 6px 18px rgba(16,39,74,.05)}
+  .tier.reco{border-color:var(--teal);box-shadow:var(--shadow)}
+  .ribbon{position:absolute;top:-11px;right:18px;background:var(--gold);color:#3a2a06;
+    font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:5px 11px;border-radius:999px;box-shadow:0 4px 10px rgba(216,165,68,.4)}
+  .tier-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .tier-level{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-deep);font-weight:700}
+  .tier-name{font-family:"Sora";font-weight:700;font-size:18px;margin-top:3px;letter-spacing:-.2px}
+  .rank{display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex:none;padding-top:3px}
+  .rank i{display:block;height:5px;border-radius:999px;background:var(--teal)}
+  .rank i:nth-child(1){width:12px;opacity:.4}
+  .rank i:nth-child(2){width:18px;opacity:.7}
+  .rank i:nth-child(3){width:24px}
+  .rank.lv1 i:nth-child(2),.rank.lv1 i:nth-child(3){opacity:.16}
+  .rank.lv2 i:nth-child(3){opacity:.16}
+  .price{margin:14px 0 4px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .price .amt{font-family:"Sora";font-weight:800;font-size:30px;color:var(--navy);letter-spacing:-.5px}
+  .price .unit{font-size:12.5px;color:var(--ink-soft);font-weight:600}
+  .price .plus{font-size:13px;color:var(--teal-deep);font-weight:700}
+  .feats{list-style:none;margin:16px 0 0;display:flex;flex-direction:column;gap:9px}
+  .feats li{display:flex;gap:9px;font-size:13.5px;color:#2c3d59;font-weight:500;line-height:1.4}
+  .feats li svg{flex:none;margin-top:2px}
+  .tier-cta{margin-top:18px;display:block;width:100%;text-align:center;text-decoration:none;
+    background:var(--navy);color:#fff;font-family:"Sora";font-weight:700;font-size:14px;
+    padding:13px;border-radius:12px;transition:transform .12s,background .18s}
+  .tier.reco .tier-cta{background:var(--teal)}
+  .tier-cta:active{transform:translateY(1px)}
+  .tier-demo{display:block;text-align:center;margin-top:9px;color:var(--teal-deep);font-weight:700;font-size:13px;text-decoration:none;padding:6px}
+  .tier-demo:active{opacity:.6}
+
+  .note{margin-top:18px;background:var(--mist);border-radius:14px;padding:15px 16px;
+    display:flex;gap:11px;align-items:flex-start;font-size:13px;color:#245a52;font-weight:600;line-height:1.45}
+  .note svg{flex:none;margin-top:1px}
+
+  /* ---------- LIVE DEMO QR ---------- */
+  .demo-block{margin-top:20px;background:var(--navy);border-radius:20px;padding:24px 20px;
+    color:#fff;text-align:center;box-shadow:var(--shadow)}
+  .demo-block h4{font-family:"Sora";font-weight:700;font-size:17px}
+  .demo-block p{font-size:13px;color:#c6d6ec;margin-top:6px;font-weight:500;max-width:34ch;margin-left:auto;margin-right:auto}
+  .qr-frame{margin:18px auto 0;width:196px;height:196px;background:#fff;border-radius:16px;
+    padding:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(0,0,0,.28)}
+  .qr-frame canvas{width:100%;height:100%;border-radius:6px;display:block}
+  .qr-pending{font-size:12.5px;color:#8ea6c9;font-weight:600;line-height:1.5;padding:0 8px}
+  .qr-pending code{background:rgba(255,255,255,.1);padding:2px 6px;border-radius:5px;color:#eaf3ff;font-size:11px}
+  .demo-scan{margin-top:14px;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--teal-bright);font-weight:700}
+  .demo-tabs{display:flex;gap:8px;margin:16px 0 2px;justify-content:center;flex-wrap:wrap}
+  .demo-tab{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.28);color:#fff;
+    font-family:inherit;font-weight:700;font-size:13.5px;padding:10px 18px;border-radius:999px;cursor:pointer;transition:all .15s}
+  .demo-tab:active{transform:translateY(1px)}
+  .demo-tab.active{background:var(--teal);border-color:var(--teal);box-shadow:0 6px 14px rgba(42,157,142,.4)}
+
+  /* ---------- FINAL CTA ---------- */
+  .final{margin:40px auto 0;max-width:640px;padding:0 18px}
+  .final-card{background:linear-gradient(135deg,var(--teal-deep),var(--teal));border-radius:22px;
+    padding:30px 24px;text-align:center;color:#fff;box-shadow:0 18px 40px rgba(31,127,115,.4)}
+  .final-card h2{font-size:23px;font-weight:800;letter-spacing:-.3px}
+  .final-card p{margin-top:10px;font-size:14px;color:#e6fbf7;font-weight:500;max-width:38ch;margin-left:auto;margin-right:auto}
+  .final-cta{margin-top:20px;display:inline-flex;align-items:center;gap:9px;background:#fff;color:var(--teal-deep);
+    text-decoration:none;font-family:"Sora";font-weight:800;font-size:16px;padding:15px 28px;border-radius:999px;
+    box-shadow:0 10px 24px rgba(0,0,0,.2)}
+  .final-cta:active{transform:translateY(1px)}
+
+  /* ---------- FOOTER ---------- */
+  footer{margin-top:44px;background:var(--navy-2);color:#fff;padding:30px 20px 36px;text-align:center}
+  footer .brand{justify-content:center;margin-bottom:14px}
+  footer .f-links{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:600}
+  footer .f-links a{color:var(--mist);text-decoration:none}
+  footer .f-tag{margin-top:16px;font-size:11.5px;color:#8ea6c9;letter-spacing:.04em}
+
+  /* ---------- ANIMACIONES ---------- */
+  .tier{transition:transform .18s ease,box-shadow .22s ease,border-color .18s ease}
+  .tier:hover{transform:translateY(-4px);box-shadow:0 20px 44px rgba(16,39,74,.14)}
+  .tier.reco:hover{box-shadow:0 24px 50px rgba(42,157,142,.22)}
+  .anim-in{opacity:0;transform:translateY(18px)}
+  .anim-in.show{opacity:1;transform:none;transition:opacity .5s ease,transform .5s cubic-bezier(.2,.9,.3,1)}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.9,.3,1)}
+  .reveal.on{opacity:1;transform:none}
+  .seg-btn{position:relative;overflow:hidden}
+  .seg-btn::after{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(120px 120px at var(--mx,50%) var(--my,50%),rgba(42,157,142,.14),transparent 70%);opacity:0;transition:opacity .25s;pointer-events:none}
+  .seg-btn:hover::after{opacity:1}
+  .ribbon{animation:pop .45s cubic-bezier(.3,1.6,.4,1) both;animation-delay:.35s}
+  @keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+  .demo-block{transition:transform .2s}
+  .wa-mini{transition:transform .15s,box-shadow .2s}
+  .wa-mini:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(42,157,142,.45)}
+  .final-cta{transition:transform .15s,box-shadow .2s}
+  .final-cta:hover{transform:translateY(-2px);box-shadow:0 16px 32px rgba(0,0,0,.28)}
+
+  @media (min-width:560px){
+    .tiers{gap:18px}
+    .segments{grid-template-columns:repeat(3,1fr)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .hero-logo rect,.scroll-cue span,.ribbon{animation:none!important}
+    .anim-in,.reveal{opacity:1!important;transform:none!important;transition:none!important}
+    .tier:hover,.wa-mini:hover,.final-cta:hover{transform:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
+        <rect x="30" y="18" width="40" height="15" rx="7.5" fill="#2A9D8E"/>
+        <rect x="22" y="42" width="56" height="15" rx="7.5" fill="#E8F6F6"/>
+        <rect x="14" y="66" width="72" height="15" rx="7.5" fill="#2A9D8E"/>
+      </svg>
+    </div>
+    <div class="brand-name">
+      <b>Solida</b><span>Aplicaciones</span>
+    </div>
+  </div>
+  <a class="wa-mini" href="https://wa.me/528443604349" target="_blank" rel="noopener">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 .9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.1.1.3 0 .5-.1.2-.2.3-.3.5l-.4.4c-.1.1-.3.3-.1.5.1.3.6 1 1.3 1.7.9.8 1.6 1 1.9 1.1.2.1.4.1.5-.1.1-.2.6-.7.8-.9.2-.3.3-.2.6-.1.2.1 1.5.7 1.7.9.3.1.4.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
+    WhatsApp
+  </a>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-bars" aria-hidden="true">
+    <i style="width:38%"></i><i style="width:54%"></i><i style="width:70%"></i>
+  </div>
+  <div class="hero-inner">
+    <svg class="hero-logo" viewBox="0 0 100 100" aria-label="Solida Aplicaciones">
+      <rect class="b1" x="30" y="18" width="40" height="15" rx="7.5" fill="#2A9D8E"/>
+      <rect class="b2" x="22" y="42" width="56" height="15" rx="7.5" fill="#E8F6F6"/>
+      <rect class="b3" x="14" y="66" width="72" height="15" rx="7.5" fill="#2A9D8E"/>
+    </svg>
+    <span class="eyebrow-pill">Presencia digital para tu negocio</span>
+    <h1>Tu negocio en línea, tan <span class="accent">sólido</span> como lo que ofreces.</h1>
+    <p class="sub">Menús, catálogos, tarjetas profesionales e invitaciones con enlace y código QR. Fáciles de compartir, listos en días.</p>
+    <div class="hero-note">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34b9a7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Esta misma página es un ejemplo de lo que entregamos.</span>
+    </div>
+    <div class="scroll-cue">Elige tu giro para ver precios<span>&#9660;</span></div>
+  </div>
+</section>
+
+<!-- ============ STEP 1: SEGMENT ============ -->
+<div class="section">
+  <div class="step-label">
+    <div class="step-num">1</div>
+    <h2>¿Cuál es tu giro?</h2>
+  </div>
+  <div class="segments" id="segments"></div>
+</div>
+
+<!-- ============ STEP 2: PRICING ============ -->
+<div class="section" id="pricing">
+  <div class="step-label">
+    <div class="step-num">2</div>
+    <h2>Tus paquetes y precios</h2>
+  </div>
+  <div id="pricing-body"></div>
+</div>
+
+<!-- ============ FINAL CTA ============ -->
+<div class="final">
+  <div class="final-card">
+    <h2>¿Listo para verte en línea?</h2>
+    <p>Cuéntanos de tu negocio y te preparamos una propuesta. Sin compromiso.</p>
+    <a class="final-cta" id="finalCta" href="https://wa.me/528443604349" target="_blank" rel="noopener">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 .9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.1.1.3 0 .5-.1.2-.2.3-.3.5l-.4.4c-.1.1-.3.3-.1.5.1.3.6 1 1.3 1.7.9.8 1.6 1 1.9 1.1.2.1.4.1.5-.1.1-.2.6-.7.8-.9.2-.3.3-.2.6-.1.2.1 1.5.7 1.7.9.3.1.4.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
+      Hablar por WhatsApp
+    </a>
+  </div>
+</div>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
+        <rect x="30" y="18" width="40" height="15" rx="7.5" fill="#2A9D8E"/>
+        <rect x="22" y="42" width="56" height="15" rx="7.5" fill="#E8F6F6"/>
+        <rect x="14" y="66" width="72" height="15" rx="7.5" fill="#2A9D8E"/>
+      </svg>
+    </div>
+    <div class="brand-name"><b>Solida</b><span>Aplicaciones</span></div>
+  </div>
+  <div class="f-links">
+    <a href="https://wa.me/528443604349" target="_blank" rel="noopener">WhatsApp · 844 360 4349</a>
+  </div>
+  <div class="f-tag">Presencia digital para negocios · Coahuila, México</div>
+</footer>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN — pega aquí los enlaces de tus demos publicadas.
+   Deja "" mientras no exista el enlace (mostrará "demo próximamente").
+   ============================================================ */
+const WHATSAPP = "528443604349";
+const prefersReduced = ()=> (window.matchMedia? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false);
+const DEMO_LINKS = {
+  restaurantes:  "https://solidaaplicaciones.com/restaurante",
+  profesionales: "https://solidaaplicaciones.com/profesional",
+  talleres:      "https://solidaaplicaciones.com/taller",
+  nutriologos:   "https://solidaaplicaciones.com/nutriologo",
+  invitaciones:  "https://solidaaplicaciones.com/invitacion",
+  uniformes:     "https://solidaaplicaciones.com/uniformes"
+};
+
+/* ---- Íconos (line icons) ---- */
+const ICONS = {
+  restaurantes:'<path d="M4 19h16"/><path d="M6 19a6 6 0 0 1 12 0"/><path d="M12 9V6"/>',
+  profesionales:'<rect x="3" y="7.5" width="18" height="12.5" rx="2.2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/><path d="M3 12.5h18"/>',
+  talleres:'<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/>',
+  nutriologos:'<path d="M12 8c-1.6-2.8-6-2.4-6 1.6 0 4 3.4 8.4 6 8.4s6-4.4 6-8.4c0-4-4.4-4.4-6-1.6Z"/><path d="M12 8c0-2 1.2-3.6 3.2-4"/>',
+  invitaciones:'<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><path d="m3.5 7 8.5 5.5L20.5 7"/>',
+  uniformes:'<path d="M4 20 15 9"/><path d="M14 6.5 17.5 10"/><circle cx="18.5" cy="5.5" r="2"/><path d="M17.2 6.8 15 9l-1.5-1.5 2.2-2.2"/><path d="m4 20 1.2-3.2L8 19.5 4 20Z"/>'
+};
+
+/* ---- DATOS ---- */
+const SEGMENTS = {
+  restaurantes:{
+    label:"Restaurantes y cafés", short:"Menú digital con QR",
+    intro:"Menú digital con código QR",
+    blurb:"Tus mesas con un QR que abre el menú al instante. Cambia precios y platillos cuando quieras, sin reimprimir nada.",
+    demoName:"tu menú digital",
+    note:"Mantenimiento «Menú al día»: cambios ilimitados de precios y platillos + hosting + soporte. $349/mes o $2,990/año.",
+    tiers:[
+      {level:"Básico",name:"Menú Esencial",amount:"$1,490",unit:"pago único",lv:1,
+       demo:"https://solidaaplicaciones.com/restaurante/basico",
+       feats:["Menú en una página, hasta 30 platillos","Organizado por categorías","Hasta 6 fotos de platillos","Código QR para tus mesas","Botones de WhatsApp y llamar"]},
+      {level:"Intermedio",name:"Menú Pro",amount:"$2,490",unit:"pago único",lv:2,reco:true,
+       demo:"https://solidaaplicaciones.com/restaurante/intermedio",
+       feats:["Todo lo de Esencial","Platillos y fotos ilimitados","Secciones: entradas, fuertes, bebidas, postres","Destacados y promociones del día","Ubicación con mapa y redes","Diseño a tu marca"]},
+      {level:"Premium",name:"Menú Premium",amount:"$3,990",unit:"pago único",lv:3,
+       demo:"https://solidaaplicaciones.com/restaurante/avanzado",
+       feats:["Todo lo de Pro","Pedidos desde la mesa con cuenta en vivo","Comanda enviada directo a cocina por WhatsApp","Forma de pago y número de mesa","Menos errores y meseros más eficientes"]}
+    ]
+  },
+  profesionales:{
+    label:"Profesionales y consultorios", short:"Tarjeta y sitio profesional",
+    intro:"Tarjeta y sitio profesional",
+    blurb:"Ideal para psicólogos, dentistas, abogados, veterinarios o agentes. Todo tu contacto y servicios en un enlace que inspira confianza.",
+    demoName:"tu perfil profesional",
+    note:"Mantenimiento y hosting: $299/mes o $2,490/año. Incluye cambios razonables y soporte por WhatsApp.",
+    tiers:[
+      {level:"Básico",name:"Tarjeta Digital",amount:"$1,290",unit:"pago único",lv:1,
+       feats:["Una pantalla con tu foto o logo","Tus servicios y especialidad","Botones: WhatsApp, llamar, mapa, redes","Código QR para tu tarjeta física"]},
+      {level:"Intermedio",name:"Perfil Profesional",amount:"$2,390",unit:"pago único",lv:2,reco:true,
+       feats:["Todo lo de Tarjeta Digital","Secciones: sobre ti, servicios, testimonios","Botón de agendar cita por WhatsApp","Galería y horarios de atención","Diseño a tu marca"]},
+      {level:"Premium",name:"Sitio Profesional",amount:"$3,890",unit:"pago único",lv:3,
+       feats:["Todo lo de Perfil Profesional","Mini-sitio de varias páginas","Preguntas frecuentes o artículos","Dominio propio incluido (1 año)"]}
+    ]
+  },
+  talleres:{
+    label:"Talleres y servicios", short:"Catálogo + cotización",
+    intro:"Catálogo de servicios + cotización",
+    blurb:"Para talleres, lavanderías, costura, plomería o jardinería. Muestras tus servicios con precios y el cliente cotiza por WhatsApp en un toque.",
+    demoName:"tu catálogo de servicios",
+    note:"Mantenimiento y hosting: $299/mes o $2,490/año. Incluye actualización de servicios y precios.",
+    tiers:[
+      {level:"Básico",name:"Catálogo Express",amount:"$1,390",unit:"pago único",lv:1,
+       feats:["Lista de servicios con precios","Hasta 8 fotos de tus trabajos","Botón de cotizar por WhatsApp","Ubicación, horario y código QR"]},
+      {level:"Intermedio",name:"Catálogo Pro",amount:"$2,390",unit:"pago único",lv:2,reco:true,
+       feats:["Todo lo de Express","Servicios por categorías","Galería «antes / después»","Promociones y testimonios","Cotización con mensaje prellenado"]},
+      {level:"Premium",name:"Servicio Completo",amount:"$3,690",unit:"pago único",lv:3,
+       feats:["Todo lo de Pro","Agenda de citas o pedidos","Varias sucursales","Dominio propio incluido (1 año)"]}
+    ]
+  },
+  nutriologos:{
+    label:"Nutriólogos y coaches", short:"Planes dinámicos",
+    intro:"Planes dinámicos para tus pacientes",
+    blurb:"Entrega dietas y rutinas que se sienten como una app: mandado con equivalencias, entrenamiento con progresión automática y seguimiento de peso. Tu marca, tu herramienta.",
+    demoName:"un plan dinámico de ejemplo",
+    note:"La mensualidad mantiene tu herramienta activa, con soporte y respaldos. Es tu presencia digital que trabaja contigo cada semana.",
+    tiers:[
+      {level:"Básico",name:"Plan Digital",amount:"$2,490",unit:"inicio",plus:"+ $399/mes",lv:1,
+       demo:"https://solidaaplicaciones.com/nutriologo/basico",
+       feats:["Plan diario interactivo con tu marca","Comidas con horarios, porciones y registro","Sustituciones rápidas por alimento","Registro de vasos de agua","La entregas por enlace a cada paciente"]},
+      {level:"Intermedio",name:"Práctica Pro",amount:"$3,990",unit:"inicio",plus:"+ $599/mes",lv:2,reco:true,
+       demo:"https://solidaaplicaciones.com/nutriologo/intermedio",
+       feats:["Todo lo de Plan Digital","Macros del plan: kcal, proteína, carbos y grasas","Mandado semanal con cantidades exactas","Equivalencias por alimento con cantidad ajustada","Preparación semanal (meal prep) paso a paso"]},
+      {level:"Premium",name:"Coach Total",amount:"$5,990",unit:"inicio",plus:"+ $899/mes",lv:3,
+       demo:"https://solidaaplicaciones.com/nutriologo/avanzado",
+       feats:["Todo lo de Práctica Pro","Cambias un alimento en el mandado y la dieta se ajusta sola","Rutina del día con pesos sugeridos y doble progreso","Ciclo 3+1 automático con aviso de semana de descarga","Presupuesto semanal de antojos con semáforo","Registro de peso con gráfica, guardado en el dispositivo"]}
+    ]
+  },
+  invitaciones:{
+    label:"Invitaciones de evento", short:"Bodas, XV, cumpleaños…",
+    intro:"Invitaciones digitales de evento",
+    blurb:"Bodas, XV años, bautizos, cumpleaños o eventos de empresa. Cuenta regresiva, ubicación, confirmación y galería que se comparten solas.",
+    demoName:"una invitación de ejemplo",
+    note:"Enlace activo hasta 1 mes después del evento. ¿Lo quieres de recuerdo? Extensión de 1 año por +$290.",
+    tiers:[
+      {level:"Básico",name:"Esencial",amount:"$690",unit:"por evento",lv:1,
+       feats:["Una pantalla con cuenta regresiva","Textos, colores y hasta 3 fotos","Botón de ubicación con mapa","Enlace para compartir + código QR"]},
+      {level:"Intermedio",name:"Pro",amount:"$1,290",unit:"por evento",lv:2,reco:true,
+       feats:["Todo lo de Esencial","Confirmación de asistencia por WhatsApp","Galería, música y varias secciones","Itinerario, código de vestimenta, mesa de regalos","Animaciones de entrada"]},
+      {level:"Premium",name:"Deluxe",amount:"$2,290",unit:"por evento",lv:3,
+       feats:["Diseño 100% a medida y temática única","Ilustraciones o detalles personalizados","QR diseñado para imprimir","Hasta 2 rondas de cambios"]}
+    ]
+  },
+  uniformes:{
+    label:"Uniformes y bordados", short:"Configurador de pedidos",
+    intro:"Configurador de uniformes con orden automática",
+    blurb:"Tus clientes arman su uniforme (prenda, color, tela, bordado, logo y tallas), reciben un estimado al instante y te envían la orden de trabajo lista por WhatsApp. Menos malentendidos, más ventas cerradas.",
+    demoName:"el configurador de uniformes",
+    note:"Mantenimiento y hosting: $399/mes o $3,490/año. Incluye ajuste de catálogo, prendas y precios.",
+    tiers:[
+      {level:"Básico",name:"Catálogo Digital",amount:"$1,690",unit:"pago único",lv:1,
+       demo:"https://solidaaplicaciones.com/uniformes/basico",
+       feats:["Catálogo de prendas, colores y telas","Técnicas de decorado y precios de referencia","Botón de cotizar por WhatsApp","Código QR para tu negocio"]},
+      {level:"Intermedio",name:"Cotizador",amount:"$2,990",unit:"pago único",lv:2,reco:true,
+       demo:"https://solidaaplicaciones.com/uniformes/intermedio",
+       feats:["Todo lo de Catálogo","El cliente elige prendas y cantidades","Estimado de precio al instante","Cotización enviada por WhatsApp"]},
+      {level:"Premium",name:"Configurador con OT",amount:"$5,900",unit:"pago único",lv:3,
+       demo:"https://solidaaplicaciones.com/uniformes/avanzado",
+       feats:["Configura color, tela, bordado, logo y tallas","Vista previa de la prenda con el logo puesto","Orden de trabajo en imagen a tu WhatsApp","Diseño a tu marca"]}
+    ]
+  }
+};
+
+/* ---- Helpers ---- */
+const CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2A9D8E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>';
+const waLink = (txt)=>`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(txt)}`;
+
+/* ---- Render segment buttons ---- */
+const segWrap = document.getElementById('segments');
+Object.entries(SEGMENTS).forEach(([key,s],i)=>{
+  const b=document.createElement('button');
+  b.className='seg-btn';
+  b.setAttribute('aria-pressed','false');
+  b.dataset.key=key;
+  b.innerHTML=`<span class="seg-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[key]}</svg></span>
+    <span class="seg-t">${s.label}</span><span class="seg-d">${s.short}</span>`;
+  b.addEventListener('click',()=>selectSegment(key));
+  segWrap.appendChild(b);
+});
+
+/* ---- Render pricing ---- */
+const body=document.getElementById('pricing-body');
+const finalCta=document.getElementById('finalCta');
+
+function selectSegment(key){
+  document.querySelectorAll('.seg-btn').forEach(b=>b.setAttribute('aria-pressed', b.dataset.key===key?'true':'false'));
+  const s=SEGMENTS[key];
+  let tiersHtml=s.tiers.map(t=>`
+    <div class="tier${t.reco?' reco':''}">
+      ${t.reco?'<span class="ribbon">Más elegido</span>':''}
+      <div class="tier-top">
+        <div><div class="tier-level">${t.level}</div><div class="tier-name">${t.name}</div></div>
+        <div class="rank lv${t.lv}"><i></i><i></i><i></i></div>
+      </div>
+      <div class="price"><span class="amt">${t.amount}</span><span class="unit">${t.unit}</span>${t.plus?`<span class="plus">${t.plus}</span>`:''}</div>
+      <ul class="feats">${t.feats.map(f=>`<li>${CHECK}<span>${f}</span></li>`).join('')}</ul>
+      <a class="tier-cta" target="_blank" rel="noopener" href="${waLink(`Hola Solida Aplicaciones 👋 Me interesa el paquete "${t.name}" (${s.label}). ¿Me dan más información?`)}">Me interesa este</a>
+    </div>`).join('');
+
+  const demoTabLabel=(url)=>{const seg=url.split('/').filter(Boolean).pop();
+    return ({basico:'Básico',intermedio:'Intermedio',avanzado:'Avanzado'})[seg]||'Ver ejemplo';};
+  const demoOpts = s.tiers.some(t=>t.demo)
+    ? s.tiers.filter(t=>t.demo).map(t=>({label:demoTabLabel(t.demo),url:t.demo}))
+    : (DEMO_LINKS[key]?[{label:'Ver ejemplo',url:DEMO_LINKS[key]}]:[]);
+  const demoHtml = demoOpts.length ? `
+    <div class="demo-block">
+      <h4>Mira un ejemplo real</h4>
+      <p>Elige una versión y escanea el código con la cámara de tu celular.</p>
+      <div class="demo-tabs" id="demoTabs">${demoOpts.map(o=>`<button class="demo-tab" data-url="${o.url}">${o.label}</button>`).join('')}</div>
+      <div class="qr-frame" id="qrFrame"><div class="qr-pending">Explora el paquete de tu interés ▸</div></div>
+      <div class="demo-scan" id="demoScan" style="visibility:hidden">▸ escanéalo con tu cámara ◂</div>
+    </div>` : '';
+
+  body.innerHTML=`
+    <div class="seg-intro"><h3>${s.intro}</h3><p>${s.blurb}</p></div>
+    <div class="tiers">${tiersHtml}</div>
+    <div class="note">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2A9D8E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <span>${s.note}</span>
+    </div>
+    ${demoHtml}`;
+
+  finalCta.href=waLink(`Hola Solida Aplicaciones 👋 Me interesa el servicio para ${s.label}. ¿Me pueden ayudar?`);
+
+  const tabs=document.getElementById('demoTabs');
+  if(tabs){
+    tabs.querySelectorAll('.demo-tab').forEach(btn=>btn.onclick=()=>{
+      tabs.querySelectorAll('.demo-tab').forEach(b=>b.classList.toggle('active',b===btn));
+      document.getElementById('qrFrame').innerHTML='<canvas id="qrCanvas"></canvas>';
+      drawBrandedQR(btn.dataset.url);
+      const sc=document.getElementById('demoScan'); if(sc) sc.style.visibility='visible';
+    });
+  }
+  // Entrada escalonada de las cards
+  const rm=prefersReduced();
+  if(!rm){
+    const cards=body.querySelectorAll('.seg-intro,.tier,.note,.demo-block');
+    cards.forEach(el=>el.classList.add('anim-in'));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      cards.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),70*i));
+    }));
+  }
+  document.getElementById('pricing').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---- Reveals al hacer scroll (secciones estáticas) ---- */
+(function(){
+  const rm=prefersReduced();
+  const els=[...document.querySelectorAll('.section .step-label,.seg-btn,.final-card,footer .brand')];
+  if(rm||!('IntersectionObserver' in window)){els.forEach(e=>e.classList.add('on'));return;}
+  els.forEach(e=>e.classList.add('reveal'));
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{if(en.isIntersecting){en.target.classList.add('on');io.unobserve(en.target);}});
+  },{threshold:.15});
+  els.forEach((e,i)=>{e.style.transitionDelay=(i%6)*0.05+'s';io.observe(e);});
+})();
+
+/* ---- Glow que sigue al cursor en los botones de giro ---- */
+document.querySelectorAll('.seg-btn').forEach(b=>{
+  b.addEventListener('pointermove',e=>{
+    const r=b.getBoundingClientRect();
+    b.style.setProperty('--mx',(e.clientX-r.left)+'px');
+    b.style.setProperty('--my',(e.clientY-r.top)+'px');
+  });
+});
+
+/* ---- QR en vivo con logo de la marca ---- */
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+function drawBrandedQR(text){
+  const canvas=document.getElementById('qrCanvas');
+  if(!canvas) return;
+  if(typeof qrcode==='undefined'){
+    const f=document.getElementById('qrFrame');
+    if(f) f.innerHTML='<div class="qr-pending">No se pudo generar el QR sin conexión.<br>Enlace:<br><code>'+text+'</code></div>';
+    return;
+  }
+  const qr=qrcode(0,'H');qr.addData(text);qr.make();
+  const n=qr.getModuleCount();
+  const scale=12,margin=4;
+  const off=margin*scale;
+  const size=(n+margin*2)*scale;
+  canvas.width=size;canvas.height=size;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,size,size);
+  ctx.fillStyle='#1B396B';
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+    if(qr.isDark(r,c)) ctx.fillRect(off+c*scale,off+r*scale,scale,scale);
+  }
+  // Logo al centro
+  const L=Math.round(size*0.22), lx=(size-L)/2, ly=(size-L)/2;
+  ctx.fillStyle='#ffffff';roundRect(ctx,lx-8,ly-8,L+16,L+16,14);ctx.fill();
+  ctx.fillStyle='#1B396B';roundRect(ctx,lx,ly,L,L,12);ctx.fill();
+  const bh=L*0.15, gap=L*0.12, bx=lx+L*0.5;
+  const bars=[[0.40,'#2A9D8E',ly+L*0.24],[0.56,'#E8F6F6',ly+L*0.24+bh+gap],[0.72,'#2A9D8E',ly+L*0.24+2*(bh+gap)]];
+  bars.forEach(([w,col,y])=>{const bw=L*w;ctx.fillStyle=col;roundRect(ctx,bx-bw/2,y,bw,bh,bh/2);ctx.fill();});
+}
+
+/* ---- Animación de entrada del logo del hero ---- */
+if(!prefersReduced()){
+  document.querySelectorAll('.hero-logo rect').forEach((r,i)=>{
+    r.style.opacity='0';r.style.transform='translateX(-14px)';
+    r.style.transition='opacity .5s ease, transform .5s cubic-bezier(.2,1.2,.4,1)';
+    setTimeout(()=>{r.style.opacity='1';r.style.transform='none';},180+i*140);
+  });
+}
+
+/* Arranque: sin selección, invitamos a elegir */
+</script>
+</body>
+</html>
