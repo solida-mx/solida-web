@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>La Central Studio · Barbería y Salón</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--coal:#17151a;--coal-2:#211e26;--copper:#c98246;--copper-2:#e09a5c;--rose:#d8a7a0;--bone:#f6f1ea;--ink:#211d24;--muted:#7c7480;--line:#e6ded3;--card:#ffffff;--wa:#25d366;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Inter",sans-serif;color:var(--ink);background:var(--bone);line-height:1.55;-webkit-text-size-adjust:100%}
+  h1,h2,h3{font-family:"Playfair Display",serif;font-weight:600}
+
+  header{position:sticky;top:0;z-index:40;background:rgba(23,21,26,.97);backdrop-filter:blur(8px);color:var(--bone);padding:12px 16px;display:flex;align-items:center;gap:10px}
+  .brand{font-family:"Playfair Display",serif;font-size:16px}
+  .brand small{display:block;font-family:"Inter";font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:var(--copper-2)}
+  .status{margin-left:auto;font-size:11px;font-weight:700;padding:6px 11px;border-radius:999px;display:flex;align-items:center;gap:6px}
+  .status.open{background:rgba(37,211,102,.14);color:#7ce6a5}
+  .status.closed{background:rgba(224,90,90,.14);color:#f0a1a1}
+  .status i{width:7px;height:7px;border-radius:50%;background:currentColor;font-style:normal}
+  .hcta{background:var(--copper);color:#231407;text-decoration:none;font-weight:700;font-size:12.5px;padding:8px 13px;border-radius:999px}
+
+  .hero{background:linear-gradient(170deg,var(--coal-2),var(--coal));color:var(--bone);padding:38px 20px 62px;text-align:center;position:relative;overflow:hidden}
+  .pole{position:absolute;left:16px;top:20px;bottom:20px;width:8px;border-radius:6px;opacity:.45;background:repeating-linear-gradient(-45deg,#c0392b 0 9px,#fff 9px 18px,#2e5fa3 18px 27px,#fff 27px 36px)}
+  .kick{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--copper-2);font-weight:600}
+  .hero h1{font-size:clamp(32px,10vw,46px);margin:8px 0 6px}
+  .hero h1 i{color:var(--copper-2)}
+  .hero p{font-size:14px;color:#d8d2dc;max-width:38ch;margin:0 auto}
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px 40px}
+  .cta{display:flex;gap:10px;margin:-28px 0 24px;position:relative;z-index:2}
+  .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:13px;font-weight:700;font-size:13.5px;text-decoration:none}
+  .btn-wa{background:var(--wa);color:#0a3d1e;box-shadow:0 8px 20px rgba(37,211,102,.3)}
+  .btn-map{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+  .btn:active{transform:translateY(1px)}
+
+  .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--copper);font-weight:700;margin:26px 0 4px}
+  h2.tt{font-size:24px;margin-bottom:14px}
+
+  .promo{background:linear-gradient(140deg,var(--copper),#a5662f);color:#fff;border-radius:18px;padding:18px 20px;display:flex;gap:14px;align-items:center;box-shadow:0 14px 34px rgba(201,130,70,.3)}
+  .promo .e{font-size:30px}
+  .promo b{font-family:"Playfair Display",serif;font-size:17px;display:block}
+  .promo span{font-size:12.5px;color:#ffe9d4}
+
+  .team{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .tm{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px;text-align:center}
+  .tm .av{width:64px;height:64px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-family:"Playfair Display",serif;font-size:22px;color:#fff}
+  .tm b{font-size:14.5px;display:block}
+  .tm span{font-size:11.5px;color:var(--muted)}
+  .tm .sp{display:inline-block;margin-top:8px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--copper);background:#f9efe4;border-radius:999px;padding:4px 10px}
+
+  .menu{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:6px 18px}
+  .menu h3{font-size:16px;color:var(--copper);padding:14px 0 4px;border-bottom:1px solid var(--line)}
+  .it{display:flex;align-items:baseline;gap:8px;padding:11px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .it:last-child{border-bottom:none}
+  .it b{font-weight:600}
+  .it small{display:block;font-size:11.5px;color:var(--muted);font-weight:400}
+  .dots{flex:1;border-bottom:1.5px dotted var(--line);transform:translateY(-3px)}
+  .it .p{font-family:"Playfair Display",serif;font-weight:700;white-space:nowrap}
+
+  .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .ph{aspect-ratio:1;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff}
+  .g1{background:linear-gradient(140deg,#2b2731,#17151a)}.g2{background:linear-gradient(140deg,#c98246,#8f5426)}
+  .g3{background:linear-gradient(140deg,#d8a7a0,#a86e66)}.g4{background:linear-gradient(140deg,#3b3542,#211e26)}
+  .g5{background:linear-gradient(140deg,#8f5426,#5c3312)}.g6{background:linear-gradient(140deg,#6d5a63,#453842)}
+
+  .testi{background:var(--card);border-left:3px solid var(--copper);border-radius:0 14px 14px 0;padding:15px 17px;margin-bottom:11px}
+  .testi .st{color:var(--copper);letter-spacing:2px;font-size:13px}
+  .testi p{font-size:13.5px;color:#453e4a;margin-top:5px}
+  .testi .who{margin-top:7px;font-size:11.5px;color:var(--muted);font-weight:600}
+
+  .info{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px;margin-top:8px}
+  .inforow{display:flex;gap:11px;padding:8px 0;font-size:13.5px;align-items:flex-start}
+  .inforow svg{flex:none;margin-top:2px;color:var(--copper)}
+  .socials{display:flex;gap:12px;justify-content:center;margin-top:16px}
+  .socials a{color:var(--copper);font-weight:700;font-size:12.5px;text-decoration:none;border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:8px 16px}
+
+  .made{background:var(--coal);color:#c9c2ce;text-align:center;padding:26px 20px 30px;margin-top:32px}
+  .made b{font-family:"Playfair Display",serif;color:#fff;display:block;margin-bottom:6px;font-size:15px}
+  .made p{font-size:12.5px;max-width:34ch;margin:0 auto 12px}
+  .made a{display:inline-block;background:var(--copper);color:#231407;text-decoration:none;font-weight:700;font-size:13px;padding:11px 20px;border-radius:999px}
+  .made .hint{margin-top:14px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6d6572}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">La Central Studio<small>Barbería · Salón</small></div>
+  <div class="status" id="status"><i></i><span id="statusTxt">…</span></div>
+  <a class="hcta" id="hwa">Cita</a>
+</header>
+
+<section class="hero">
+  <div class="pole"></div>
+  <div class="kick">Barbería · Salón de belleza · Saltillo</div>
+  <h1>La Central <i>Studio</i></h1>
+  <p>Cortes con carácter, color con técnica y un café mientras esperas.</p>
+</section>
+
+<div class="wrap">
+  <div class="cta">
+    <a class="btn btn-wa" id="wa">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5-1.3A10 10 0 1 0 12 2Z"/></svg>
+      Agendar cita
+    </a>
+    <a class="btn btn-map" href="https://maps.google.com/?q=La+Central+Studio+Saltillo" target="_blank" rel="noopener">📍 Cómo llegar</a>
+  </div>
+
+  <div class="promo"><div class="e">🔥</div><div><b>Martes y miércoles: corte + barba $230</b><span>Promoción válida de 10:00 a 14:00 · menciona la promo al agendar.</span></div></div>
+
+  <div class="eyebrow">Nuestro equipo</div>
+  <h2 class="tt">Elige a tu barbero o estilista</h2>
+  <div class="team" id="team"></div>
+
+  <div class="eyebrow">La carta</div>
+  <h2 class="tt">Servicios y precios</h2>
+  <div class="menu" id="menu"></div>
+
+  <div class="eyebrow">Trabajos recientes</div>
+  <h2 class="tt">Galería</h2>
+  <div class="gal">
+    <div class="ph g1">💈</div><div class="ph g2">✂️</div><div class="ph g3">💇‍♀️</div>
+    <div class="ph g4">🧔</div><div class="ph g5">🎨</div><div class="ph g6">✨</div>
+  </div>
+
+  <div class="eyebrow">Clientes felices</div>
+  <h2 class="tt">Testimonios</h2>
+  <div class="testi"><div class="st">★★★★★</div><p>“El mejor fade que me han hecho en Saltillo. Ambiente relajado y puntualidad total.”</p><div class="who">— Carlos M.</div></div>
+  <div class="testi"><div class="st">★★★★★</div><p>“Me hicieron el balayage exacto de la foto que llevé. Cuidaron muchísimo mi cabello.”</p><div class="who">— Fernanda R.</div></div>
+
+  <div class="eyebrow">Visítanos</div>
+  <div class="info">
+    <div class="inforow"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><div><b>Dirección</b><br>Calle Victoria 340, Centro, Saltillo, Coah.</div></div>
+    <div class="inforow"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><b>Horario</b><br>Mar a Sáb 10:00–20:00 · Dom 10:00–15:00 · Lun cerrado</div></div>
+  </div>
+  <div class="socials"><a href="#">Instagram</a><a href="#">Facebook</a><a href="#">TikTok</a></div>
+</div>
+
+<div class="made">
+  <b>Página por Solida Aplicaciones</b>
+  <p>Demostración. Tu estudio con equipo, galería, promociones y citas por WhatsApp.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20demo%20Estudio%20Pro%20de%20barber%C3%ADa%20y%20quiero%20una%20p%C3%A1gina%20as%C3%AD.">Quiero una página así</a>
+  <div class="hint">▸ Paquete Intermedio · Estudio Pro ◂</div>
+</div>
+
+<script>
+const WA="528443604349";
+const msg=encodeURIComponent("Hola, quiero agendar una cita en La Central Studio 💈");
+["wa","hwa"].forEach(id=>document.getElementById(id).href="https://wa.me/"+WA+"?text="+msg);
+
+/* abierto / cerrado en vivo: Mar-Sáb 10-20, Dom 10-15, Lun cerrado */
+(function(){
+  const d=new Date(), day=d.getDay(), h=d.getHours();
+  let open=false;
+  if(day>=2&&day<=6) open=h>=10&&h<20;
+  else if(day===0) open=h>=10&&h<15;
+  const el=document.getElementById('status');
+  el.classList.add(open?'open':'closed');
+  document.getElementById('statusTxt').textContent=open?'Abierto ahora':'Cerrado';
+})();
+
+const TEAM=[
+  {n:"Marco",r:"Barbero senior",s:"Fades y navaja",c:"linear-gradient(140deg,#c98246,#8f5426)",i:"M"},
+  {n:"Regina",r:"Estilista master",s:"Color y balayage",c:"linear-gradient(140deg,#d8a7a0,#a86e66)",i:"R"},
+  {n:"Iván",r:"Barbero",s:"Diseños y barba",c:"linear-gradient(140deg,#3b3542,#17151a)",i:"I"},
+  {n:"Paola",r:"Estilista",s:"Cortes y peinados",c:"linear-gradient(140deg,#8d7a94,#5c4f63)",i:"P"}
+];
+document.getElementById('team').innerHTML=TEAM.map(t=>`<div class="tm">
+  <div class="av" style="background:${t.c}">${t.i}</div>
+  <b>${t.n}</b><span>${t.r}</span><div><span class="sp">${t.s}</span></div></div>`).join('');
+
+const MENU=[
+  {c:"Barbería",items:[
+    {n:"Corte clásico",d:"Tijera y máquina, acabado con navaja",p:"$180"},
+    {n:"Corte + barba",d:"Ritual con toalla caliente",p:"$280"},
+    {n:"Afeitado tradicional",d:"Navaja, toalla caliente y aftershave",p:"$160"},
+    {n:"Diseño / freestyle",d:"Líneas y figuras",p:"desde $220"}]},
+  {c:"Salón",items:[
+    {n:"Corte de dama",d:"Lavado, corte y secado",p:"$250"},
+    {n:"Color completo",d:"Tinte de línea profesional",p:"desde $650"},
+    {n:"Balayage / mechas",d:"Con diagnóstico previo",p:"desde $1,200"},
+    {n:"Peinado / ondas",d:"Para evento o del diario",p:"desde $300"}]},
+  {c:"Extras",items:[
+    {n:"Cejas",d:"Perfilado con navaja o cera",p:"$80"},
+    {n:"Tratamiento capilar",d:"Hidratación profunda",p:"$380"}]}
+];
+document.getElementById('menu').innerHTML=MENU.map(g=>`<h3>${g.c}</h3>`+g.items.map(i=>`
+  <div class="it"><div><b>${i.n}</b><small>${i.d}</small></div><span class="dots"></span><span class="p">${i.p}</span></div>`).join('')).join('');
+</script>
+</body>
+</html>

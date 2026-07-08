@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mtra. Ana Sofía Rivera · Sitio Profesional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--deep:#22423d;--sage:#5c8073;--sage-soft:#a9c4b8;--mint:#eef4f0;--mint-2:#e2ede7;--cream:#f7f5ef;--ink:#243330;--muted:#697a75;--line:#e0e8e2;--card:#ffffff;--warm:#c98a5e;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Inter",sans-serif;color:var(--ink);background:var(--cream);line-height:1.6;-webkit-text-size-adjust:100%}
+  h1,h2,h3,.disp{font-family:"Newsreader",serif;font-weight:500}
+
+  header{position:sticky;top:0;z-index:40;background:rgba(34,66,61,.97);backdrop-filter:blur(8px);color:var(--mint)}
+  .hrow{padding:12px 18px;display:flex;align-items:center;gap:10px}
+  .brand{font-family:"Newsreader",serif;font-size:16px}
+  .brand small{display:block;font-family:"Inter";font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--sage-soft)}
+  .dom{margin-left:auto;font-size:10.5px;letter-spacing:.08em;color:var(--sage-soft);border:1px solid rgba(169,196,184,.4);border-radius:999px;padding:5px 10px;white-space:nowrap}
+  nav{display:flex;gap:4px;overflow-x:auto;padding:0 12px 10px;-webkit-overflow-scrolling:touch}
+  nav::-webkit-scrollbar{display:none}
+  nav button{flex:none;background:transparent;border:1px solid rgba(238,244,240,.25);color:var(--mint);font-family:inherit;font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:999px;cursor:pointer}
+  nav button.on{background:var(--sage);border-color:var(--sage);color:#fff}
+
+  .page{display:none;max-width:600px;margin:0 auto;padding:26px 18px 10px;animation:in .3s ease}
+  .page.on{display:block}
+  @keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .hero-mini{background:linear-gradient(180deg,var(--deep),#1a332f);color:var(--mint);border-radius:22px;padding:30px 22px;text-align:center;position:relative;overflow:hidden}
+  .breathe{position:absolute;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(169,196,184,.18),transparent 70%);top:-70px;left:50%;transform:translateX(-50%);animation:breathe 7s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.15)}}
+  .hm-in{position:relative}
+  .avatar{width:88px;height:88px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(140deg,var(--sage),var(--sage-soft));display:flex;align-items:center;justify-content:center;font-family:"Newsreader",serif;font-size:32px;color:#fff;border:3px solid rgba(255,255,255,.25)}
+  .hero-mini h1{font-size:26px}
+  .hero-mini .spec{font-style:italic;font-family:"Newsreader",serif;color:#d9e6df;font-size:16px}
+  .hero-mini p{font-size:13.5px;color:#cfe0d8;max-width:38ch;margin:12px auto 0}
+
+  .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--sage);font-weight:700;margin:22px 0 8px}
+  h2.title{font-size:24px;margin-bottom:12px}
+  .about{font-size:14.5px;color:#3c4d49}
+  .about .lead{font-family:"Newsreader",serif;font-style:italic;font-size:18px;color:var(--deep);display:block;margin-bottom:10px}
+
+  .svc{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px}
+  .svc-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .svc h3{font-size:17px;font-family:"Inter";font-weight:600}
+  .svc .len{font-size:12px;color:var(--sage);font-weight:600;white-space:nowrap}
+  .svc p{font-size:13px;color:var(--muted);margin-top:4px}
+  .svc .agendar{display:inline-block;margin-top:10px;font-size:13px;font-weight:700;color:var(--sage);text-decoration:none}
+
+  .faq{background:var(--card);border:1.5px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
+  .faq summary{list-style:none;cursor:pointer;padding:15px 16px;font-weight:600;font-size:14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";font-family:"Newsreader",serif;font-size:22px;color:var(--sage);line-height:1}
+  .faq[open] summary::after{content:"–"}
+  .faq .a{padding:0 16px 15px;font-size:13.5px;color:var(--muted)}
+
+  .art{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px;display:block;text-decoration:none;color:inherit}
+  .art .tag{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--warm);font-weight:700}
+  .art h3{font-size:17px;margin:4px 0 6px}
+  .art p{font-size:13px;color:var(--muted)}
+  .art .more{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--sage)}
+
+  .form{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:20px;margin-top:6px}
+  .form label{display:block;font-size:12.5px;font-weight:600;margin:12px 0 5px;color:var(--deep)}
+  .form input,.form select,.form textarea{width:100%;font-family:inherit;font-size:14px;padding:11px 12px;border:1.5px solid var(--line);border-radius:11px;background:var(--cream);color:var(--ink)}
+  .form textarea{min-height:70px;resize:vertical}
+  .send{margin-top:16px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--sage);color:#fff;border:none;font-family:inherit;font-weight:700;font-size:14.5px;padding:14px;border-radius:13px;cursor:pointer;box-shadow:0 8px 22px rgba(92,128,115,.3)}
+  .send:active{transform:translateY(1px)}
+  .info{background:var(--mint);border-radius:14px;padding:14px 16px;margin-top:14px;font-size:13px;color:#3c4d49}
+  .info b{display:block;color:var(--deep)}
+
+  .made{background:var(--deep);color:var(--mint);text-align:center;padding:28px 20px 32px;margin-top:34px}
+  .made .disp{font-size:15px;color:#fff;margin-bottom:6px}
+  .made p{font-size:13px;color:#c3d6cf;max-width:34ch;margin:0 auto 14px}
+  .made a{display:inline-flex;align-items:center;gap:8px;background:var(--sage);color:#fff;text-decoration:none;font-weight:600;font-size:13.5px;padding:11px 20px;border-radius:999px}
+  .made .demo-hint{margin-top:16px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5f7a72}
+  @media (prefers-reduced-motion:reduce){.breathe{animation:none}.page{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <div class="brand">Ana Sofía Rivera<small>Psicóloga clínica</small></div>
+    <div class="dom">anasofiarivera.mx</div>
+  </div>
+  <nav id="nav">
+    <button data-p="inicio" class="on">Inicio</button>
+    <button data-p="servicios">Servicios</button>
+    <button data-p="faq">Preguntas</button>
+    <button data-p="articulos">Artículos</button>
+    <button data-p="agendar">Agendar</button>
+  </nav>
+</header>
+
+<!-- INICIO -->
+<div class="page on" id="p-inicio">
+  <div class="hero-mini">
+    <div class="breathe"></div>
+    <div class="hm-in">
+      <div class="avatar">AR</div>
+      <h1>Mtra. Ana Sofía Rivera</h1>
+      <div class="spec">Terapia cognitivo-conductual</div>
+      <p>Un espacio seguro para entenderte, sanar y volver a sentirte en calma. A tu ritmo.</p>
+    </div>
+  </div>
+  <div class="eyebrow">Sobre mí</div>
+  <div class="about">
+    <span class="lead">Acompaño a personas adultas a atravesar la ansiedad, el duelo y las etapas difíciles de la vida.</span>
+    Con más de 8 años de experiencia clínica, mi enfoque combina la terapia cognitivo-conductual con un trato cálido y sin juicios. Este sitio reúne todo lo que necesitas: mis servicios, respuestas a tus dudas y una agenda directa.
+  </div>
+  <div class="info" style="margin-top:18px"><b>Consultorio</b>Torre Médica Saltillo · Piso 4, Consultorio 402<br>Lun a Vie 9:00–19:00 · Sáb 9:00–13:00</div>
+</div>
+
+<!-- SERVICIOS -->
+<div class="page" id="p-servicios">
+  <div class="eyebrow">En qué te acompaño</div>
+  <h2 class="title">Servicios</h2>
+  <div id="svcList"></div>
+</div>
+
+<!-- FAQ -->
+<div class="page" id="p-faq">
+  <div class="eyebrow">Antes de tu primera cita</div>
+  <h2 class="title">Preguntas frecuentes</h2>
+  <details class="faq"><summary>¿Cómo sé si necesito terapia?</summary><div class="a">Si algo te pesa desde hace semanas —ansiedad, tristeza, una pérdida, decisiones que no avanzan— la terapia te da herramientas y un espacio para procesarlo. No necesitas estar «muy mal» para empezar.</div></details>
+  <details class="faq"><summary>¿Cuánto dura un proceso terapéutico?</summary><div class="a">Depende de tu objetivo. Algunos procesos breves toman 8 a 12 sesiones; otros temas requieren acompañamiento más largo. En la primera sesión definimos juntos un plan realista.</div></details>
+  <details class="faq"><summary>¿Las sesiones en línea funcionan igual?</summary><div class="a">Sí. Uso videollamada segura y la evidencia muestra resultados equivalentes al formato presencial para la mayoría de los casos. Solo necesitas un espacio privado y audífonos.</div></details>
+  <details class="faq"><summary>¿Qué pasa si necesito cancelar?</summary><div class="a">Puedes reagendar sin costo avisando con 24 horas de anticipación por WhatsApp.</div></details>
+  <details class="faq"><summary>¿Todo lo que hablemos es confidencial?</summary><div class="a">Sí. La confidencialidad está protegida por la ética profesional, con las excepciones que la ley marca (riesgo grave para ti o para terceros), lo cual te explico en la primera sesión.</div></details>
+</div>
+
+<!-- ARTICULOS -->
+<div class="page" id="p-articulos">
+  <div class="eyebrow">Para leer con calma</div>
+  <h2 class="title">Artículos</h2>
+  <a class="art" href="#" onclick="return false">
+    <div class="tag">Ansiedad</div>
+    <h3>3 señales de que la ansiedad está tomando el control</h3>
+    <p>Dormir mal, evitar lugares, el nudo en el estómago constante… aprende a reconocer cuándo pedir apoyo hace la diferencia.</p>
+    <span class="more">Leer artículo ▸</span>
+  </a>
+  <a class="art" href="#" onclick="return false">
+    <div class="tag">Duelo</div>
+    <h3>El duelo no tiene calendario</h3>
+    <p>Por qué «ya deberías estar bien» es un mito, y cómo transitar la pérdida a tu propio ritmo sin culpa.</p>
+    <span class="more">Leer artículo ▸</span>
+  </a>
+  <a class="art" href="#" onclick="return false">
+    <div class="tag">Pareja</div>
+    <h3>Discutir no es el problema: es cómo discutimos</h3>
+    <p>Los 4 patrones de comunicación que más dañan una relación y qué hacer distinto desde hoy.</p>
+    <span class="more">Leer artículo ▸</span>
+  </a>
+</div>
+
+<!-- AGENDAR -->
+<div class="page" id="p-agendar">
+  <div class="eyebrow">Da el primer paso</div>
+  <h2 class="title">Agendar una cita</h2>
+  <div class="form">
+    <label>Tu nombre</label>
+    <input id="fNombre" placeholder="¿Cómo te llamas?">
+    <label>Motivo de consulta</label>
+    <select id="fMotivo">
+      <option>Terapia individual</option>
+      <option>Terapia de pareja</option>
+      <option>Manejo de ansiedad</option>
+      <option>Duelo y pérdida</option>
+      <option>Aún no lo sé, quiero orientación</option>
+    </select>
+    <label>Modalidad</label>
+    <select id="fModo"><option>Presencial (Saltillo)</option><option>En línea</option></select>
+    <label>Días y horarios que te acomodan</label>
+    <input id="fHorario" placeholder="Ej. entre semana después de las 5 pm">
+    <label>¿Algo que quieras contarme antes? (opcional)</label>
+    <textarea id="fNota" placeholder="Escribe con confianza…"></textarea>
+    <button class="send" id="btnSend">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5-1.3A10 10 0 1 0 12 2Z"/></svg>
+      Enviar por WhatsApp
+    </button>
+  </div>
+  <div class="info"><b>¿Prefieres escribir directo?</b>WhatsApp 844 360 4349 · Respondo el mismo día hábil.</div>
+</div>
+
+<div class="made">
+  <div class="disp">Sitio profesional por Solida Aplicaciones</div>
+  <p>Demostración. Mini-sitio de varias páginas con preguntas frecuentes, artículos, agenda y dominio propio.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20demo%20del%20Sitio%20Profesional%20y%20quiero%20uno%20as%C3%AD.">Quiero un sitio así</a>
+  <div class="demo-hint">▸ Paquete Premium · Sitio Profesional ◂</div>
+</div>
+
+<script>
+const WA="528443604349";
+/* tabs */
+const nav=document.getElementById('nav');
+nav.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  nav.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p-'+b.dataset.p).classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+/* servicios */
+const SERVICES=[
+  {t:"Terapia individual",d:"Acompañamiento uno a uno para ansiedad, autoestima, estrés y crecimiento personal.",l:"50 min por sesión"},
+  {t:"Terapia de pareja",d:"Herramientas de comunicación y reconexión para relaciones en momentos difíciles.",l:"75 min por sesión"},
+  {t:"Manejo de ansiedad",d:"Programa práctico basado en evidencia para recuperar la calma y el control.",l:"Programa de 8 sesiones"},
+  {t:"Duelo y pérdida",d:"Un espacio para transitar la pérdida con acompañamiento respetuoso y a tu tiempo.",l:"A tu ritmo"}
+];
+document.getElementById('svcList').innerHTML=SERVICES.map(s=>`<div class="svc">
+  <div class="svc-top"><h3>${s.t}</h3><span class="len">${s.l}</span></div>
+  <p>${s.d}</p>
+  <a class="agendar" href="https://wa.me/${WA}?text=${encodeURIComponent('Hola, quiero agendar: '+s.t)}">Agendar este servicio ▸</a>
+</div>`).join('');
+/* agendar */
+document.getElementById('btnSend').addEventListener('click',()=>{
+  const v=id=>document.getElementById(id).value.trim();
+  const txt=["Hola, quiero agendar una cita 🙂",
+    "• Nombre: "+(v('fNombre')||"—"),
+    "• Motivo: "+document.getElementById('fMotivo').value,
+    "• Modalidad: "+document.getElementById('fModo').value,
+    "• Horarios que me acomodan: "+(v('fHorario')||"—"),
+    v('fNota')?("• Nota: "+v('fNota')):""
+  ].filter(Boolean).join("\n");
+  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(txt),"_blank");
+});
+</script>
+</body>
+</html>

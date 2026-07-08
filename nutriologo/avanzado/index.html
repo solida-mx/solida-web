@@ -214,6 +214,124 @@
     padding:0 18px;border-radius:12px;cursor:pointer}
   .w-input button:active{transform:scale(.96)}
 
+  /* ===== Toggle de unidad kg/lb ===== */
+  .routine-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 10px}
+  .unit-toggle{display:flex;background:rgba(255,255,255,.05);border:1.5px solid var(--line);border-radius:11px;padding:3px;flex:none}
+  .unit-toggle button{border:none;background:none;color:var(--muted);font-family:"Space Grotesk",sans-serif;font-weight:700;
+    font-size:12.5px;padding:6px 14px;border-radius:8px;cursor:pointer;transition:all .16s}
+  .unit-toggle button.on{background:var(--em);color:#08130e}
+
+  /* ===== Series marcables + timer ===== */
+  .ex.ex-complete{border-color:rgba(61,220,151,.4);background:linear-gradient(0deg,var(--em-soft),var(--em-soft)),var(--card)}
+  .set-track{display:flex;align-items:center;gap:11px;margin-top:11px}
+  .set-dots{display:flex;gap:5px;flex:none}
+  .set-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--line);transition:all .2s}
+  .set-dot.on{background:var(--em);border-color:var(--em);box-shadow:0 0 0 3px var(--em-soft)}
+  .set-btn{flex:1;border:1.5px solid rgba(61,220,151,.3);background:var(--em-soft);color:var(--em);
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:12.5px;padding:9px;border-radius:11px;cursor:pointer;transition:transform .12s}
+  .set-btn:active{transform:scale(.97)}
+  .set-btn.done{background:var(--em);color:#08130e;border-color:var(--em)}
+
+  /* ===== Barra de timer de descanso (flotante) ===== */
+  .rest-bar{position:fixed;left:12px;right:12px;bottom:82px;z-index:120;background:rgba(12,21,18,.96);
+    border:1.5px solid rgba(61,220,151,.4);border-radius:15px;padding:12px 14px;display:none;align-items:center;gap:12px;
+    box-shadow:0 12px 34px rgba(0,0,0,.5);backdrop-filter:blur(8px)}
+  .rest-bar.show{display:flex;animation:slideUp .25s cubic-bezier(.2,.9,.3,1)}
+  @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+  .rest-info{display:flex;flex-direction:column;flex:none;min-width:66px}
+  .rest-time{font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:22px;color:var(--em);line-height:1}
+  .rest-name{font-size:10.5px;color:var(--muted);font-weight:700;margin-top:2px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rest-track{flex:1;height:7px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+  .rest-fill{display:block;height:100%;background:var(--em);border-radius:99px;transition:width 1s linear}
+  .rest-skip{flex:none;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.05);
+    color:var(--muted);font-size:13px;cursor:pointer}
+
+  /* ===== Botón "Entrené hoy" tipo héroe con animación ===== */
+  .trained-hero{width:100%;margin-top:14px;display:flex;align-items:center;gap:14px;text-align:left;
+    background:linear-gradient(135deg,rgba(61,220,151,.14),rgba(242,181,68,.1));border:1.5px solid rgba(61,220,151,.35);
+    border-radius:18px;padding:15px 16px;cursor:pointer;position:relative;overflow:hidden;transition:transform .14s,border-color .2s}
+  .trained-hero:active{transform:scale(.98)}
+  .trained-hero.on{background:linear-gradient(135deg,var(--em),var(--em-deep));border-color:var(--em)}
+  .trained-hero.on .t-txt b,.trained-hero.on .t-txt small{color:#08130e}
+  .trained-hero.on .lifter{color:#08130e}
+  .t-txt{flex:1;display:flex;flex-direction:column;gap:2px}
+  .t-txt b{font-family:"Space Grotesk",sans-serif;font-size:16px;color:var(--ink)}
+  .t-txt small{font-size:11.5px;color:var(--muted);font-weight:600}
+  .t-check{flex:none;width:30px;height:30px;border-radius:50%;background:rgba(8,19,14,.25);display:flex;align-items:center;justify-content:center;color:#08130e}
+  /* Muñeco levantando pesa (CSS puro) */
+  .lifter{position:relative;width:42px;height:42px;flex:none;color:var(--em)}
+  .lifter .l-head{position:absolute;left:16px;top:8px;width:10px;height:10px;border-radius:50%;background:currentColor}
+  .lifter .l-body{position:absolute;left:19px;top:17px;width:4px;height:15px;background:currentColor;border-radius:2px}
+  .lifter .l-arm{position:absolute;left:11px;top:15px;width:20px;height:4px;background:currentColor;border-radius:2px;
+    transform-origin:50% 50%;transition:transform .3s}
+  .lifter .l-bar{position:absolute;left:5px;top:9px;width:32px;height:4px;background:currentColor;border-radius:2px;transition:transform .3s}
+  .lifter .l-bar i{position:absolute;top:-5px;width:6px;height:14px;background:currentColor;border-radius:2px}
+  .lifter .l-bar i:first-child{left:-3px}
+  .lifter .l-bar i:last-child{right:-3px}
+  .trained-hero.celebrate .l-arm{animation:lift .5s ease}
+  .trained-hero.celebrate .l-bar{animation:liftbar .5s ease}
+  @keyframes lift{0%,100%{transform:rotate(0)}40%{transform:rotate(-8deg)}}
+  @keyframes liftbar{0%{transform:translateY(6px)}45%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+  .trained-hero.on .lifter .l-bar{transform:translateY(-3px)}
+  .trained-hero.on .lifter .l-arm{transform:rotate(-6deg)}
+  .session-count{display:flex;align-items:baseline;gap:7px;margin-top:9px;padding-left:4px}
+  .session-count .sc-num{font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:22px;color:var(--amber)}
+  .session-count .sc-lbl{font-size:12px;color:var(--muted);font-weight:600}
+
+  /* Confeti + felicitación */
+  .confetti{position:fixed;width:9px;height:9px;border-radius:2px;z-index:300;pointer-events:none;
+    animation:confetti-fly .9s ease-out forwards}
+  @keyframes confetti-fly{0%{transform:translate(0,0) rotate(0);opacity:1}
+    100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}}
+  .congrats{position:fixed;inset:0;z-index:290;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s}
+  .congrats.show{opacity:1}
+  .congrats-in{background:rgba(12,21,18,.95);border:1.5px solid var(--em);border-radius:20px;padding:22px 30px;text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);transform:scale(.8);transition:transform .35s cubic-bezier(.3,1.5,.4,1)}
+  .congrats.show .congrats-in{transform:scale(1)}
+  .congrats .c-emoji{font-size:44px;display:block;animation:bounce .6s ease infinite alternate}
+  @keyframes bounce{to{transform:translateY(-7px)}}
+  .congrats-in b{display:block;font-family:"Space Grotesk",sans-serif;font-size:20px;color:var(--em);margin-top:6px}
+  .congrats-in small{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+
+  /* ===== Indicadores de composición corporal ===== */
+  .ind-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+  .ind{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 11px;position:relative;overflow:hidden}
+  .ind::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ic)}
+  .ind-lbl{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .ind-val{display:block;font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:23px;color:var(--ink);margin:5px 0 4px}
+  .ind-val i{font-size:12px;font-weight:600;color:var(--muted);font-style:normal;margin-left:2px}
+  .ind-tr{font-size:11px;font-weight:800}
+  .ind-tr.good{color:var(--em)} .ind-tr.bad{color:var(--coral)} .ind-tr.flat{color:var(--muted)}
+
+  /* ===== Selector de métrica + gráfica corporal ===== */
+  .metric-tabs{display:flex;gap:7px;margin-bottom:12px}
+  .metric-tabs button{flex:1;border:1.5px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:12px;padding:8px;border-radius:10px;cursor:pointer;transition:all .16s}
+  .metric-tabs button.on{border-color:var(--em);background:var(--em-soft);color:var(--em)}
+  .body-chart{min-height:96px}
+
+  /* ===== Formulario de medición ===== */
+  .body-form{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+  .body-form label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .body-form label span{color:var(--faint);font-weight:600}
+  .body-form input{background:rgba(255,255,255,.05);border:1.5px solid var(--line);border-radius:11px;color:var(--ink);
+    font-family:inherit;font-size:15px;font-weight:600;padding:11px 12px}
+  .body-form input:focus{outline:none;border-color:var(--em)}
+  .bf-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .bf-row label{text-transform:none;letter-spacing:0}
+  .body-form>button{background:var(--em);border:none;color:#08130e;font-family:"Space Grotesk",sans-serif;
+    font-weight:800;font-size:14px;padding:13px;border-radius:12px;cursor:pointer;transition:transform .12s}
+  .body-form>button:active{transform:scale(.98)}
+  .body-list{list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:2px}
+  .body-list li{display:flex;align-items:center;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--line);font-size:12.5px}
+  .body-list li:last-child{border-bottom:none}
+  .bl-date{color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px}
+  .base-tag{font-style:normal;font-size:9px;background:var(--em-soft);color:var(--em);padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:.04em}
+  .bl-vals{display:flex;align-items:center;gap:11px;color:var(--ink);font-weight:700}
+  .bl-vals span{display:flex;align-items:baseline;gap:2px}
+  .bl-vals i{font-size:9px;color:var(--muted);font-weight:600;font-style:normal}
+  .bl-vals .del{background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:2px 4px}
+
   /* --- Botón Entrené hoy --- */
   .trained-btn{width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:9px;
     background:var(--em-soft);border:1.5px solid rgba(61,220,151,.35);color:var(--em);font-family:"Space Grotesk",sans-serif;
@@ -375,10 +493,13 @@
   <!-- ============ TAB: RUTINA ============ -->
   <section class="tab" id="tab-rutina">
     <div id="deloadBanner"></div>
-    <div class="sec-title"><h2>Ciclo de 4 semanas</h2><span class="ln"></span><span class="chip" id="cycleChip">—</span></div>
+    <div class="sec-title"><h2>Ciclo del mes</h2><span class="ln"></span><span class="chip" id="cycleChip">—</span></div>
     <div class="cycle-cal" id="cycleCal"></div>
 
-    <div class="sec-title"><h2 id="routineDayTitle">Rutina de hoy</h2><span class="ln"></span></div>
+    <div class="routine-head">
+      <div class="sec-title" style="margin:0"><h2 id="routineDayTitle">Rutina de hoy</h2></div>
+      <div class="unit-toggle" id="unitToggle"></div>
+    </div>
     <div class="cardio" id="cardioBox"></div>
     <div id="exList"></div>
     <div id="trainedBox"></div>
@@ -422,18 +543,32 @@
     <div class="stat-grid">
       <div class="stat" style="--sc:#3ddc97"><b id="stMeals">0/4</b><span>comidas hoy</span></div>
       <div class="stat" style="--sc:#f2b544"><b id="stBudget">0%</b><span>antojos usados</span></div>
-      <div class="stat" style="--sc:#5aa9e6"><b id="stDelta">—</b><span>vs. sem. pasada</span></div>
+      <div class="stat" style="--sc:#5aa9e6"><b id="stDelta">—</b><span>peso vs. anterior</span></div>
     </div>
 
+    <!-- Indicadores de composición corporal con tendencia -->
+    <div class="ind-grid" id="indGrid"></div>
+
+    <!-- Gráfica de tendencia con selector de métrica -->
     <div class="card">
-      <b style="font-size:14.5px">Registro semanal de peso</b>
-      <div class="subtle">Pésate 1 vez por semana, en ayunas, el mismo día.</div>
-      <div class="w-input">
-        <input type="number" step="0.1" min="30" max="250" inputmode="decimal" id="wIn" placeholder="Peso en kg">
-        <button id="wSave">Guardar</button>
+      <div class="metric-tabs" id="metricTabs"></div>
+      <div class="body-chart" id="bodyChart"></div>
+    </div>
+
+    <!-- Registro de medición con fecha -->
+    <div class="card">
+      <b style="font-size:14.5px">Nueva medición</b>
+      <div class="subtle">Pon la fecha de tu pesaje o estudio. Puedes registrar peso, % de grasa y músculo (los que tengas).</div>
+      <div class="body-form">
+        <label>Fecha <input type="date" id="bDate"></label>
+        <div class="bf-row">
+          <label>Peso <span>kg</span><input type="number" step="0.1" min="30" max="250" inputmode="decimal" id="bKg" placeholder="94.7"></label>
+          <label>% grasa <span>%</span><input type="number" step="0.1" min="3" max="70" inputmode="decimal" id="bFat" placeholder="23.2"></label>
+          <label>Músculo <span>MME kg</span><input type="number" step="0.1" min="10" max="80" inputmode="decimal" id="bMme" placeholder="47.0"></label>
+        </div>
+        <button id="bodySave">Guardar medición</button>
       </div>
-      <div class="chart-box" id="chartBox"></div>
-      <ul class="w-list" id="wList"></ul>
+      <ul class="body-list" id="bodyList"></ul>
     </div>
 
     <div class="banner em">
@@ -481,6 +616,15 @@
   <button class="nb" data-tab="antojos"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 8.5c-1 1-1.5 2.3-1.5 3.5a5 5 0 0 0 10 0c0-1.2-.5-2.5-1.5-3.5L12 5 8.5 8.5Z"/><path d="M12 5V2"/></svg>Antojos</button>
   <button class="nb" data-tab="progreso"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Progreso</button>
 </nav>
+
+<div class="rest-bar" id="restBar">
+  <div class="rest-info">
+    <span class="rest-time" id="restTime">0:00</span>
+    <span class="rest-name" id="restName">Descanso</span>
+  </div>
+  <div class="rest-track"><span class="rest-fill" id="restFill"></span></div>
+  <button class="rest-skip" id="restSkip" aria-label="Saltar descanso">✕</button>
+</div>
 
 <div class="toast" id="toast"></div>
 

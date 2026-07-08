@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Soporte — Solida Aplicaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B396B; --navy-2:#12274a; --navy-3:#0d1e3a;
+    --teal:#2A9D8E; --teal-bright:#34b9a7; --teal-deep:#1f7f73;
+    --mist:#E8F6F6; --gold:#d8a544;
+    --ink:#0f1f38; --ink-soft:#4a5c78;
+    --paper:#f5f9fb; --card:#ffffff; --line:#e2ebf0;
+    --shadow:0 18px 44px rgba(16,39,74,.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Manrope",system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.55;-webkit-text-size-adjust:100%}
+  h1,h2,h3{font-family:"Sora",sans-serif}
+  header{position:sticky;top:0;z-index:50;background:rgba(27,57,107,.92);backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(255,255,255,.08);padding:11px 16px;display:flex;align-items:center;gap:11px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--navy-3);display:flex;align-items:center;justify-content:center;padding:6px;flex:none}
+  .brand-name{display:flex;flex-direction:column;line-height:1.05}
+  .brand-name b{font-family:"Sora";font-weight:700;color:#fff;font-size:14px}
+  .brand-name span{font-size:9.5px;letter-spacing:.22em;color:var(--teal-bright);text-transform:uppercase}
+  .hero{color:#fff;background:radial-gradient(120% 120% at 80% -10%, #244a86 0%, var(--navy) 45%, var(--navy-2) 100%);
+    padding:38px 20px 42px;text-align:center}
+  .hero h1{font-size:clamp(26px,7vw,36px);font-weight:800;line-height:1.1;letter-spacing:-.5px;max-width:560px;margin:0 auto}
+  .hero h1 .accent{color:var(--teal-bright)}
+  .hero p{margin:12px auto 0;font-size:15px;color:#d4e2f2;max-width:46ch;font-weight:500}
+  .wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
+  .cards{display:grid;gap:14px}
+  a.card{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1.5px solid var(--line);
+    border-radius:15px;padding:18px 16px;text-decoration:none;color:var(--ink);
+    transition:border-color .18s,box-shadow .18s,transform .12s}
+  a.card:hover{border-color:var(--teal);box-shadow:0 8px 20px rgba(42,157,142,.14)}
+  a.card:active{transform:scale(.985)}
+  .card-ico{width:44px;height:44px;border-radius:12px;background:var(--mist);color:var(--teal-deep);
+    display:flex;align-items:center;justify-content:center;flex:none}
+  .card h2{font-size:16px;font-weight:700;line-height:1.2}
+  .card p{font-size:13px;color:var(--ink-soft);margin-top:4px;font-weight:500}
+  .card .go{margin-top:8px;font-size:12.5px;font-weight:700;color:var(--teal-deep)}
+  .urgent{margin-top:26px;background:var(--navy);border-radius:15px;padding:18px 16px;color:#fff;text-align:center}
+  .urgent h3{font-size:15px}
+  .urgent p{font-size:12.5px;color:#c6d6ec;margin:6px 0 12px;font-weight:500}
+  .btn-wa{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#fff;text-decoration:none;
+    font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;box-shadow:0 6px 14px rgba(42,157,142,.35)}
+  .btn-wa:active{transform:translateY(1px)}
+  .foot{margin-top:34px;text-align:center;font-size:11.5px;color:var(--ink-soft)}
+  .foot a{color:var(--teal-deep);font-weight:700;text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" width="22" height="22" aria-hidden="true">
+        <rect x="30" y="18" width="40" height="15" rx="7.5" fill="#2A9D8E"/>
+        <rect x="22" y="42" width="56" height="15" rx="7.5" fill="#E8F6F6"/>
+        <rect x="14" y="66" width="72" height="15" rx="7.5" fill="#2A9D8E"/>
+      </svg>
+    </div>
+    <div class="brand-name"><b>Solida Aplicaciones</b><span>Soporte</span></div>
+  </div>
+</header>
+
+<section class="hero">
+  <h1>¿En qué te <span class="accent">ayudamos</span> hoy?</h1>
+  <p>Elige una opción. En unos minutos nos llega tu información ordenada y nos ponemos a trabajar.</p>
+</section>
+
+<div class="wrap">
+  <div class="cards">
+    <a class="card" href="levantamiento/">
+      <div class="card-ico">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6"/></svg>
+      </div>
+      <div>
+        <h2>Voy a empezar mi página</h2>
+        <p>Llena aquí la información de tu negocio según tu paquete (Básico, Intermedio o Premium). Con esto construimos tu página sin idas y vueltas.</p>
+        <div class="go">Llenar mi información &#8594;</div>
+      </div>
+    </a>
+
+    <a class="card" href="cambios/">
+      <div class="card-ico">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </div>
+      <div>
+        <h2>Mi página ya está publicada y quiero un cambio</h2>
+        <p>Precios, platillos, fotos, promociones, horarios o cualquier ajuste. Descríbelo aquí y te confirmamos cuándo queda publicado.</p>
+        <div class="go">Solicitar un cambio &#8594;</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="urgent">
+    <h3>&#9888;&#65039; ¿Tu página no abre o un botón falla?</h3>
+    <p>Eso es urgente y lo atendemos el mismo día. Escríbenos directo:</p>
+    <a class="btn-wa" href="https://wa.me/528443604349?text=%F0%9F%9A%A8%20REPORTE%20URGENTE%20%E2%80%94%20Mi%20p%C3%A1gina%20tiene%20una%20falla.%0ANegocio%3A%20%0AP%C3%A1gina%3A%20%0AQu%C3%A9%20est%C3%A1%20fallando%3A%20">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.2 1.2-1.7 1.2-.4.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.4.2.5.7 1.8.8 1.9.1.1.1.3 0 .5-.1.2-.1.3-.3.5l-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.3.1 1.6.8 1.9.9.3.2.5.2.5.4.1.1.1.7-.1 1.2Z"/></svg>
+      Reportar falla por WhatsApp
+    </a>
+  </div>
+
+  <p class="foot">¿Quieres una página nueva para otro negocio? Mira los paquetes en <a href="/">el tabulador</a>.<br>Hecho con Solida Aplicaciones</p>
+</div>
+</body>
+</html>

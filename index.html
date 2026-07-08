@@ -51,6 +51,31 @@
     font-weight:700;font-size:12.5px;padding:9px 14px;border-radius:999px;white-space:nowrap;
     display:inline-flex;align-items:center;gap:6px;box-shadow:0 6px 14px rgba(42,157,142,.35)}
   .wa-mini:active{transform:translateY(1px)}
+  .cli-mini{margin-left:auto;flex:none;color:var(--mist);text-decoration:none;font-weight:700;font-size:12.5px;
+    padding:9px 13px;border-radius:999px;border:1px solid rgba(232,246,246,.35);white-space:nowrap}
+  .cli-mini:hover{border-color:var(--teal-bright);color:#fff}
+  .cli-mini + .wa-mini{margin-left:0}
+
+  /* ---------- CTA empezar en cada paquete ---------- */
+  .tier-start{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:9px;
+    text-decoration:none;font-family:"Sora";font-weight:700;font-size:13px;color:var(--teal-deep);
+    border:1.5px solid var(--teal);border-radius:999px;padding:11px 14px;transition:background .15s,color .15s}
+  .tier-start:hover{background:var(--teal);color:#fff}
+  .tier-start:active{transform:translateY(1px)}
+
+  /* ---------- Franja para clientes ---------- */
+  .client-strip{margin-top:16px;background:var(--card);border:1.5px solid var(--line);border-radius:22px;
+    padding:22px 20px;text-align:center}
+  .client-strip h2{font-size:18px;font-weight:700;letter-spacing:-.2px;color:var(--navy)}
+  .client-strip p{margin-top:7px;font-size:13px;color:var(--ink-soft);font-weight:500;max-width:44ch;margin-left:auto;margin-right:auto}
+  .client-strip .cs-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+  @media (max-width:430px){.client-strip .cs-row{grid-template-columns:1fr}}
+  .client-strip a.cs-btn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;
+    font-family:"Sora";font-weight:700;font-size:13.5px;border-radius:999px;padding:13px 14px;transition:transform .12s}
+  .client-strip a.cs-btn:active{transform:translateY(1px)}
+  .cs-btn.solid{background:var(--navy);color:#fff;box-shadow:0 8px 18px rgba(27,57,107,.28)}
+  .cs-btn.ghost{border:1.5px solid var(--teal);color:var(--teal-deep)}
+  .cs-btn.ghost:hover{background:var(--mist)}
 
   /* ---------- HERO ---------- */
   .hero{position:relative;overflow:hidden;color:#fff;
@@ -149,6 +174,10 @@
   .qr-frame{margin:18px auto 0;width:196px;height:196px;background:#fff;border-radius:16px;
     padding:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(0,0,0,.28)}
   .qr-frame canvas{width:100%;height:100%;border-radius:6px;display:block}
+  .qr-frame.qr-tap{cursor:pointer;transition:transform .12s,box-shadow .18s}
+  .qr-frame.qr-tap:hover{box-shadow:0 10px 26px rgba(27,57,107,.22)}
+  .qr-frame.qr-tap:active{transform:scale(.97)}
+  .qr-frame.qr-tap:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
   .qr-pending{font-size:12.5px;color:#8ea6c9;font-weight:600;line-height:1.5;padding:0 8px}
   .qr-pending code{background:rgba(255,255,255,.1);padding:2px 6px;border-radius:5px;color:#eaf3ff;font-size:11px}
   .demo-scan{margin-top:14px;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
@@ -224,6 +253,7 @@
       <b>Solida</b><span>Aplicaciones</span>
     </div>
   </div>
+  <a class="cli-mini" href="soporte/">Soy cliente</a>
   <a class="wa-mini" href="https://wa.me/528443604349" target="_blank" rel="noopener">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 .9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.1.1.3 0 .5-.1.2-.2.3-.3.5l-.4.4c-.1.1-.3.3-.1.5.1.3.6 1 1.3 1.7.9.8 1.6 1 1.9 1.1.2.1.4.1.5-.1.1-.2.6-.7.8-.9.2-.3.3-.2.6-.1.2.1 1.5.7 1.7.9.3.1.4.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
     WhatsApp
@@ -280,6 +310,21 @@
       Hablar por WhatsApp
     </a>
   </div>
+
+  <div class="client-strip">
+    <h2>¿Ya tienes tu página con nosotros?</h2>
+    <p>Pide cambios, reporta una falla o mándanos la información de tu negocio — todo desde tu celular, sin llamadas.</p>
+    <div class="cs-row">
+      <a class="cs-btn solid" href="soporte/cambios/">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Solicitar un cambio
+      </a>
+      <a class="cs-btn ghost" href="soporte/">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 17h.01"/><path d="M9.5 9.3a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.7v.3"/></svg>
+        Centro de soporte
+      </a>
+    </div>
+  </div>
 </div>
 
 <!-- ============ FOOTER ============ -->
@@ -296,6 +341,8 @@
   </div>
   <div class="f-links">
     <a href="https://wa.me/528443604349" target="_blank" rel="noopener">WhatsApp · 844 360 4349</a>
+    <a href="soporte/">Soy cliente · Centro de soporte</a>
+    <a href="soporte/levantamiento/">Quiero mi página · Enviar mi información</a>
   </div>
   <div class="f-tag">Presencia digital para negocios · Coahuila, México</div>
 </footer>
@@ -308,12 +355,13 @@
 const WHATSAPP = "528443604349";
 const prefersReduced = ()=> (window.matchMedia? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false);
 const DEMO_LINKS = {
-  restaurantes:  "https://solidaaplicaciones.com/restaurante",
-  profesionales: "https://solidaaplicaciones.com/profesional",
-  talleres:      "https://solidaaplicaciones.com/taller",
-  nutriologos:   "https://solidaaplicaciones.com/nutriologo",
-  invitaciones:  "https://solidaaplicaciones.com/invitacion",
-  uniformes:     "https://solidaaplicaciones.com/uniformes"
+  restaurantes:  "https://solida-web.j23salva.workers.dev/restaurante",
+  profesionales: "https://solida-web.j23salva.workers.dev/profesional",
+  talleres:      "https://solida-web.j23salva.workers.dev/taller",
+  nutriologos:   "https://solida-web.j23salva.workers.dev/nutriologo",
+  invitaciones:  "https://solida-web.j23salva.workers.dev/invitacion",
+  uniformes:     "https://solida-web.j23salva.workers.dev/uniformes",
+  barberias:     "https://solida-web.j23salva.workers.dev/barberia"
 };
 
 /* ---- Íconos (line icons) ---- */
@@ -323,7 +371,8 @@ const ICONS = {
   talleres:'<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/>',
   nutriologos:'<path d="M12 8c-1.6-2.8-6-2.4-6 1.6 0 4 3.4 8.4 6 8.4s6-4.4 6-8.4c0-4-4.4-4.4-6-1.6Z"/><path d="M12 8c0-2 1.2-3.6 3.2-4"/>',
   invitaciones:'<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><path d="m3.5 7 8.5 5.5L20.5 7"/>',
-  uniformes:'<path d="M4 20 15 9"/><path d="M14 6.5 17.5 10"/><circle cx="18.5" cy="5.5" r="2"/><path d="M17.2 6.8 15 9l-1.5-1.5 2.2-2.2"/><path d="m4 20 1.2-3.2L8 19.5 4 20Z"/>'
+  uniformes:'<path d="M4 20 15 9"/><path d="M14 6.5 17.5 10"/><circle cx="18.5" cy="5.5" r="2"/><path d="M17.2 6.8 15 9l-1.5-1.5 2.2-2.2"/><path d="m4 20 1.2-3.2L8 19.5 4 20Z"/>',
+  barberias:'<circle cx="6.5" cy="7" r="2.5"/><circle cx="6.5" cy="17" r="2.5"/><path d="M8.6 8.8 19.5 19"/><path d="M8.6 15.2 19.5 5"/>'
 };
 
 /* ---- DATOS ---- */
@@ -336,13 +385,13 @@ const SEGMENTS = {
     note:"Mantenimiento «Menú al día»: cambios ilimitados de precios y platillos + hosting + soporte. $349/mes o $2,990/año.",
     tiers:[
       {level:"Básico",name:"Menú Esencial",amount:"$1,490",unit:"pago único",lv:1,
-       demo:"https://solidaaplicaciones.com/restaurante/basico",
+       demo:"https://solida-web.j23salva.workers.dev/restaurante/basico",
        feats:["Menú en una página, hasta 30 platillos","Organizado por categorías","Hasta 6 fotos de platillos","Código QR para tus mesas","Botones de WhatsApp y llamar"]},
       {level:"Intermedio",name:"Menú Pro",amount:"$2,490",unit:"pago único",lv:2,reco:true,
-       demo:"https://solidaaplicaciones.com/restaurante/intermedio",
+       demo:"https://solida-web.j23salva.workers.dev/restaurante/intermedio",
        feats:["Todo lo de Esencial","Platillos y fotos ilimitados","Secciones: entradas, fuertes, bebidas, postres","Destacados y promociones del día","Ubicación con mapa y redes","Diseño a tu marca"]},
       {level:"Premium",name:"Menú Premium",amount:"$3,990",unit:"pago único",lv:3,
-       demo:"https://solidaaplicaciones.com/restaurante/avanzado",
+       demo:"https://solida-web.j23salva.workers.dev/restaurante/avanzado",
        feats:["Todo lo de Pro","Pedidos desde la mesa con cuenta en vivo","Comanda enviada directo a cocina por WhatsApp","Forma de pago y número de mesa","Menos errores y meseros más eficientes"]}
     ]
   },
@@ -354,10 +403,13 @@ const SEGMENTS = {
     note:"Mantenimiento y hosting: $299/mes o $2,490/año. Incluye cambios razonables y soporte por WhatsApp.",
     tiers:[
       {level:"Básico",name:"Tarjeta Digital",amount:"$1,290",unit:"pago único",lv:1,
+       demo:"https://solida-web.j23salva.workers.dev/profesional/basico",
        feats:["Una pantalla con tu foto o logo","Tus servicios y especialidad","Botones: WhatsApp, llamar, mapa, redes","Código QR para tu tarjeta física"]},
       {level:"Intermedio",name:"Perfil Profesional",amount:"$2,390",unit:"pago único",lv:2,reco:true,
+       demo:"https://solida-web.j23salva.workers.dev/profesional/intermedio",
        feats:["Todo lo de Tarjeta Digital","Secciones: sobre ti, servicios, testimonios","Botón de agendar cita por WhatsApp","Galería y horarios de atención","Diseño a tu marca"]},
       {level:"Premium",name:"Sitio Profesional",amount:"$3,890",unit:"pago único",lv:3,
+       demo:"https://solida-web.j23salva.workers.dev/profesional/avanzado",
        feats:["Todo lo de Perfil Profesional","Mini-sitio de varias páginas","Preguntas frecuentes o artículos","Dominio propio incluido (1 año)"]}
     ]
   },
@@ -369,10 +421,13 @@ const SEGMENTS = {
     note:"Mantenimiento y hosting: $299/mes o $2,490/año. Incluye actualización de servicios y precios.",
     tiers:[
       {level:"Básico",name:"Catálogo Express",amount:"$1,390",unit:"pago único",lv:1,
+       demo:"https://solida-web.j23salva.workers.dev/taller/basico",
        feats:["Lista de servicios con precios","Hasta 8 fotos de tus trabajos","Botón de cotizar por WhatsApp","Ubicación, horario y código QR"]},
       {level:"Intermedio",name:"Catálogo Pro",amount:"$2,390",unit:"pago único",lv:2,reco:true,
+       demo:"https://solida-web.j23salva.workers.dev/taller/intermedio",
        feats:["Todo lo de Express","Servicios por categorías","Galería «antes / después»","Promociones y testimonios","Cotización con mensaje prellenado"]},
       {level:"Premium",name:"Servicio Completo",amount:"$3,690",unit:"pago único",lv:3,
+       demo:"https://solida-web.j23salva.workers.dev/taller/avanzado",
        feats:["Todo lo de Pro","Agenda de citas o pedidos","Varias sucursales","Dominio propio incluido (1 año)"]}
     ]
   },
@@ -384,13 +439,13 @@ const SEGMENTS = {
     note:"La mensualidad mantiene tu herramienta activa, con soporte y respaldos. Es tu presencia digital que trabaja contigo cada semana.",
     tiers:[
       {level:"Básico",name:"Plan Digital",amount:"$2,490",unit:"inicio",plus:"+ $399/mes",lv:1,
-       demo:"https://solidaaplicaciones.com/nutriologo/basico",
+       demo:"https://solida-web.j23salva.workers.dev/nutriologo/basico",
        feats:["Plan diario interactivo con tu marca","Comidas con horarios, porciones y registro","Sustituciones rápidas por alimento","Registro de vasos de agua","La entregas por enlace a cada paciente"]},
       {level:"Intermedio",name:"Práctica Pro",amount:"$3,990",unit:"inicio",plus:"+ $599/mes",lv:2,reco:true,
-       demo:"https://solidaaplicaciones.com/nutriologo/intermedio",
+       demo:"https://solida-web.j23salva.workers.dev/nutriologo/intermedio",
        feats:["Todo lo de Plan Digital","Macros del plan: kcal, proteína, carbos y grasas","Mandado semanal con cantidades exactas","Equivalencias por alimento con cantidad ajustada","Preparación semanal (meal prep) paso a paso"]},
       {level:"Premium",name:"Coach Total",amount:"$5,990",unit:"inicio",plus:"+ $899/mes",lv:3,
-       demo:"https://solidaaplicaciones.com/nutriologo/avanzado",
+       demo:"https://solida-web.j23salva.workers.dev/nutriologo/avanzado",
        feats:["Todo lo de Práctica Pro","Cambias un alimento en el mandado y la dieta se ajusta sola","Rutina del día con pesos sugeridos y doble progreso","Ciclo 3+1 automático con aviso de semana de descarga","Presupuesto semanal de antojos con semáforo","Registro de peso con gráfica, guardado en el dispositivo"]}
     ]
   },
@@ -402,10 +457,13 @@ const SEGMENTS = {
     note:"Enlace activo hasta 1 mes después del evento. ¿Lo quieres de recuerdo? Extensión de 1 año por +$290.",
     tiers:[
       {level:"Básico",name:"Esencial",amount:"$690",unit:"por evento",lv:1,
+       demo:"https://solida-web.j23salva.workers.dev/invitacion/basico",
        feats:["Una pantalla con cuenta regresiva","Textos, colores y hasta 3 fotos","Botón de ubicación con mapa","Enlace para compartir + código QR"]},
       {level:"Intermedio",name:"Pro",amount:"$1,290",unit:"por evento",lv:2,reco:true,
+       demo:"https://solida-web.j23salva.workers.dev/invitacion/intermedio",
        feats:["Todo lo de Esencial","Confirmación de asistencia por WhatsApp","Galería, música y varias secciones","Itinerario, código de vestimenta, mesa de regalos","Animaciones de entrada"]},
       {level:"Premium",name:"Deluxe",amount:"$2,290",unit:"por evento",lv:3,
+       demo:"https://solida-web.j23salva.workers.dev/invitacion/avanzado",
        feats:["Diseño 100% a medida y temática única","Ilustraciones o detalles personalizados","QR diseñado para imprimir","Hasta 2 rondas de cambios"]}
     ]
   },
@@ -417,14 +475,32 @@ const SEGMENTS = {
     note:"Mantenimiento y hosting: $399/mes o $3,490/año. Incluye ajuste de catálogo, prendas y precios.",
     tiers:[
       {level:"Básico",name:"Catálogo Digital",amount:"$1,690",unit:"pago único",lv:1,
-       demo:"https://solidaaplicaciones.com/uniformes/basico",
+       demo:"https://solida-web.j23salva.workers.dev/uniformes/basico",
        feats:["Catálogo de prendas, colores y telas","Técnicas de decorado y precios de referencia","Botón de cotizar por WhatsApp","Código QR para tu negocio"]},
       {level:"Intermedio",name:"Cotizador",amount:"$2,990",unit:"pago único",lv:2,reco:true,
-       demo:"https://solidaaplicaciones.com/uniformes/intermedio",
+       demo:"https://solida-web.j23salva.workers.dev/uniformes/intermedio",
        feats:["Todo lo de Catálogo","El cliente elige prendas y cantidades","Estimado de precio al instante","Cotización enviada por WhatsApp"]},
       {level:"Premium",name:"Configurador con OT",amount:"$5,900",unit:"pago único",lv:3,
-       demo:"https://solidaaplicaciones.com/uniformes/avanzado",
+       demo:"https://solida-web.j23salva.workers.dev/uniformes/avanzado",
        feats:["Configura color, tela, bordado, logo y tallas","Vista previa de la prenda con el logo puesto","Orden de trabajo en imagen a tu WhatsApp","Diseño a tu marca"]}
+    ]
+  },
+  barberias:{
+    label:"Barberías y salones", short:"Carta + reservas en línea",
+    intro:"Carta de servicios y reservas en línea",
+    blurb:"Para barberías, salones de belleza y estudios de uñas. Tu carta con precios en un QR, promociones y equipo, hasta agenda en línea con reservas directo a tu WhatsApp.",
+    demoName:"la página de una barbería",
+    note:"Mantenimiento y hosting: $299/mes o $2,490/año. Incluye cambios de precios, promociones y equipo.",
+    tiers:[
+      {level:"Básico",name:"Carta de Servicios",amount:"$1,390",unit:"pago único",lv:1,
+       demo:"https://solida-web.j23salva.workers.dev/barberia/basico",
+       feats:["Carta de servicios con precios por categorías","Barbería, salón y extras en un solo enlace","Botones de WhatsApp, llamar y mapa","Código QR para tu mostrador y tarjetas"]},
+      {level:"Intermedio",name:"Estudio Pro",amount:"$2,590",unit:"pago único",lv:2,reco:true,
+       demo:"https://solida-web.j23salva.workers.dev/barberia/intermedio",
+       feats:["Todo lo de Carta de Servicios","Estatus abierto / cerrado en automático","Promociones de la semana destacadas","Tu equipo con foto y especialidad","Galería de trabajos y testimonios","Diseño a tu marca"]},
+      {level:"Premium",name:"Reserva Total",amount:"$4,290",unit:"pago único",lv:3,
+       demo:"https://solida-web.j23salva.workers.dev/barberia/avanzado",
+       feats:["Todo lo de Estudio Pro","Agenda en línea paso a paso","El cliente elige servicio, barbero o estilista, día y hora","Reserva formateada directo a tu WhatsApp","Horarios ocupados y días de descanso configurables","Dominio propio incluido (1 año)"]}
     ]
   }
 };
@@ -453,7 +529,7 @@ const finalCta=document.getElementById('finalCta');
 function selectSegment(key){
   document.querySelectorAll('.seg-btn').forEach(b=>b.setAttribute('aria-pressed', b.dataset.key===key?'true':'false'));
   const s=SEGMENTS[key];
-  let tiersHtml=s.tiers.map(t=>`
+  let tiersHtml=s.tiers.map((t,ti)=>`
     <div class="tier${t.reco?' reco':''}">
       ${t.reco?'<span class="ribbon">Más elegido</span>':''}
       <div class="tier-top">
@@ -463,6 +539,7 @@ function selectSegment(key){
       <div class="price"><span class="amt">${t.amount}</span><span class="unit">${t.unit}</span>${t.plus?`<span class="plus">${t.plus}</span>`:''}</div>
       <ul class="feats">${t.feats.map(f=>`<li>${CHECK}<span>${f}</span></li>`).join('')}</ul>
       <a class="tier-cta" target="_blank" rel="noopener" href="${waLink(`Hola Solida Aplicaciones 👋 Me interesa el paquete "${t.name}" (${s.label}). ¿Me dan más información?`)}">Me interesa este</a>
+      <a class="tier-start" href="soporte/levantamiento/?giro=${key}&nivel=${ti}">Quiero mi página · empezar aquí ▸</a>
     </div>`).join('');
 
   const demoTabLabel=(url)=>{const seg=url.split('/').filter(Boolean).pop();
@@ -476,7 +553,7 @@ function selectSegment(key){
       <p>Elige una versión y escanea el código con la cámara de tu celular.</p>
       <div class="demo-tabs" id="demoTabs">${demoOpts.map(o=>`<button class="demo-tab" data-url="${o.url}">${o.label}</button>`).join('')}</div>
       <div class="qr-frame" id="qrFrame"><div class="qr-pending">Explora el paquete de tu interés ▸</div></div>
-      <div class="demo-scan" id="demoScan" style="visibility:hidden">▸ escanéalo con tu cámara ◂</div>
+      <div class="demo-scan" id="demoScan" style="visibility:hidden">▸ escanéalo con tu cámara o tócalo para abrirlo ◂</div>
     </div>` : '';
 
   body.innerHTML=`
@@ -496,6 +573,16 @@ function selectSegment(key){
       tabs.querySelectorAll('.demo-tab').forEach(b=>b.classList.toggle('active',b===btn));
       document.getElementById('qrFrame').innerHTML='<canvas id="qrCanvas"></canvas>';
       drawBrandedQR(btn.dataset.url);
+      // El QR también es botón: tocarlo abre la misma página que abre al escanearlo
+      const frame=document.getElementById('qrFrame');
+      frame.classList.add('qr-tap');
+      frame.setAttribute('role','link');
+      frame.setAttribute('tabindex','0');
+      frame.setAttribute('aria-label','Abrir demo '+btn.textContent.trim());
+      frame.title='Tócalo para abrir';
+      const openDemo=()=>window.open(btn.dataset.url,'_blank','noopener');
+      frame.onclick=openDemo;
+      frame.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openDemo();}};
       const sc=document.getElementById('demoScan'); if(sc) sc.style.visibility='visible';
     });
   }
@@ -514,7 +601,7 @@ function selectSegment(key){
 /* ---- Reveals al hacer scroll (secciones estáticas) ---- */
 (function(){
   const rm=prefersReduced();
-  const els=[...document.querySelectorAll('.section .step-label,.seg-btn,.final-card,footer .brand')];
+  const els=[...document.querySelectorAll('.section .step-label,.seg-btn,.final-card,.client-strip,footer .brand')];
   if(rm||!('IntersectionObserver' in window)){els.forEach(e=>e.classList.add('on'));return;}
   els.forEach(e=>e.classList.add('reveal'));
   const io=new IntersectionObserver(entries=>{

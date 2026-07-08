@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Valentina · Mis XV Años</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root{--night:#141230;--night-2:#1e1b45;--violet:#6d5bd0;--lilac:#b9aef2;--star:#f4d98c;--blush:#f2c7dd;--paper:#fbf9ff;--ink:#2b2745;--muted:#7a75a0;--line:#e6e1f5;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Jost",sans-serif;color:var(--ink);background:var(--paper);line-height:1.7;font-weight:300;-webkit-text-size-adjust:100%}
+  .script{font-family:"Great Vibes",cursive;font-weight:400}
+  h2,h3,.serif{font-family:"Cormorant Garamond",serif;font-weight:500}
+
+  .hero{min-height:100svh;background:radial-gradient(120% 90% at 50% -10%,var(--night-2),var(--night) 70%);color:#efeaff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:44px 24px;position:relative;overflow:hidden}
+  .stars{position:absolute;inset:0;pointer-events:none}
+  .st{position:absolute;background:#fff;border-radius:50%;opacity:.7;animation:tw 3s ease-in-out infinite}
+  @keyframes tw{0%,100%{opacity:.15}50%{opacity:.9}}
+  .moon{position:absolute;top:34px;right:30px;width:54px;height:54px;border-radius:50%;background:var(--star);box-shadow:0 0 40px rgba(244,217,140,.5);opacity:.9}
+  .moon::after{content:"";position:absolute;top:4px;left:-8px;width:48px;height:48px;border-radius:50%;background:var(--night)}
+  .hero-in{position:relative;z-index:1;opacity:0;animation:rise 1.6s ease .2s forwards}
+  @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+  .pre{font-size:11px;letter-spacing:.5em;text-transform:uppercase;color:var(--lilac);margin-bottom:16px}
+  .big{font-family:"Great Vibes",cursive;font-size:clamp(64px,20vw,104px);line-height:1;color:#fff;text-shadow:0 0 30px rgba(185,174,242,.4)}
+  .xv{font-family:"Cormorant Garamond",serif;font-size:clamp(20px,6vw,26px);letter-spacing:.42em;color:var(--star);margin-top:10px;text-transform:uppercase}
+  .hero .date{margin-top:24px;font-size:13px;letter-spacing:.28em;color:#cfc8f3}
+  .orn{margin:18px auto 0;color:var(--star);font-size:14px;letter-spacing:.6em}
+  .scroll{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.34em;color:var(--lilac);text-transform:uppercase}
+  .scroll span{display:block;margin-top:6px;animation:bob 2s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+  .wrap{max-width:540px;margin:0 auto;padding:0 20px}
+  .sec{padding:42px 0 6px;text-align:center}
+  .eyebrow{font-size:10.5px;letter-spacing:.34em;text-transform:uppercase;color:var(--violet);margin-bottom:8px}
+  h2{font-size:30px;color:var(--night)}
+  .lead{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:19px;color:var(--muted);max-width:36ch;margin:8px auto 0}
+
+  .countdown{display:flex;gap:10px;justify-content:center;margin-top:22px}
+  .cd{flex:1;max-width:88px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px 4px;box-shadow:0 10px 26px rgba(109,91,208,.1)}
+  .cd b{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:30px;color:var(--violet);display:block;line-height:1}
+  .cd span{font-size:9px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+
+  .story{background:linear-gradient(180deg,#fff,var(--paper));border:1px solid var(--line);border-radius:20px;padding:26px 22px;margin-top:22px}
+  .story p{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:19px;color:#4a4570}
+  .story .sig{margin-top:12px;font-family:"Great Vibes",cursive;font-size:26px;color:var(--violet)}
+
+  .itin{margin-top:22px;text-align:left;position:relative;padding-left:26px}
+  .itin::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:1.5px;background:linear-gradient(var(--lilac),var(--blush))}
+  .it{position:relative;padding:0 0 20px}
+  .it::before{content:"✦";position:absolute;left:-25px;top:0;color:var(--star);background:var(--paper);font-size:13px}
+  .it b{font-family:"Cormorant Garamond",serif;font-size:19px;font-weight:600;color:var(--night);display:block}
+  .it span{font-size:12px;letter-spacing:.14em;color:var(--violet);text-transform:uppercase}
+  .it p{font-size:13px;color:var(--muted);margin-top:2px}
+
+  .venue{background:var(--night);color:#efeaff;border-radius:20px;padding:26px 22px;margin-top:22px;position:relative;overflow:hidden}
+  .venue .vst{position:absolute;inset:0;opacity:.25;background:radial-gradient(30% 30% at 20% 20%,rgba(185,174,242,.5),transparent),radial-gradient(24% 24% at 80% 70%,rgba(244,217,140,.4),transparent)}
+  .venue .in{position:relative}
+  .venue h3{font-size:24px;color:#fff}
+  .venue p{font-size:13.5px;color:#cfc8f3;margin:6px 0 16px}
+  .venue a{display:inline-block;font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--night);background:var(--star);text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:500}
+
+  .dress{display:flex;gap:12px;margin-top:22px}
+  .dcard{flex:1;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 12px;text-align:center}
+  .dcard .e{font-size:26px}
+  .dcard b{display:block;font-family:"Cormorant Garamond",serif;font-size:17px;color:var(--night);margin-top:6px}
+  .dcard span{font-size:11.5px;color:var(--muted)}
+
+  .rsvp{background:linear-gradient(160deg,var(--violet),#8d7ce4);color:#fff;border-radius:22px;padding:28px 22px;margin-top:26px;text-align:center;box-shadow:0 18px 44px rgba(109,91,208,.35)}
+  .rsvp h3{font-size:26px;color:#fff}
+  .rsvp p{font-size:13.5px;color:#eae5ff;margin:8px 0 16px}
+  .rsvp select,.rsvp input{width:100%;font-family:inherit;font-size:14px;padding:12px;border-radius:12px;border:none;margin-bottom:10px;background:rgba(255,255,255,.92);color:var(--ink)}
+  .rsvp button{width:100%;font-family:inherit;font-weight:500;font-size:14.5px;letter-spacing:.06em;padding:14px;border:none;border-radius:999px;background:var(--night);color:var(--star);cursor:pointer}
+  .rsvp button:active{transform:translateY(1px)}
+  .rsvp .dl{margin-top:12px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:15px;color:#e5deff}
+
+  .qr-sec{margin-top:30px;text-align:center;background:#fff;border:1px dashed var(--lilac);border-radius:20px;padding:22px}
+  #qr{display:inline-block;background:#fff;padding:10px;border-radius:12px;box-shadow:0 8px 24px rgba(109,91,208,.16)}
+  #qr img{display:block;width:116px;height:116px}
+  .qr-sec p{font-size:12px;color:var(--muted);margin-top:10px}
+
+  .made{background:var(--night);color:#cfc8f3;text-align:center;padding:28px 20px 32px;margin-top:38px}
+  .made .t{font-family:"Cormorant Garamond",serif;font-size:17px;color:#fff;margin-bottom:6px}
+  .made p{font-size:12.5px;max-width:36ch;margin:0 auto 14px}
+  .made a{display:inline-block;background:var(--star);color:var(--night);text-decoration:none;font-weight:500;font-size:13px;padding:11px 20px;border-radius:999px}
+  .made .hint{margin-top:14px;font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:#6d679a}
+  @media (prefers-reduced-motion:reduce){.st{animation:none}.hero-in{animation:none;opacity:1}.scroll span{animation:none}}
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="stars" id="stars"></div>
+  <div class="moon"></div>
+  <div class="hero-in">
+    <div class="pre">Bajo las estrellas</div>
+    <div class="big">Valentina</div>
+    <div class="xv">Mis XV Años</div>
+    <div class="orn">✦ ✧ ✦</div>
+    <div class="date">SÁBADO · 12 DE DICIEMBRE · 2026</div>
+  </div>
+  <div class="scroll">Desliza<span>▾</span></div>
+</section>
+
+<div class="wrap">
+  <div class="sec">
+    <div class="eyebrow">Faltan</div>
+    <h2>Para brillar juntas</h2>
+    <div class="countdown">
+      <div class="cd"><b id="cdD">–</b><span>Días</span></div>
+      <div class="cd"><b id="cdH">–</b><span>Horas</span></div>
+      <div class="cd"><b id="cdM">–</b><span>Min</span></div>
+      <div class="cd"><b id="cdS">–</b><span>Seg</span></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="story">
+      <p>“Hay noches que se sueñan toda la vida. Esta es la mía, y quiero que brilles conmigo.”</p>
+      <div class="sig">Valentina</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="eyebrow">La noche</div>
+    <h2>Itinerario</h2>
+    <div class="itin">
+      <div class="it"><span>6:30 pm</span><b>Misa de acción de gracias</b><p>Parroquia del Sagrado Corazón</p></div>
+      <div class="it"><span>8:00 pm</span><b>Recepción</b><p>Jardín Las Lunas · cóctel de bienvenida</p></div>
+      <div class="it"><span>9:00 pm</span><b>Vals y brindis</b><p>El momento estelar de la noche</p></div>
+      <div class="it"><span>9:45 pm</span><b>Cena</b><p>Menú de tres tiempos</p></div>
+      <div class="it"><span>11:00 pm</span><b>¡A bailar!</b><p>Hasta que las estrellas se apaguen</p></div>
+    </div>
+  </div>
+
+  <div class="venue">
+    <div class="vst"></div>
+    <div class="in">
+      <div class="eyebrow" style="color:var(--lilac)">Recepción</div>
+      <h3>Jardín Las Lunas</h3>
+      <p>Camino a Los Pinos 120, Arteaga, Coahuila</p>
+      <a href="https://maps.google.com/?q=Jardin+Las+Lunas+Arteaga" target="_blank" rel="noopener">Cómo llegar</a>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="eyebrow">Para esa noche</div>
+    <h2>Código de vestimenta</h2>
+    <div class="dress">
+      <div class="dcard"><div class="e">🌙</div><b>Formal</b><span>Tonos noche: azul, violeta, plata</span></div>
+      <div class="dcard"><div class="e">✨</div><b>Reservado</b><span>El lila es de la quinceañera</span></div>
+    </div>
+  </div>
+
+  <div class="rsvp">
+    <h3>Confirma tu asistencia</h3>
+    <p>Tu lugar entre las estrellas está apartado. Confírmalo antes del 28 de noviembre.</p>
+    <input id="rNombre" placeholder="Tu nombre y apellido">
+    <select id="rNum"><option>Asistiré · 1 persona</option><option>Asistiremos · 2 personas</option><option>Asistiremos · 3 personas</option><option>Asistiremos · 4 personas</option><option>No podré asistir 😔</option></select>
+    <button id="btnRsvp">Confirmar por WhatsApp ✦</button>
+    <div class="dl">Con cariño, familia Herrera Luna</div>
+  </div>
+
+  <div class="qr-sec">
+    <div class="eyebrow">QR de la invitación</div>
+    <div id="qr"></div>
+    <p>Diseñado para imprimirse en las invitaciones físicas.</p>
+  </div>
+</div>
+
+<div class="made">
+  <div class="t">Invitación Deluxe por Solida Aplicaciones</div>
+  <p>Demostración de diseño 100% a medida: temática celestial, ilustraciones y confirmación integrada.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20invitaci%C3%B3n%20Deluxe%20y%20quiero%20una%20tem%C3%A1tica%20%C3%BAnica%20para%20mi%20evento.">Quiero una invitación así</a>
+  <div class="hint">▸ Paquete Premium · Deluxe ◂</div>
+</div>
+
+<script>
+const WA="528443604349";
+/* estrellas */
+const stars=document.getElementById('stars');
+for(let i=0;i<46;i++){
+  const s=document.createElement('i'); s.className='st';
+  const sz=(Math.random()*2+1).toFixed(1);
+  s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${(Math.random()*3).toFixed(2)}s`;
+  stars.appendChild(s);
+}
+/* cuenta regresiva: demo viva a ~75 días */
+const target=new Date(); target.setDate(target.getDate()+75); target.setHours(20,0,0,0);
+function tick(){
+  const t=target-new Date(); if(t<0) return;
+  cdD.textContent=Math.floor(t/864e5); cdH.textContent=Math.floor(t%864e5/36e5);
+  cdM.textContent=Math.floor(t%36e5/6e4); cdS.textContent=Math.floor(t%6e4/1e3);
+}
+tick(); setInterval(tick,1000);
+/* RSVP */
+document.getElementById('btnRsvp').onclick=()=>{
+  const n=document.getElementById('rNombre').value.trim()||"—";
+  const c=document.getElementById('rNum').value;
+  const txt=`✦ XV de Valentina ✦\n\nConfirmación de asistencia:\n• Nombre: ${n}\n• ${c}\n\n¡Gracias! 💜`;
+  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(txt),"_blank");
+};
+/* QR */
+try{
+  const q=qrcode(0,'M'); q.addData('https://solida-web.j23salva.workers.dev/invitacion/avanzado'); q.make();
+  document.getElementById('qr').innerHTML=q.createImgTag(4,0);
+}catch(e){document.querySelector('.qr-sec').style.display='none'}
+</script>
+</body>
+</html>

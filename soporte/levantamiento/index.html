@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Información de tu negocio — Solida Aplicaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B396B; --navy-2:#12274a; --navy-3:#0d1e3a;
+    --teal:#2A9D8E; --teal-bright:#34b9a7; --teal-deep:#1f7f73;
+    --mist:#E8F6F6; --gold:#d8a544;
+    --ink:#0f1f38; --ink-soft:#4a5c78;
+    --paper:#f5f9fb; --card:#ffffff; --line:#e2ebf0;
+    --shadow:0 18px 44px rgba(16,39,74,.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Manrope",system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.55;-webkit-text-size-adjust:100%}
+  h1,h2,h3{font-family:"Sora",sans-serif}
+  header{position:sticky;top:0;z-index:50;background:rgba(27,57,107,.92);backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(255,255,255,.08);padding:11px 16px;display:flex;align-items:center;gap:11px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--navy-3);display:flex;align-items:center;justify-content:center;padding:6px;flex:none}
+  .brand-name{display:flex;flex-direction:column;line-height:1.05}
+  .brand-name b{font-family:"Sora";font-weight:700;color:#fff;font-size:14px}
+  .brand-name span{font-size:9.5px;letter-spacing:.22em;color:var(--teal-bright);text-transform:uppercase}
+  .back{margin-left:auto;color:#fff;text-decoration:none;font-size:12.5px;font-weight:700;opacity:.85}
+  .hero{color:#fff;background:radial-gradient(120% 120% at 80% -10%, #244a86 0%, var(--navy) 45%, var(--navy-2) 100%);
+    padding:32px 20px 36px;text-align:center}
+  .hero h1{font-size:clamp(24px,6.6vw,34px);font-weight:800;line-height:1.12;letter-spacing:-.5px;max-width:560px;margin:0 auto}
+  .hero h1 .accent{color:var(--teal-bright)}
+  .hero p{margin:10px auto 0;font-size:14.5px;color:#d4e2f2;max-width:48ch;font-weight:500}
+  .wrap{max-width:640px;margin:0 auto;padding:26px 18px 70px}
+  .step{margin-top:26px}
+  .step-label{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .step-num{width:26px;height:26px;border-radius:8px;background:var(--navy);color:#fff;
+    font-family:"Sora";font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none}
+  .step-label h2{font-size:18px;font-weight:700;letter-spacing:-.2px}
+  .hint{font-size:12.5px;color:var(--ink-soft);margin:-8px 0 12px 36px;font-weight:500}
+  .segments{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}
+  .seg-btn{background:var(--card);border:1.5px solid var(--line);border-radius:15px;
+    padding:14px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px;
+    transition:border-color .18s,box-shadow .18s,transform .12s;font-family:inherit;color:var(--ink)}
+  .seg-btn:hover{border-color:var(--teal)}
+  .seg-btn:active{transform:scale(.985)}
+  .seg-btn .seg-t{font-family:"Sora";font-weight:700;font-size:14px;line-height:1.15}
+  .seg-btn .seg-d{font-size:11.5px;color:var(--ink-soft);font-weight:500;line-height:1.35}
+  .seg-btn[aria-pressed="true"]{border-color:var(--teal);background:var(--navy);color:#fff;box-shadow:var(--shadow)}
+  .seg-btn[aria-pressed="true"] .seg-d{color:#c6d6ec}
+  .tiers{display:grid;gap:11px}
+  .tier-btn{background:var(--card);border:1.5px solid var(--line);border-radius:15px;padding:14px;cursor:pointer;
+    text-align:left;font-family:inherit;color:var(--ink);display:flex;justify-content:space-between;align-items:center;gap:10px;
+    transition:border-color .18s,box-shadow .18s}
+  .tier-btn:hover{border-color:var(--teal)}
+  .tier-btn .t-name{font-family:"Sora";font-weight:700;font-size:14.5px}
+  .tier-btn .t-lvl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-deep);font-weight:700}
+  .tier-btn .t-price{font-family:"Sora";font-weight:700;font-size:14px;color:var(--navy);white-space:nowrap}
+  .tier-btn .t-unit{display:block;font-size:10.5px;color:var(--ink-soft);font-weight:600;text-align:right}
+  .tier-btn[aria-pressed="true"]{border-color:var(--teal);background:var(--navy);color:#fff;box-shadow:var(--shadow)}
+  .tier-btn[aria-pressed="true"] .t-lvl{color:var(--teal-bright)}
+  .tier-btn[aria-pressed="true"] .t-price{color:#fff}
+  .tier-btn[aria-pressed="true"] .t-unit{color:#c6d6ec}
+  .panel{background:var(--card);border:1.5px solid var(--line);border-radius:15px;padding:16px 14px;display:grid;gap:13px}
+  .group-band{background:var(--navy);color:#fff;border-radius:10px;padding:8px 12px;font-family:"Sora";
+    font-weight:700;font-size:12.5px;letter-spacing:.04em;margin-top:4px}
+  .group-band.g2{background:var(--teal)}
+  .group-band.g3{background:var(--gold)}
+  .field label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:5px}
+  .field label b{color:var(--teal-deep)}
+  .field input,.field textarea,.field select{width:100%;border:1.5px solid var(--line);border-radius:11px;background:#fbfdfe;
+    padding:11px 12px;font-family:inherit;font-size:14.5px;color:var(--ink);outline:none;transition:border-color .15s}
+  .field textarea{min-height:96px;resize:vertical;line-height:1.5}
+  .field input:focus,.field textarea:focus{border-color:var(--teal);background:#fff}
+  .field .help{font-size:11.5px;color:var(--ink-soft);margin-top:4px;font-weight:500}
+  .checks{display:grid;gap:9px}
+  .chk{display:flex;gap:10px;align-items:flex-start;background:#fbfdfe;border:1.5px solid var(--line);border-radius:11px;
+    padding:10px 12px;cursor:pointer;font-size:13.5px;font-weight:500}
+  .chk input{width:18px;height:18px;accent-color:var(--teal);flex:none;margin-top:1px}
+  .chk:has(input:checked){border-color:var(--teal);background:var(--mist)}
+  .actions{position:sticky;bottom:0;background:linear-gradient(to top,var(--paper) 70%,transparent);padding:14px 0 10px;margin-top:26px}
+  .btn{width:100%;border:none;cursor:pointer;font-family:"Sora";font-weight:700;font-size:15px;border-radius:999px;
+    padding:15px;display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .12s}
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--teal);color:#fff;box-shadow:0 8px 18px rgba(42,157,142,.35)}
+  .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .btn-ghost{background:var(--card);border:1.5px solid var(--line);color:var(--navy);font-size:13.5px;padding:12px}
+  .preview{background:var(--navy-3);color:#dfeaf6;border-radius:15px;padding:16px 14px;font-size:12px;line-height:1.6;
+    white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;max-height:340px;overflow:auto;display:none}
+  .missing{display:none;background:#fdf3e6;border:1.5px solid var(--gold);border-radius:12px;padding:11px 13px;
+    font-size:12.5px;font-weight:600;color:#7a5510;margin-top:12px}
+  .note{background:var(--mist);border:1.5px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;font-weight:500;color:var(--ink)}
+  .hidden{display:none}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" width="22" height="22" aria-hidden="true">
+        <rect x="30" y="18" width="40" height="15" rx="7.5" fill="#2A9D8E"/>
+        <rect x="22" y="42" width="56" height="15" rx="7.5" fill="#E8F6F6"/>
+        <rect x="14" y="66" width="72" height="15" rx="7.5" fill="#2A9D8E"/>
+      </svg>
+    </div>
+    <div class="brand-name"><b>Solida Aplicaciones</b><span>Tu página, paso a paso</span></div>
+  </div>
+  <a class="back" href="../">&#8592; Soporte</a>
+</header>
+
+<section class="hero">
+  <h1>Cuéntanos de tu negocio y <span class="accent">construimos tu página</span></h1>
+  <p>Llena lo que tengas a la mano — tu avance se guarda en este dispositivo. Al final nos lo mandas por WhatsApp con un botón.</p>
+</section>
+
+<div class="wrap">
+
+  <div class="step" id="step1">
+    <div class="step-label"><div class="step-num">1</div><h2>¿Cuál es tu giro?</h2></div>
+    <div class="segments" id="segGrid"></div>
+  </div>
+
+  <div class="step hidden" id="step2">
+    <div class="step-label"><div class="step-num">2</div><h2>¿Qué paquete contrataste?</h2></div>
+    <p class="hint">Si aún no lo decides, elige el que te interesa: te pediremos solo lo de ese nivel.</p>
+    <div class="tiers" id="tierGrid"></div>
+  </div>
+
+  <div class="step hidden" id="step3">
+    <div class="step-label"><div class="step-num">3</div><h2>Datos generales</h2></div>
+    <div class="panel" id="generalPanel"></div>
+  </div>
+
+  <div class="step hidden" id="step4">
+    <div class="step-label"><div class="step-num">4</div><h2 id="reqTitle">Lo que necesitamos de tu paquete</h2></div>
+    <div class="panel" id="reqPanel"></div>
+  </div>
+
+  <div class="step hidden" id="step5">
+    <div class="step-label"><div class="step-num">5</div><h2>Material que enviarás por WhatsApp</h2></div>
+    <p class="hint">Las fotos y el logo no se suben aquí: márcalos y adjúntalos en el mismo chat después de enviar tu información.</p>
+    <div class="panel"><div class="checks" id="matChecks"></div></div>
+  </div>
+
+  <div class="step hidden" id="step6">
+    <div class="step-label"><div class="step-num">6</div><h2>Revisar y enviar</h2></div>
+    <div class="note">Así recibiremos tu información, ordenada y lista para trabajar. Revisa que todo esté bien:</div>
+    <div class="missing" id="missingBox"></div>
+    <div class="preview" id="preview" style="margin-top:12px"></div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnWa">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.2 1.2-1.7 1.2-.4.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.4.2.5.7 1.8.8 1.9.1.1.1.3 0 .5-.1.2-.1.3-.3.5l-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.3.1 1.6.8 1.9.9.3.2.5.2.5.4.1.1.1.7-.1 1.2Z"/></svg>
+        Enviar por WhatsApp
+      </button>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="btnCopy">Copiar resumen</button>
+        <button class="btn btn-ghost" id="btnDl">Descargar archivo</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const WHATSAPP = "528443604349";
+
+/* ---------- catálogo de campos ---------- */
+const GENERAL = [
+  {id:"negocio",  l:"Nombre de tu negocio", t:"input", req:true, ph:"Como aparecerá en tu página"},
+  {id:"nombre",   l:"Tu nombre (responsable)", t:"input", req:true},
+  {id:"wa",       l:"WhatsApp del negocio", t:"input", req:true, ph:"844 000 0000", help:"El número donde quieres que te escriban tus clientes."},
+  {id:"tel",      l:"Teléfono para llamadas (si es otro)", t:"input"},
+  {id:"correo",   l:"Correo electrónico", t:"input"},
+  {id:"direccion",l:"Dirección completa", t:"input", ph:"Calle, número, colonia, ciudad", help:"La usamos para el botón de mapa."},
+  {id:"horarios", l:"Horarios de atención", t:"input", ph:"Lun a Vie 9:00–18:00, Sáb 9:00–14:00"},
+  {id:"redes",    l:"Redes sociales (usuarios exactos)", t:"input", ph:"Facebook: / Instagram: / TikTok:"},
+  {id:"colores",  l:"Colores de tu marca o estilo que te gusta", t:"input", ph:"Ej. azul marino con dorado, estilo elegante"},
+  {id:"eslogan",  l:"Frase o eslogan de tu negocio (opcional)", t:"input", ph:"Si no tienes, nosotros te proponemos uno"},
+];
+
+const MATERIALS_BASE = [
+  "Logo en buena calidad (PNG o JPG)",
+  "No tengo logo: autorizo una versión con el nombre de mi negocio",
+  "Fotos de mi negocio / productos en buena resolución",
+];
+
+const SEGMENTS = {
+ restaurantes:{label:"Restaurantes y cafés", short:"Menú digital con QR",
+  materials:["Fotos de mis platillos"],
+  tiers:[
+   {level:"Básico", name:"Menú Esencial", price:"$1,490", unit:"pago único", fields:[
+     {id:"menu", l:"Tu menú completo", t:"area", req:true, big:true,
+      ph:"Escribe una categoría y debajo sus platillos, así:\n\nTACOS\n- Taco de bistec — con cebolla y cilantro — $25\n- Taco de tripas — dorada o suave — $28\n\nBEBIDAS\n- Agua del día 1 L — $35",
+      help:"Hasta 30 platillos en el paquete Básico. Nombre — descripción corta — precio."},
+     {id:"waPedidos", l:"¿Los pedidos llegan al mismo WhatsApp de arriba?", t:"input", ph:"Sí / No, usar este otro: ..."},
+   ]},
+   {level:"Intermedio", name:"Menú Pro", price:"$2,490", unit:"pago único", fields:[
+     {id:"secciones", l:"Secciones de tu menú", t:"input", ph:"Entradas, fuertes, bebidas, postres…"},
+     {id:"destacados", l:"Platillos destacados o más vendidos", t:"area", ph:"Los que quieres que resalten primero"},
+     {id:"promos", l:"Promociones del día o de la semana", t:"area", ph:"Ej. Martes de alitas 2x1 después de las 6 pm"},
+     {id:"mapa", l:"Liga de tu ubicación en Google Maps (si la tienes)", t:"input", ph:"https://maps.app.goo.gl/..."},
+   ]},
+   {level:"Premium", name:"Menú Premium", price:"$3,990", unit:"pago único", fields:[
+     {id:"waCocina", l:"WhatsApp de COCINA (recibirá las comandas)", t:"input", req:true},
+     {id:"mesas", l:"Número de mesas y cómo las numeras", t:"input", ph:"Ej. 12 mesas, numeradas del 1 al 12"},
+     {id:"pagos", l:"Formas de pago que aceptas", t:"input", ph:"Efectivo, tarjeta, transferencia"},
+     {id:"propinas", l:"Reglas de propina o cargos extra (si aplican)", t:"input"},
+   ]},
+  ]},
+ profesionales:{label:"Profesionales y consultorios", short:"Tarjeta y sitio profesional",
+  materials:["Foto profesional mía","Fotos de mi consultorio / trabajo"],
+  tiers:[
+   {level:"Básico", name:"Tarjeta Digital", price:"$1,290", unit:"pago único", fields:[
+     {id:"especialidad", l:"Tu profesión o especialidad", t:"input", req:true, ph:"Ej. Psicóloga clínica, Dentista, Abogado"},
+     {id:"cedula", l:"Cédula profesional (si aplica)", t:"input"},
+     {id:"servicios", l:"Servicios que ofreces", t:"area", req:true, ph:"Uno por renglón, con precio si quieres mostrarlo"},
+   ]},
+   {level:"Intermedio", name:"Perfil Profesional", price:"$2,390", unit:"pago único", fields:[
+     {id:"sobreMi", l:"Sobre ti / tu trayectoria", t:"area", ph:"Estudios, experiencia, tu enfoque. Si prefieres, pon los datos y nosotros lo redactamos."},
+     {id:"testimonios", l:"3 a 5 testimonios de pacientes o clientes", t:"area", ph:"«Excelente atención…» — María G.\n(Con autorización de quien lo dijo)"},
+     {id:"citas", l:"Días y horarios en que agendas citas", t:"input"},
+   ]},
+   {level:"Premium", name:"Sitio Profesional", price:"$3,890", unit:"pago único", fields:[
+     {id:"contenidoExtra", l:"Contenido para páginas adicionales", t:"area", ph:"Servicios a detalle, preguntas frecuentes o artículos que quieras incluir"},
+     {id:"dominio", l:"Dominio que te gustaría (en orden de preferencia)", t:"input", ph:"1) minegocio.com  2) minegocio.mx", help:"Incluido el primer año."},
+   ]},
+  ]},
+ talleres:{label:"Talleres y servicios", short:"Catálogo + cotización",
+  materials:["Fotos de trabajos realizados","Pares de fotos antes / después"],
+  tiers:[
+   {level:"Básico", name:"Catálogo Express", price:"$1,390", unit:"pago único", fields:[
+     {id:"servicios", l:"Tus servicios con precios", t:"area", req:true, big:true,
+      ph:"- Cambio de aceite — desde $450\n- Afinación mayor — desde $1,200\nSi el precio varía, usa «desde $»."},
+   ]},
+   {level:"Intermedio", name:"Catálogo Pro", price:"$2,390", unit:"pago único", fields:[
+     {id:"categorias", l:"Categorías de tus servicios", t:"input", ph:"Ej. Mecánica, eléctrico, suspensión"},
+     {id:"promos", l:"Promociones vigentes", t:"area"},
+     {id:"testimonios", l:"Testimonios de clientes", t:"area"},
+     {id:"datosCot", l:"¿Qué datos quieres que traiga la cotización del cliente?", t:"input", ph:"Ej. Servicio, marca y modelo del auto, notas"},
+   ]},
+   {level:"Premium", name:"Servicio Completo", price:"$3,690", unit:"pago único", fields:[
+     {id:"agenda", l:"Reglas de tu agenda de citas o pedidos", t:"area", ph:"Días, horarios y duración de cada cita"},
+     {id:"sucursales", l:"Datos de tus sucursales", t:"area", ph:"Dirección, teléfono y encargado de cada una"},
+     {id:"dominio", l:"Dominio que te gustaría", t:"input", help:"Incluido el primer año."},
+   ]},
+  ]},
+ nutriologos:{label:"Nutriólogos y coaches", short:"Planes dinámicos",
+  materials:["Logo de mi consultorio / marca personal"],
+  tiers:[
+   {level:"Básico", name:"Plan Digital", price:"$2,490 inicio", unit:"+ $399/mes", fields:[
+     {id:"planTipo", l:"Plan tipo de un paciente (comidas con horario y porciones)", t:"area", req:true, big:true,
+      ph:"DESAYUNO 8:00\n- 2 huevos revueltos\n- 1 taza de fruta\nCOLACIÓN 11:00\n- ..."},
+     {id:"sustituciones", l:"Sustituciones permitidas por alimento", t:"area", ph:"Ej. Pollo → pescado o atún en agua"},
+     {id:"agua", l:"Meta de vasos de agua al día", t:"input", ph:"Ej. 8 vasos"},
+   ]},
+   {level:"Intermedio", name:"Práctica Pro", price:"$3,990 inicio", unit:"+ $599/mes", fields:[
+     {id:"macros", l:"Macros del plan", t:"input", ph:"kcal, proteína, carbohidratos y grasas"},
+     {id:"mandado", l:"Lista de mandado semanal con cantidades", t:"area"},
+     {id:"equivalencias", l:"Tabla de equivalencias por alimento", t:"area", ph:"Ej. 100 g pollo = 110 g pescado blanco"},
+     {id:"mealprep", l:"Pasos de preparación semanal (meal prep)", t:"area"},
+   ]},
+   {level:"Premium", name:"Coach Total", price:"$5,990 inicio", unit:"+ $899/mes", fields:[
+     {id:"waCoach", l:"WhatsApp del coach que recibirá los reportes semanales", t:"input", req:true, ph:"52 + número, ej. 528441234567"},
+     {id:"rutina", l:"Rutina por día (ejercicios, series y pesos sugeridos)", t:"area", big:true},
+     {id:"antojos", l:"Presupuesto semanal de antojos (kcal)", t:"input", ph:"Ej. 500 kcal"},
+     {id:"medicion", l:"Medición base del paciente (InBody)", t:"input", ph:"Peso, % grasa, músculo MME, IMC"},
+     {id:"perfil", l:"Perfil del paciente", t:"input", ph:"Altura, edad, metas de % grasa y músculo"},
+   ]},
+  ]},
+ invitaciones:{label:"Invitaciones de evento", short:"Bodas, XV, cumpleaños…",
+  materials:["Fotos para la invitación (hasta 3 en Básico)","Fotos para la galería (Pro y Deluxe)"],
+  tiers:[
+   {level:"Básico", name:"Esencial", price:"$690", unit:"por evento", fields:[
+     {id:"tipoEvento", l:"Tipo de evento", t:"input", req:true, ph:"Boda, XV años, bautizo, cumpleaños…"},
+     {id:"festejados", l:"Nombres de los festejados / anfitriones", t:"input", req:true},
+     {id:"fechaHora", l:"Fecha y hora exactas del evento", t:"input", req:true, ph:"Sábado 14 de noviembre de 2026, 7:00 pm", help:"Con esto arma la cuenta regresiva."},
+     {id:"textos", l:"Textos de tu invitación", t:"area", ph:"Mensaje principal, dedicatoria, nombres de papás o padrinos…"},
+     {id:"ubicacion", l:"Ubicación del evento", t:"input", ph:"Nombre del salón y liga de Google Maps si la tienes"},
+     {id:"tematica", l:"Colores o temática", t:"input"},
+   ]},
+   {level:"Intermedio", name:"Pro", price:"$1,290", unit:"por evento", fields:[
+     {id:"waConfirma", l:"WhatsApp que recibirá las confirmaciones de asistencia", t:"input", req:true},
+     {id:"cancion", l:"Canción para la invitación", t:"input", ph:"Nombre y artista"},
+     {id:"itinerario", l:"Itinerario del evento", t:"area", ph:"7:00 Ceremonia · 8:30 Recepción · 9:00 Cena…"},
+     {id:"dressCode", l:"Código de vestimenta", t:"input"},
+     {id:"regalos", l:"Mesa de regalos", t:"area", ph:"Tienda y número de evento, o cuenta para transferencia"},
+   ]},
+   {level:"Premium", name:"Deluxe", price:"$2,290", unit:"por evento", fields:[
+     {id:"referencias", l:"Referencias visuales de la temática única", t:"area", ph:"Describe el estilo; las imágenes de referencia mándalas por WhatsApp"},
+     {id:"qrUso", l:"¿Dónde imprimirás el QR y a qué tamaño?", t:"input", ph:"Ej. En las invitaciones físicas, 3x3 cm"},
+   ]},
+  ]},
+ uniformes:{label:"Uniformes y bordados", short:"Configurador de pedidos",
+  materials:["Fotos de mis prendas por color","Logo de mi negocio en buena calidad"],
+  tiers:[
+   {level:"Básico", name:"Catálogo Digital", price:"$1,690", unit:"pago único", fields:[
+     {id:"prendas", l:"Catálogo de prendas con colores y telas", t:"area", req:true, big:true,
+      ph:"PLAYERA POLO\n- Colores: blanco, negro, marino\n- Telas: piqué, dry-fit\n\nCAMISA OXFORD\n- Colores: ..."},
+     {id:"tecnicas", l:"Técnicas de decorado que manejas", t:"input", ph:"Bordado, serigrafía, DTF, vinil…"},
+     {id:"preciosRef", l:"Precios de referencia por prenda y técnica", t:"area"},
+   ]},
+   {level:"Intermedio", name:"Cotizador", price:"$2,990", unit:"pago único", fields:[
+     {id:"preciosCant", l:"Precios por rangos de cantidad", t:"area", ph:"Polo bordada: 1-11 pzas $180 · 12-49 $150 · 50+ $130"},
+     {id:"reglas", l:"Reglas de precio", t:"area", ph:"Pedido mínimo, recargos por tallas extra, descuentos por volumen"},
+     {id:"camposCot", l:"¿Qué debe pedir la cotización al cliente?", t:"input", ph:"Cantidades, tallas, notas…"},
+   ]},
+   {level:"Premium", name:"Configurador con OT", price:"$5,900", unit:"pago único", fields:[
+     {id:"combinaciones", l:"Combinaciones válidas de color + tela + técnica por prenda", t:"area"},
+     {id:"posiciones", l:"Posiciones y tamaños de logo permitidos", t:"input", ph:"Pecho izquierdo 8 cm, espalda 25 cm…"},
+     {id:"tallas", l:"Curva de tallas que manejas", t:"input", ph:"S–XXL, tallas de niño…"},
+     {id:"waOT", l:"WhatsApp que recibirá la Orden de Trabajo", t:"input", req:true},
+   ]},
+  ]},
+ barberias:{label:"Barberías y salones", short:"Carta + reservas en línea",
+  materials:["Logo del negocio (o nombre y colores para proponerte uno)","Fotos del local y de trabajos realizados","Fotos del equipo (Intermedio y Premium)"],
+  tiers:[
+   {level:"Básico", name:"Carta de Servicios", price:"$1,390", unit:"pago único", fields:[
+     {id:"nombre", l:"Nombre del negocio", t:"input", req:true, ph:"Ej. La Central Studio"},
+     {id:"servicios", l:"Carta de servicios con precios, por categorías", t:"area", req:true, big:true,
+      ph:"BARBERÍA\n- Corte clásico $180\n- Corte + barba $280\n\nSALÓN\n- Corte dama $250\n- Color / balayage desde $850\n\nEXTRAS\n- Manicure spa $220"},
+     {id:"horario", l:"Horario de atención", t:"input", req:true, ph:"Mar a Sáb 10:00–20:00 · Dom 10:00–15:00 · Lun cerrado"},
+     {id:"contacto", l:"WhatsApp, teléfono y dirección", t:"area", req:true, ph:"WhatsApp, teléfono para llamadas y liga de Google Maps si la tienes"},
+     {id:"redes", l:"Redes sociales", t:"input", ph:"Instagram, Facebook, TikTok…"},
+   ]},
+   {level:"Intermedio", name:"Estudio Pro", price:"$2,590", unit:"pago único", fields:[
+     {id:"promos", l:"Promociones vigentes", t:"area", ph:"Ej. Martes y miércoles: corte + barba $230"},
+     {id:"equipo", l:"Tu equipo: nombre, puesto y especialidad de cada quien", t:"area", ph:"Marco – Barbero master, fades y barba\nRegina – Estilista senior, color…"},
+     {id:"testimonios", l:"2 o 3 testimonios de clientes", t:"area", ph:"Nombre y comentario; también puedo tomarlos de tus reseñas de Google"},
+     {id:"marca", l:"Colores y estilo de tu marca", t:"input", ph:"Ej. negro con dorado, estilo clásico / moderno"},
+   ]},
+   {level:"Premium", name:"Reserva Total", price:"$4,290", unit:"pago único", fields:[
+     {id:"duraciones", l:"Duración aproximada de cada servicio", t:"area", req:true, ph:"Corte 45 min · Corte + barba 70 min · Color 2 hrs…"},
+     {id:"quienHace", l:"¿Quién de tu equipo realiza cada servicio?", t:"area", req:true, ph:"Cortes y barba: Marco e Iván · Color: Regina · Uñas: Paola"},
+     {id:"reglasAgenda", l:"Reglas de tu agenda", t:"area", ph:"Días de descanso, horas de comida, con cuánta anticipación se puede reservar…"},
+     {id:"waReservas", l:"WhatsApp que recibirá las reservas", t:"input", req:true},
+     {id:"dominio", l:"Dominio deseado (incluido 1 año)", t:"input", ph:"Ej. lacentralstudio.mx"},
+   ]},
+  ]},
+};
+
+/* ---------- estado ---------- */
+let giro = null, tierIdx = null;
+const store = {
+  get k(){ return "solida-levantamiento"; },
+  load(){ try{ return JSON.parse(localStorage.getItem(this.k)||"{}"); }catch(e){ return {}; } },
+  save(d){ try{ localStorage.setItem(this.k, JSON.stringify(d)); }catch(e){} }
+};
+let draft = store.load();
+
+function saveDraft(){
+  const d = {giro, tierIdx, values:{}, mats:[]};
+  document.querySelectorAll("[data-fid]").forEach(el=>{ if(el.value.trim()) d.values[el.dataset.fid]=el.value; });
+  document.querySelectorAll("#matChecks input:checked").forEach(el=> d.mats.push(el.value));
+  store.save(d); draft = d;
+}
+
+/* ---------- render ---------- */
+const $ = id => document.getElementById(id);
+const show = id => $(id).classList.remove("hidden");
+
+function fieldHTML(f, prefix){
+  const req = f.req ? ' <b>*</b>' : '';
+  const help = f.help ? `<div class="help">${f.help}</div>` : '';
+  const val = (draft.values && draft.values[prefix+f.id]) ? draft.values[prefix+f.id].replace(/"/g,'&quot;') : '';
+  if(f.t==="area"){
+    const h = f.big ? ' style="min-height:150px"' : '';
+    return `<div class="field"><label>${f.l}${req}</label><textarea data-fid="${prefix}${f.id}" data-req="${!!f.req}" data-label="${f.l}" placeholder="${(f.ph||'').replace(/"/g,'&quot;')}"${h}>${val}</textarea>${help}</div>`;
+  }
+  return `<div class="field"><label>${f.l}${req}</label><input data-fid="${prefix}${f.id}" data-req="${!!f.req}" data-label="${f.l}" placeholder="${(f.ph||'').replace(/"/g,'&quot;')}" value="${val}">${help}</div>`;
+}
+
+function renderSegments(){
+  $("segGrid").innerHTML = Object.entries(SEGMENTS).map(([k,s])=>
+    `<button class="seg-btn" data-seg="${k}" aria-pressed="${giro===k}">
+       <span class="seg-t">${s.label}</span><span class="seg-d">${s.short}</span></button>`).join("");
+  $("segGrid").querySelectorAll("button").forEach(b=> b.onclick = ()=>{
+    giro = b.dataset.seg; tierIdx = null; renderSegments(); renderTiers();
+    show("step2"); $("step2").scrollIntoView({behavior:"smooth", block:"start"}); saveDraft();
+  });
+}
+
+function renderTiers(){
+  const s = SEGMENTS[giro];
+  $("tierGrid").innerHTML = s.tiers.map((t,i)=>
+    `<button class="tier-btn" data-i="${i}" aria-pressed="${tierIdx===i}">
+       <span><span class="t-lvl">${t.level}</span><br><span class="t-name">${t.name}</span></span>
+       <span><span class="t-price">${t.price}</span><span class="t-unit">${t.unit}</span></span></button>`).join("");
+  $("tierGrid").querySelectorAll("button").forEach(b=> b.onclick = ()=>{
+    tierIdx = +b.dataset.i; renderTiers(); renderForm();
+    show("step3"); show("step4"); show("step5"); show("step6");
+    $("step3").scrollIntoView({behavior:"smooth", block:"start"}); saveDraft();
+  });
+}
+
+function renderForm(){
+  const s = SEGMENTS[giro], t = s.tiers[tierIdx];
+  $("generalPanel").innerHTML = GENERAL.map(f=> fieldHTML(f, "g_")).join("");
+  $("reqTitle").textContent = `Lo que necesitamos para tu ${t.name} (${t.level})`;
+  const bands = ["group-band","group-band g2","group-band g3"];
+  let html = "";
+  for(let i=0; i<=tierIdx; i++){
+    const lv = s.tiers[i];
+    html += `<div class="${bands[i]}">${lv.level.toUpperCase()} · ${lv.name}</div>`;
+    html += lv.fields.map(f=> fieldHTML(f, giro+"_")).join("");
+  }
+  $("reqPanel").innerHTML = html;
+  const mats = MATERIALS_BASE.concat(s.materials||[]);
+  $("matChecks").innerHTML = mats.map(m=>{
+    const on = (draft.mats||[]).includes(m) ? "checked" : "";
+    return `<label class="chk"><input type="checkbox" value="${m}" ${on}> ${m}</label>`;
+  }).join("");
+  document.querySelectorAll("[data-fid], #matChecks input").forEach(el=>{
+    el.addEventListener("input", ()=>{ saveDraft(); refreshPreview(); });
+    el.addEventListener("change", ()=>{ saveDraft(); refreshPreview(); });
+  });
+  refreshPreview();
+}
+
+/* ---------- markdown ---------- */
+function buildMarkdown(){
+  const s = SEGMENTS[giro], t = s.tiers[tierIdx];
+  const v = id => { const el=document.querySelector(`[data-fid="${id}"]`); return el? el.value.trim(): ""; };
+  const missing = [];
+  let md = `# Levantamiento de información — Solida Aplicaciones\n\n`;
+  md += `**Negocio:** ${v("g_negocio")||"—"}\n`;
+  md += `**Giro:** ${s.label}\n`;
+  md += `**Paquete:** ${t.level} — ${t.name} (${t.price} ${t.unit})\n`;
+  md += `**Fecha:** ${new Date().toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"})}\n`;
+  md += `\n## Datos generales\n`;
+  GENERAL.forEach(f=>{
+    const val = v("g_"+f.id);
+    if(f.req && !val) missing.push(f.l);
+    if(val) md += `- **${f.l}:** ${val.includes("\n") ? "\n  " + val.replace(/\n/g,"\n  ") : val}\n`;
+  });
+  for(let i=0; i<=tierIdx; i++){
+    const lv = s.tiers[i];
+    md += `\n## Requisitos ${lv.level} — ${lv.name}\n`;
+    lv.fields.forEach(f=>{
+      const val = v(giro+"_"+f.id);
+      if(f.req && !val) missing.push(f.l);
+      if(val){
+        if(val.includes("\n")) md += `\n### ${f.l}\n${val}\n`;
+        else md += `- **${f.l}:** ${val}\n`;
+      } else {
+        md += `- **${f.l}:** _(pendiente)_\n`;
+      }
+    });
+  }
+  const mats = Array.from(document.querySelectorAll("#matChecks input:checked")).map(e=>e.value);
+  md += `\n## Material que enviaré por WhatsApp\n`;
+  md += mats.length ? mats.map(m=>`- [ ] ${m}`).join("\n")+"\n" : "_(sin material marcado)_\n";
+  md += `\n---\n_Generado desde solida-web.j23salva.workers.dev/soporte_\n`;
+  return {md, missing};
+}
+
+function refreshPreview(){
+  if(giro===null || tierIdx===null) return;
+  const {md, missing} = buildMarkdown();
+  $("preview").style.display = "block";
+  $("preview").textContent = md;
+  if(missing.length){
+    $("missingBox").style.display = "block";
+    $("missingBox").innerHTML = "&#9998; Aún te falta llenar: <b>" + missing.join("</b>, <b>") + "</b>. Puedes enviarlo así, pero lo marcaremos como pendiente.";
+  } else $("missingBox").style.display = "none";
+}
+
+/* ---------- acciones ---------- */
+$("btnCopy").onclick = async ()=>{
+  const {md} = buildMarkdown();
+  try{ await navigator.clipboard.writeText(md); $("btnCopy").textContent="¡Copiado!"; }
+  catch(e){ $("btnCopy").textContent="No se pudo copiar"; }
+  setTimeout(()=> $("btnCopy").textContent="Copiar resumen", 1800);
+};
+$("btnDl").onclick = ()=>{
+  const {md} = buildMarkdown();
+  const neg = (document.querySelector('[data-fid="g_negocio"]')?.value.trim()||"negocio").replace(/[^\wáéíóúñ -]/gi,"").replace(/ +/g,"-");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([md], {type:"text/markdown;charset=utf-8"}));
+  a.download = `Levantamiento-${neg}.md`;
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$("btnWa").onclick = ()=>{
+  const {md} = buildMarkdown();
+  const enc = encodeURIComponent(md);
+  if(enc.length > 8000){
+    const neg = document.querySelector('[data-fid="g_negocio"]')?.value.trim()||"";
+    const short = `Hola, soy ${neg||"cliente"} y ya llené la información de mi página en el formulario de Solida. Como es larga, la descargué en archivo y la adjunto en este chat. También mando mi logo y fotos aquí mismo.`;
+    $("btnDl").click();
+    alert("Tu información es larga, así que se descargó como archivo. Se abrirá WhatsApp: adjunta ahí el archivo que se acaba de descargar, junto con tu logo y fotos.");
+    window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(short)}`, "_blank");
+  } else {
+    window.open(`https://wa.me/${WHATSAPP}?text=${enc}`, "_blank");
+  }
+};
+
+/* ---------- init ---------- */
+renderSegments();
+/* Preselección desde el tabulador: /soporte/levantamiento/?giro=restaurantes&nivel=1 */
+const params = new URLSearchParams(location.search);
+const pGiro = params.get("giro"), pNivel = parseInt(params.get("nivel"), 10);
+if(pGiro && SEGMENTS[pGiro]){
+  draft.giro = pGiro;
+  if(Number.isInteger(pNivel) && pNivel >= 0 && pNivel < SEGMENTS[pGiro].tiers.length) draft.tierIdx = pNivel;
+}
+if(draft.giro && SEGMENTS[draft.giro]){
+  giro = draft.giro; renderSegments(); renderTiers(); show("step2");
+  if(Number.isInteger(draft.tierIdx)){
+    tierIdx = draft.tierIdx; renderTiers(); renderForm();
+    show("step3"); show("step4"); show("step5"); show("step6");
+    if(pGiro) setTimeout(()=> document.getElementById("step3").scrollIntoView({behavior:"smooth", block:"start"}), 250);
+  }
+  saveDraft();
+}
+</script>
+</body>
+</html>

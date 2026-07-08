@@ -9,11 +9,29 @@ const CONFIG = {
   // Formato: código de país + número, sin signos. Ej. 52 + 10 dígitos.
   coachWa: "528443604349",
   kcal: 2100, prot: 185, carb: 210, fat: 60,
-  // Fecha en que arrancó el ciclo actual (lunes de la Semana 1)
-  inicioCiclo: "2026-06-15",
   // Presupuesto semanal de antojos (kcal)
   antojosSemana: 2000,
-  cardioMin: 20
+  cardioMin: 20,
+  // Unidad de peso por defecto para la rutina ("kg" o "lb")
+  unidad: "kg",
+  // Datos y metas del cliente (edita aquí cuando el estudio InBody cambie).
+  // Los valores de "meta" mueven las flechas de subida/bajada del panel de composición.
+  perfil: {
+    altura: 183, edad: 29,
+    metaGrasa: 15,      // % de grasa corporal objetivo
+    metaMusculo: 49     // MME (masa muscular esquelética) objetivo en kg
+  }
+};
+
+// --- Medición corporal inicial (del estudio InBody / femmto del 06/07/2026) ---
+// Se usa como primer punto del historial si el cliente aún no ha registrado nada.
+// El nutriólogo puede cambiar estos números cuando llegue un estudio nuevo.
+const MEDICION_BASE = {
+  d: "2026-07-06",
+  kg: 94.7,     // Peso
+  mme: 47.0,    // Masa muscular esquelética (kg)
+  grasa: 23.2,  // % de grasa corporal
+  imc: 28.3     // Índice de masa corporal
 };
 
 /* ---------- utilidades de fecha ---------- */
@@ -28,7 +46,8 @@ function weekKey(d){ // lunes como inicio de semana
 const thisWeek = weekKey(now);
 
 /* ---------- almacenamiento (localStorage con respaldo en memoria) ---------- */
-let S = { meals:{}, water:{}, swaps:{}, mealOpt:"A", lifts:{}, liftHi:{}, antojos:{}, weights:[], trained:{}, note:{}, lastReport:null };
+let S = { meals:{}, water:{}, swaps:{}, mealOpt:"A", lifts:{}, liftHi:{}, antojos:{}, weights:[], trained:{}, note:{}, lastReport:null,
+          unidad:CONFIG.unidad, sets:{}, sessions:0, body:[] };
 const LS_KEY = "solida_plan_premium_v1";
 let canStore = true;
 try {
@@ -191,8 +210,24 @@ const CYCLE = [
  {n:"Arranque", d:"Ajusta pesos al 80%. Técnica primero. Sin fallo.", c:"#5aa9e6"},
  {n:"Carga", d:"Aplica doble progreso. Sube donde completaste.", c:"#f2b544"},
  {n:"Alta intensidad", d:"Acércate al fallo en el último set de compuestos.", c:"#ff6b57"},
- {n:"DESCARGA", d:"60–65% del peso de sem. 3. Sin fallo. Recupérate.", c:"#3ddc97"}
+ {n:"DESCARGA", d:"60–65% del peso de la semana previa. Sin fallo. Recupérate.", c:"#3ddc97"}
 ];
+
+/* Descanso sugerido entre series, en segundos, según qué tan pesado es el ejercicio.
+   Regla: entre menos repeticiones (más pesado / más fuerza), más descanso.
+   - Compuesto pesado 6-8 reps  -> 180 s (3 min)
+   - Compuesto 8-10 reps        -> 120 s (2 min)
+   - Aislamiento 10-12 reps     ->  90 s (1.5 min)
+   - Ligero / alto rango 12+    ->  60 s (1 min) */
+function restFor(ex){
+  const lo = parseInt(String(ex.r).split(/[-–]/)[0],10) || 10;
+  const heavy = ex.grp==="inf" || /banca|militar|muerto|remo|jalón|jalon|sentadilla|prensa|hip/i.test(ex.n);
+  if(lo<=8)  return heavy?180:150;
+  if(lo<=10) return 120;
+  if(lo<=12) return 90;
+  return 60;
+}
+function fmtRest(s){ const m=Math.floor(s/60), r=s%60; return m?(r?m+" min "+r+" s":m+" min"):s+" s"; }
 
 /* ============================================================
    ANTOJOS
@@ -348,35 +383,115 @@ $("shopList").addEventListener("click",e=>{
 $("prepSteps").innerHTML = PREP_STEPS.map((s,i)=>`<div class="prep-step"><span class="n">${i+1}</span><span>${s}</span></div>`).join("");
 
 /* ============================================================
-   RUTINA — día actual, ciclo 3+1, doble progreso, descarga
+   RUTINA — día actual, ciclo por SEMANA DEL MES, doble progreso
+   La semana 1 es la primera semana del mes. El tipo de semana se
+   asigna automático según cuántas semanas tenga el mes:
+     Mes de 4 semanas:  1 Arranque · 2 Carga · 3 Alta int. · 4 Descarga
+     Mes de 5 semanas:  1 Arranque · 2 Carga · 3 Carga · 4 Alta int. · 5 Descarga
+   (Para otros clientes, esto se podrá configurar a futuro.)
    ============================================================ */
-const start = new Date(CONFIG.inicioCiclo+"T00:00:00");
-const diffDays = Math.max(0, Math.floor((now-start)/86400000));
-const weekIdx = Math.floor(diffDays/7)%4;           // 0..3
+// ¿en qué semana del mes cae una fecha? (semanas empiezan en lunes)
+function weekOfMonth(d){
+  const first = new Date(d.getFullYear(), d.getMonth(), 1);
+  const offset = (first.getDay()+6)%7;          // lunes=0 ... domingo=6
+  return Math.floor((d.getDate()-1+offset)/7)+1;
+}
+function weeksInMonth(y,m){
+  const first = new Date(y,m,1);
+  const offset = (first.getDay()+6)%7;
+  const days = new Date(y,m+1,0).getDate();
+  return Math.ceil((days+offset)/7);
+}
+// Mapa de tipo de semana -> índice de CYCLE, según total de semanas del mes
+function cycleIndexFor(weekNo, totalWeeks){
+  if(totalWeeks>=5){
+    // 1 arranque, 2 carga, 3 carga, 4 alta, 5(+) descarga
+    if(weekNo<=1) return 0;
+    if(weekNo===2||weekNo===3) return 1;
+    if(weekNo===4) return 2;
+    return 3;
+  }
+  // meses de 4 (o menos): 1 arranque, 2 carga, 3 alta, 4(+) descarga
+  if(weekNo<=1) return 0;
+  if(weekNo===2) return 1;
+  if(weekNo===3) return 2;
+  return 3;
+}
+const totalWeeks = weeksInMonth(now.getFullYear(), now.getMonth());
+const weekNo = weekOfMonth(now);                    // 1..totalWeeks
+const weekIdx = cycleIndexFor(weekNo, totalWeeks);  // índice en CYCLE
 const isDeload = weekIdx===3;
 const cyc = CYCLE[weekIdx];
-$("cycleChip").textContent = "Semana "+(weekIdx+1)+" de 4";
+$("cycleChip").textContent = "Semana "+weekNo+" de "+totalWeeks;
 $("cycleChip").style.background = "rgba(255,255,255,.06)";
 $("cycleChip").style.color = cyc.c;
 
-$("cycleCal").innerHTML = CYCLE.map((c,i)=>`
-  <div class="cw${i===weekIdx?' now':''}" style="--wc:${c.c}"><b>Sem ${i+1}</b><span>${c.n}</span></div>`).join("");
+// Calendario del mes: una casilla por semana real del mes
+$("cycleCal").innerHTML = Array.from({length:totalWeeks},(_,k)=>{
+  const wn=k+1, ci=cycleIndexFor(wn,totalWeeks), c=CYCLE[ci];
+  return `<div class="cw${wn===weekNo?' now':''}" style="--wc:${c.c}"><b>Sem ${wn}</b><span>${c.n}</span></div>`;
+}).join("");
 
 const banner = $("deloadBanner");
 if(isDeload){
   banner.innerHTML = `<div class="banner em"><span class="i">🧘</span>
-    <div><b>Esta es tu semana de DESCARGA.</b> Usa el 60–65% del peso de la semana 3 (ya calculado abajo), sin fallo.
+    <div><b>Esta es tu semana de DESCARGA.</b> Usa el 60–65% del peso de la semana previa (ya calculado abajo), sin fallo.
     La descarga no frena el progreso — lo acelera al permitir recuperación completa.</div></div>`;
 }else{
-  const rest = 3-weekIdx;
+  // semanas que faltan para la descarga (la descarga es la última del mes)
+  const rest = totalWeeks - weekNo;
   banner.innerHTML = `<div class="banner ${weekIdx===2?'coral':'amber'}"><span class="i">${weekIdx===2?'🔥':'📅'}</span>
-    <div><b>Semana ${weekIdx+1} · ${cyc.n}.</b> ${cyc.d} Faltan <b>${rest} semana${rest>1?'s':''}</b> para tu descarga.</div></div>`;
+    <div><b>Semana ${weekNo} · ${cyc.n}.</b> ${cyc.d} ${rest>0?`Faltan <b>${rest} semana${rest>1?'s':''}</b> para tu descarga.`:''}</div></div>`;
 }
 
 const dow = now.getDay(); // 0 dom .. 6 sab
 const todayRoutine = ROUTINE[dow];
-function getW(ex){ return S.lifts[ex.id]!==undefined ? S.lifts[ex.id] : ex.base; }
+function getW(ex){ return S.lifts[ex.id]!==undefined ? S.lifts[ex.id] : ex.base; } // siempre en kg
 function roundP(v){ return Math.round(v/2.5)*2.5; }
+
+/* --- unidades de peso (guardado interno siempre en kg) --- */
+const KG2LB = 2.20462;
+function toUnit(kg){ return S.unidad==="lb" ? Math.round(kg*KG2LB/2.5)*2.5 : kg; }
+function unitLabel(){ return S.unidad==="lb" ? "lb" : "kg"; }
+function fmtW(kg){ const v=toUnit(kg); return (Number.isInteger(v)?v:v.toFixed(1))+" "+unitLabel(); }
+
+/* --- series marcadas: S.sets[fecha][exId] = número de series hechas --- */
+function setsDone(exId){ const day=S.sets[dayKey]; return day&&day[exId] ? day[exId] : 0; }
+function toggleSet(exId, total){
+  if(!S.sets[dayKey]) S.sets[dayKey]={};
+  const cur = S.sets[dayKey][exId]||0;
+  S.sets[dayKey][exId] = cur>=total ? 0 : cur+1; // avanza; al completar y volver a tocar, reinicia
+  save();
+  return S.sets[dayKey][exId];
+}
+
+/* --- Timer de descanso entre series --- */
+let restTimer=null, restLeft=0;
+function startRest(seconds, exName){
+  clearInterval(restTimer); restLeft=seconds;
+  const bar=$("restBar");
+  bar.classList.add("show");
+  const paint=()=>{
+    const m=Math.floor(restLeft/60), s=restLeft%60;
+    $("restTime").textContent = (m?m+":":"")+String(s).padStart(m?2:1,"0");
+    $("restName").textContent = "Descanso · "+exName;
+    $("restFill").style.width = (restLeft/seconds*100)+"%";
+  };
+  paint();
+  restTimer=setInterval(()=>{
+    restLeft--;
+    if(restLeft<=0){ clearInterval(restTimer); bar.classList.remove("show");
+      showToast("¡A darle! Siguiente serie 💪"); try{navigator.vibrate&&navigator.vibrate(200);}catch(e){} return; }
+    paint();
+  },1000);
+}
+function stopRest(){ clearInterval(restTimer); $("restBar").classList.remove("show"); }
+$("restSkip") && ($("restSkip").onclick = stopRest);
+
+function renderUnitToggle(){
+  const t=$("unitToggle"); if(!t) return;
+  t.innerHTML = ["kg","lb"].map(u=>`<button data-u="${u}" class="${S.unidad===u?'on':''}">${u.toUpperCase()}</button>`).join("");
+}
 
 function renderRoutine(){
   if(!todayRoutine){
@@ -396,31 +511,51 @@ function renderRoutine(){
     const inc = ex.grp==="inf"?5:2.5;
     const hiDone = S.liftHi[ex.id]===thisWeek;
     const bodyweight = ex.base===0;
-    return `<div class="ex" data-ex="${ex.id}">
+    const done = setsDone(ex.id);
+    const rest = restFor(ex);
+    // puntos de series (uno por set)
+    const dots = Array.from({length:ex.s},(_,i)=>`<span class="set-dot${i<done?' on':''}"></span>`).join("");
+    return `<div class="ex${done>=ex.s?' ex-complete':''}" data-ex="${ex.id}">
       <div class="ex-top">
-        <span class="nm"><b>${ex.n}</b><small>${ex.s}×${ex.r} · ${ex.grp==="inf"?"tren inferior (+5 kg)":"tren superior (+2.5 kg)"}</small></span>
+        <span class="nm"><b>${ex.n}</b><small>${ex.s}×${ex.r} · descanso ${fmtRest(rest)} · ${ex.grp==="inf"?"tren inferior (+"+toUnit(5)+" "+unitLabel()+")":"tren superior (+"+toUnit(2.5)+" "+unitLabel()+")"}</small></span>
         ${bodyweight?`<span class="ex-w"><span class="wv">Corporal<small>peso</small></span></span>`:`
         <span class="ex-w">
           <button data-w="-" aria-label="Bajar peso">−</button>
-          <span class="wv">${showW} kg<small>${isDeload?"descarga 62%":"hoy"}</small></span>
+          <span class="wv">${fmtW(showW)}<small>${isDeload?"descarga 62%":"hoy"}</small></span>
           <button data-w="+" aria-label="Subir peso">+</button>
         </span>`}
+      </div>
+      <div class="set-track">
+        <div class="set-dots">${dots}</div>
+        <button class="set-btn${done>=ex.s?' done':''}" data-set="${ex.id}" data-rest="${rest}" data-total="${ex.s}" data-name="${ex.n}">
+          ${done>=ex.s?'✓ Series completas':`Marcar serie ${done+1} de ${ex.s}`}
+        </button>
       </div>
       ${!isDeload&&!bodyweight?`
       <div class="ex-done${hiDone?' on':''}" data-hi="${ex.id}">
         <span class="box">${hiDone?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
         <span>Completé todas las series en rango alto</span>
       </div>
-      <div class="next-up${hiDone?' show':''}">▲ Próxima sesión sube a ${roundP(w+inc)} kg</div>`:""}
+      <div class="next-up${hiDone?' show':''}">▲ Próxima sesión sube a ${fmtW(roundP(w+inc))}</div>`:""}
     </div>`;
   }).join("");
 }
 $("exList").addEventListener("click",e=>{
+  // marcar serie -> inicia timer de descanso
+  const sb=e.target.closest("[data-set]");
+  if(sb){ const exId=sb.dataset.set, total=+sb.dataset.total, rest=+sb.dataset.rest, name=sb.dataset.name;
+    const n=toggleSet(exId,total);
+    renderRoutine();
+    if(n>0 && n<total){ startRest(rest,name); }   // descansa entre series (no tras la última)
+    else if(n>=total){ stopRest(); showToast("Ejercicio completo ✓"); }
+    else { stopRest(); }
+    return; }
   const wb=e.target.closest("[data-w]");
   if(wb){ const exId=wb.closest(".ex").dataset.ex;
     const ex=todayRoutine.ex.find(x=>x.id===exId);
-    const inc = 2.5;
-    let w=getW(ex)+(wb.dataset.w==="+"?inc:-inc);
+    // el +/- ajusta en la unidad visible, pero se guarda en kg
+    const stepKg = (ex.grp==="inf"?5:2.5);
+    let w=getW(ex)+(wb.dataset.w==="+"?stepKg:-stepKg);
     if(w<0)w=0; S.lifts[exId]=w; save(); renderRoutine(); return; }
   const hi=e.target.closest("[data-hi]");
   if(hi){ const exId=hi.dataset.hi;
@@ -428,21 +563,73 @@ $("exList").addEventListener("click",e=>{
     else { S.liftHi[exId]=thisWeek; showToast("¡Doble progreso! La próxima sesión te sugerimos subir peso 📈"); }
     save(); renderRoutine(); }
 });
+// toggle de unidad kg/lb
+document.addEventListener("click",e=>{
+  const u=e.target.closest("#unitToggle [data-u]"); if(!u) return;
+  S.unidad=u.dataset.u; save(); renderUnitToggle(); renderRoutine();
+  showToast("Pesos en "+(S.unidad==="lb"?"libras":"kilogramos"));
+});
 
-/* --- Botón "Entrené hoy" (alimenta el reporte semanal) --- */
+/* --- Botón "Entrené hoy" vistoso + contador de sesiones --- */
 function renderTrained(){
   const box=$("trainedBox");
   if(!todayRoutine){ box.innerHTML=""; return; }
   const on = S.trained[dayKey]===true;
-  box.innerHTML = `<button class="trained-btn${on?' on':''}" id="trainedBtn">
-    <span class="bx">${on?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
-    ${on?'¡Entrenamiento de hoy completado!':'Marcar: entrené hoy'}
-  </button>`;
+  box.innerHTML = `
+    <button class="trained-hero${on?' on':''}" id="trainedBtn" aria-pressed="${on}">
+      <span class="lifter" aria-hidden="true">
+        <span class="l-head"></span>
+        <span class="l-body"></span>
+        <span class="l-arm"></span>
+        <span class="l-bar"><i></i><i></i></span>
+      </span>
+      <span class="t-txt">
+        <b>${on?'¡Sesión completada! 💥':'Marcar: entrené hoy'}</b>
+        <small>${on?'Sumaste otro día. Así se construye.':'Registra tu día de entrenamiento'}</small>
+      </span>
+      <span class="t-check">${on?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
+    </button>
+    <div class="session-count"><span class="sc-num">${S.sessions||0}</span> <span class="sc-lbl">sesiones completadas en total</span></div>`;
   $("trainedBtn").onclick=()=>{
-    if(S.trained[dayKey]){ delete S.trained[dayKey]; }
-    else { S.trained[dayKey]=true; showToast("Entrenamiento registrado 💪 aparecerá en tu reporte"); }
+    const btn=$("trainedBtn");
+    if(S.trained[dayKey]){ delete S.trained[dayKey]; S.sessions=Math.max(0,(S.sessions||0)-1); }
+    else {
+      S.trained[dayKey]=true; S.sessions=(S.sessions||0)+1;
+      btn.classList.add("celebrate");
+      launchConfetti(btn);
+      showCongrats();
+      try{navigator.vibrate&&navigator.vibrate([120,60,120]);}catch(e){}
+    }
     save(); renderTrained();
   };
+}
+
+// mensaje de felicitación flotante
+function showCongrats(){
+  const msgs=["¡Bien hecho! 💪","¡Otro día ganado! 🔥","¡Constancia pura! 🏆","¡Así se hace! 🚀","¡Máquina! ⚡"];
+  const el=document.createElement("div");
+  el.className="congrats";
+  el.innerHTML=`<div class="congrats-in"><span class="c-emoji">🏋️</span><b>${msgs[Math.floor(Math.random()*msgs.length)]}</b><small>Sesión registrada en tu progreso</small></div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add("show"));
+  setTimeout(()=>{ el.classList.remove("show"); setTimeout(()=>el.remove(),350); },1900);
+}
+// confeti ligero (sin librerías)
+function launchConfetti(anchor){
+  const cols=["#3ddc97","#f2b544","#ff6b57","#5aa9e6","#a78bfa"];
+  const r=anchor.getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  for(let i=0;i<26;i++){
+    const p=document.createElement("i"); p.className="confetti";
+    p.style.left=cx+"px"; p.style.top=cy+"px";
+    p.style.background=cols[i%cols.length];
+    const ang=Math.random()*Math.PI*2, dist=60+Math.random()*90;
+    p.style.setProperty("--dx",Math.cos(ang)*dist+"px");
+    p.style.setProperty("--dy",(Math.sin(ang)*dist-40)+"px");
+    p.style.setProperty("--rot",(Math.random()*540-270)+"deg");
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),900);
+  }
 }
 
 /* ============================================================
@@ -487,47 +674,129 @@ $("antojoList").addEventListener("click",e=>{
 });
 
 /* ============================================================
-   PROGRESO — peso semanal + gráfica (guardado en el dispositivo)
+   PROGRESO — composición corporal (peso, % grasa, músculo MME)
+   con fecha manual, historial, gráfica e indicadores de tendencia.
+   Se guarda en el dispositivo. El nutriólogo puede fijar la
+   medición base (InBody) en MEDICION_BASE arriba.
    ============================================================ */
-function renderWeights(){
-  const W=S.weights.slice().sort((a,b)=>a.d.localeCompare(b.d));
-  // delta
-  if(W.length>=2){
-    const d=(W[W.length-1].kg-W[W.length-2].kg);
-    $("stDelta").textContent=(d>0?"+":"")+d.toFixed(1)+" kg";
-    $("stDelta").style.color = d<=0 ? "#3ddc97" : "#ff6b57";
-  } else $("stDelta").textContent="—";
-  // list
-  $("wList").innerHTML = W.slice(-6).reverse().map(w=>{
-    const dt=new Date(w.d+"T00:00:00");
-    return `<li><span>${dt.getDate()} ${MONTHS[dt.getMonth()]}</span><span style="color:var(--ink)">${w.kg.toFixed(1)} kg
-      <button class="del" data-del="${w.d}">✕</button></span></li>`;
-  }).join("") || `<li><span>Aún no hay registros</span><span>—</span></li>`;
-  // chart
-  const box=$("chartBox");
-  if(W.length<2){ box.innerHTML = `<div class="subtle" style="text-align:center;padding:14px 0">Registra al menos 2 semanas para ver tu gráfica 📉</div>`; return; }
-  const vals=W.map(w=>w.kg), min=Math.min(...vals)-0.5, max=Math.max(...vals)+0.5;
-  const Wd=320, H=110, pad=8;
-  const X=i=>pad+i*(Wd-2*pad)/(W.length-1);
-  const Y=v=>pad+(max-v)*(H-2*pad)/(max-min||1);
-  const pts=W.map((w,i)=>X(i)+","+Y(w.kg)).join(" ");
-  box.innerHTML=`<svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Gráfica de peso">
-    <polyline points="${pts}" fill="none" stroke="#3ddc97" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    ${W.map((w,i)=>`<circle cx="${X(i)}" cy="${Y(w.kg)}" r="3.4" fill="#0c1512" stroke="#3ddc97" stroke-width="2"/>`).join("")}
-    <text x="${X(W.length-1)}" y="${Y(W[W.length-1].kg)-8}" fill="#ecf7f0" font-size="11" font-weight="700" text-anchor="end">${W[W.length-1].kg.toFixed(1)} kg</text>
+// historial ordenado; incluye la medición base del InBody como primer punto
+// (a menos que el cliente ya tenga un registro en esa misma fecha)
+function bodyHistory(){
+  let h = S.body.slice();
+  if(MEDICION_BASE && !h.some(x=>x.d===MEDICION_BASE.d)){
+    h.push(Object.assign({},MEDICION_BASE));
+  }
+  return h.sort((a,b)=>a.d.localeCompare(b.d));
+}
+function fmtDateShort(d){ const t=new Date(d+"T00:00:00"); return t.getDate()+" "+MONTHS[t.getMonth()]; }
+
+// tarjeta-indicador con flecha de tendencia (mejor = hacia la meta)
+function trendCard(label, unit, cur, prev, goalDir, color){
+  let arrow="", cls="flat", delta="";
+  if(prev!=null && cur!=null){
+    const d=cur-prev;
+    if(Math.abs(d)<0.05){ arrow="→"; cls="flat"; }
+    else {
+      const down=d<0;
+      arrow = down?"▼":"▲";
+      // goalDir: "down" => bajar es bueno (grasa); "up" => subir es bueno (músculo)
+      const good = (goalDir==="down"&&down) || (goalDir==="up"&&!down);
+      cls = good?"good":"bad";
+    }
+    delta = (d>0?"+":"")+d.toFixed(1);
+  }
+  return `<div class="ind" style="--ic:${color}">
+    <span class="ind-lbl">${label}</span>
+    <b class="ind-val">${cur!=null?cur.toFixed(1):"—"}<i>${unit}</i></b>
+    <span class="ind-tr ${cls}">${arrow} ${delta?delta+" "+unit:"sin cambio"}</span>
+  </div>`;
+}
+
+function lineChart(series, color, unit){
+  const pts=series.filter(p=>p.v!=null);
+  if(pts.length<2) return `<div class="subtle" style="text-align:center;padding:12px 0">Registra 2+ mediciones para ver la tendencia</div>`;
+  const vals=pts.map(p=>p.v), min=Math.min(...vals), max=Math.max(...vals);
+  const pad=(max-min)*0.15||1, lo=min-pad, hi=max+pad;
+  const Wd=320,H=96,m=8;
+  const X=i=>m+i*(Wd-2*m)/(pts.length-1);
+  const Y=v=>m+(hi-v)*(H-2*m)/(hi-lo);
+  const line=pts.map((p,i)=>X(i)+","+Y(p.v)).join(" ");
+  const area=`${X(0)},${H-m} `+line+` ${X(pts.length-1)},${H-m}`;
+  const gid="g"+color.replace('#','');
+  return `<svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Tendencia">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity=".28"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    <polygon points="${area}" fill="url(#${gid})"/>
+    <polyline points="${line}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${pts.map((p,i)=>`<circle cx="${X(i)}" cy="${Y(p.v)}" r="3" fill="#0c1512" stroke="${color}" stroke-width="2"/>`).join("")}
+    <text x="${X(pts.length-1)}" y="${Y(pts[pts.length-1].v)-7}" fill="#ecf7f0" font-size="10.5" font-weight="700" text-anchor="end">${pts[pts.length-1].v.toFixed(1)}${unit}</text>
   </svg>`;
 }
-$("wSave").onclick=()=>{
-  const v=parseFloat($("wIn").value);
-  if(!v||v<30||v>250){ showToast("Escribe un peso válido en kg"); return; }
-  const existing=S.weights.find(w=>w.d===dayKey);
-  if(existing) existing.kg=v; else S.weights.push({d:dayKey,kg:v});
-  save(); $("wIn").value=""; renderWeights();
-  showToast("Peso guardado: "+v.toFixed(1)+" kg ✓");
+
+let bodyMetric="kg"; // qué serie muestra la gráfica: kg | grasa | mme
+function renderBody(){
+  const H=bodyHistory();
+  const last=H[H.length-1]||null, prev=H.length>=2?H[H.length-2]:null;
+
+  // stat-grid superior (comidas/antojos siguen, delta de peso)
+  const done=S.meals[dayKey]||[false,false,false,false];
+  $("stMeals") && ($("stMeals").textContent = done.filter(Boolean).length+"/"+MEALS.length);
+  if(H.length>=2 && last&&prev){
+    const d=last.kg-prev.kg;
+    $("stDelta").textContent=(d>0?"+":"")+d.toFixed(1)+" kg";
+    $("stDelta").style.color = d<=0 ? "#3ddc97" : "#ff6b57";
+  } else if($("stDelta")) $("stDelta").textContent="—";
+
+  // panel de indicadores (peso, grasa, músculo)
+  $("indGrid").innerHTML =
+    trendCard("Peso","kg", last?last.kg:null, prev?prev.kg:null, "down", "#5aa9e6")+
+    trendCard("% grasa","%", last?last.grasa:null, prev?prev.grasa:null, "down", "#ff6b57")+
+    trendCard("Músculo (MME)","kg", last?last.mme:null, prev?prev.mme:null, "up", "#3ddc97");
+
+  // selector de métrica + gráfica
+  $("metricTabs").innerHTML = [["kg","Peso","#5aa9e6"],["grasa","% grasa","#ff6b57"],["mme","Músculo","#3ddc97"]]
+    .map(([k,t])=>`<button data-metric="${k}" class="${bodyMetric===k?'on':''}">${t}</button>`).join("");
+  const series = H.map(p=>({d:p.d, v: bodyMetric==="kg"?p.kg : bodyMetric==="grasa"?p.grasa : p.mme}));
+  const col = bodyMetric==="kg"?"#5aa9e6":bodyMetric==="grasa"?"#ff6b57":"#3ddc97";
+  const unit = bodyMetric==="grasa"?"%":"kg";
+  $("bodyChart").innerHTML = lineChart(series, col, unit);
+
+  // historial
+  $("bodyList").innerHTML = H.slice().reverse().slice(0,8).map(p=>{
+    const isBase = S.body.findIndex(x=>x.d===p.d)===-1;
+    return `<li>
+      <span class="bl-date">${fmtDateShort(p.d)}${isBase?' <i class="base-tag">base</i>':''}</span>
+      <span class="bl-vals">
+        <span>${p.kg?p.kg.toFixed(1):"—"}<i>kg</i></span>
+        <span>${p.grasa?p.grasa.toFixed(1):"—"}<i>%grasa</i></span>
+        <span>${p.mme?p.mme.toFixed(1):"—"}<i>MME</i></span>
+        ${isBase?'':`<button class="del" data-delbody="${p.d}" aria-label="Borrar">✕</button>`}
+      </span></li>`;
+  }).join("") || `<li><span>Aún no hay mediciones</span></li>`;
+}
+
+// guardar medición con fecha manual
+$("bodySave").onclick=()=>{
+  const fecha=$("bDate").value || dayKey;
+  const kg=parseFloat($("bKg").value);
+  const grasa=parseFloat($("bFat").value);
+  const mme=parseFloat($("bMme").value);
+  if(!kg && !grasa && !mme){ showToast("Escribe al menos un dato (peso, % grasa o músculo)"); return; }
+  if(kg && (kg<30||kg>250)){ showToast("Peso fuera de rango"); return; }
+  const rec={d:fecha};
+  if(kg) rec.kg=kg; if(grasa) rec.grasa=grasa; if(mme) rec.mme=mme;
+  const ex=S.body.find(x=>x.d===fecha);
+  if(ex) Object.assign(ex,rec); else S.body.push(rec);
+  save();
+  $("bKg").value=""; $("bFat").value=""; $("bMme").value="";
+  renderBody();
+  showToast("Medición guardada: "+fmtDateShort(fecha)+" ✓");
 };
-$("wList").addEventListener("click",e=>{
-  const d=e.target.closest("[data-del]"); if(!d) return;
-  S.weights=S.weights.filter(w=>w.d!==d.dataset.del); save(); renderWeights();
+document.addEventListener("click",e=>{
+  const del=e.target.closest("[data-delbody]");
+  if(del){ S.body=S.body.filter(x=>x.d!==del.dataset.delbody); save(); renderBody(); return; }
+  const mt=e.target.closest("#metricTabs [data-metric]");
+  if(mt){ bodyMetric=mt.dataset.metric; renderBody(); }
 });
 
 /* ============================================================
@@ -561,21 +830,28 @@ function reportMetrics(){
     for(const dw in ROUTINE){ const ex=ROUTINE[dw].ex.find(x=>x.id===id); if(ex) return ex.n; }
     return null;
   }).filter(Boolean);
-  // Peso: último y delta
-  const W=S.weights.slice().sort((a,b)=>a.d.localeCompare(b.d));
-  const lastW = W.length? W[W.length-1].kg : null;
-  const deltaW = W.length>=2? (W[W.length-1].kg-W[W.length-2].kg) : null;
+  // Composición corporal: último y delta
+  const H=bodyHistory();
+  const lastW = H.length? H[H.length-1].kg : null;
+  const deltaW = H.length>=2? (H[H.length-1].kg-H[H.length-2].kg) : null;
+  const lastFat = H.length? H[H.length-1].grasa : null;
+  const deltaFat = H.length>=2? (H[H.length-1].grasa-H[H.length-2].grasa) : null;
+  const lastMme = H.length? H[H.length-1].mme : null;
+  const deltaMme = H.length>=2? (H[H.length-1].mme-H[H.length-2].mme) : null;
+  // Sesiones acumuladas
+  const totalSessions = S.sessions||0;
   // Antojos
   const used=usedKcal(), budget=CONFIG.antojosSemana;
-  return {trainedDays, mealPct, waterAvg, liftNames, lastW, deltaW, used, budget,
-          note:(S.note[thisWeek]||"").trim(), weekIdx, cycName:CYCLE[weekIdx].n};
+  return {trainedDays, mealPct, waterAvg, liftNames, lastW, deltaW,
+          lastFat, deltaFat, lastMme, deltaMme, totalSessions, used, budget,
+          note:(S.note[thisWeek]||"").trim(), weekNo, totalWeeks, cycName:CYCLE[weekIdx].n};
 }
 
 // Dibuja el reporte en un canvas y regresa {canvas, dataUrl}
 function drawReport(){
   const m=reportMetrics();
   const cv=document.createElement("canvas");
-  const Wd=1080, scale=1; cv.width=Wd; let H=1420; cv.height=H;
+  const Wd=1080, scale=1; cv.width=Wd; let H=1660; cv.height=H;
   const ctx=cv.getContext("2d");
   const em="#3ddc97", amber="#f2b544", coral="#ff6b57", sky="#5aa9e6";
   const ink="#ecf7f0", muted="#8fa89b", card="#16241e", line="#24382f";
@@ -599,7 +875,7 @@ function drawReport(){
   ctx.fillText(CONFIG.cliente, PAD, y);
   y+=40;
   ctx.fillStyle=muted; ctx.font="500 25px Manrope,sans-serif";
-  ctx.fillText("Coach "+CONFIG.coach+"  ·  Semana "+(m.weekIdx+1)+" de 4 ("+m.cycName+")", PAD, y);
+  ctx.fillText("Coach "+CONFIG.coach+"  ·  Semana "+m.weekNo+" de "+m.totalWeeks+" ("+m.cycName+")", PAD, y);
   y+=46;
   // ---- Fila de tarjetas (peso / entrenos / comidas / antojos) ----
   const gap=22, cols=2, cw=(Wd-PAD*2-gap*(cols-1))/cols, ch=190;
@@ -612,9 +888,16 @@ function drawReport(){
     if(sub){ ctx.fillStyle=muted; ctx.font="500 22px Manrope,sans-serif"; ctx.fillText(sub, cx+40, cy+158); }
   }
   const wTxt = m.lastW!=null ? m.lastW.toFixed(1)+" kg" : "— kg";
-  const wSub = m.deltaW!=null ? ((m.deltaW>0?"+":"")+m.deltaW.toFixed(1)+" kg vs. semana pasada") : "registra 2 semanas";
+  const wSub = m.deltaW!=null ? ((m.deltaW>0?"+":"")+m.deltaW.toFixed(1)+" kg vs. anterior") : "registra 2 mediciones";
   statCard(PAD, y, sky, wTxt, "Peso actual", wSub);
-  statCard(PAD+cw+gap, y, em, m.trainedDays.length+"/5", "Entrenamientos", m.trainedDays.length>=4?"¡excelente asistencia!":"días entrenados");
+  const fatTxt = m.lastFat!=null ? m.lastFat.toFixed(1)+"%" : "—%";
+  const fatSub = m.deltaFat!=null ? ((m.deltaFat>0?"+":"")+m.deltaFat.toFixed(1)+"% grasa") : "% de grasa corporal";
+  statCard(PAD+cw+gap, y, coral, fatTxt, "Grasa corporal", fatSub);
+  y+=ch+gap;
+  const mmeTxt = m.lastMme!=null ? m.lastMme.toFixed(1)+" kg" : "— kg";
+  const mmeSub = m.deltaMme!=null ? ((m.deltaMme>0?"+":"")+m.deltaMme.toFixed(1)+" kg músculo") : "masa muscular (MME)";
+  statCard(PAD, y, em, mmeTxt, "Músculo (MME)", mmeSub);
+  statCard(PAD+cw+gap, y, em, m.trainedDays.length+"/5", "Entrenamientos", "esta semana · "+m.totalSessions+" en total");
   y+=ch+gap;
   statCard(PAD, y, amber, m.mealPct+"%", "Cumpl. de comidas", "de la dieta marcada");
   const antTxt = Math.round(m.used/m.budget*100)+"%";
@@ -659,7 +942,7 @@ function renderReportDue(){
   let overdue=true;
   if(S.lastReport){ overdue = (Date.now()-S.lastReport) >= 7*86400000; }
   else { // primera vez: solo avisa si ya hay algo de datos
-    overdue = S.weights.length>0 || Object.keys(S.trained).length>0;
+    overdue = S.body.length>0 || Object.keys(S.trained).length>0;
   }
   if(overdue){
     due.innerHTML = `<div class="report-due"><span class="i">🔔</span><div><b>Toca reportarte.</b> Ya pasó una semana desde tu último reporte. Genera y envía el de esta semana a ${CONFIG.coach}.</div></div>`;
@@ -681,9 +964,11 @@ $("genReport").onclick=()=>{
   $("rpImg").src = currentReport.dataUrl;
   // Texto para WhatsApp (acompaña la imagen que el usuario adjunta)
   const m=reportMetrics();
-  const waTxt = "Hola "+CONFIG.coach+" 👋 Aquí está mi reporte de la semana "+(m.weekIdx+1)+":%0A"+
+  const waTxt = "Hola "+CONFIG.coach+" 👋 Aquí está mi reporte de la semana "+m.weekNo+":%0A"+
     "• Peso: "+(m.lastW!=null?m.lastW.toFixed(1)+" kg":"—")+
     (m.deltaW!=null? " ("+(m.deltaW>0?"+":"")+m.deltaW.toFixed(1)+" kg)":"")+"%0A"+
+    (m.lastFat!=null? "• Grasa: "+m.lastFat.toFixed(1)+"%25"+(m.deltaFat!=null?" ("+(m.deltaFat>0?"+":"")+m.deltaFat.toFixed(1)+")":"")+"%0A":"")+
+    (m.lastMme!=null? "• Músculo (MME): "+m.lastMme.toFixed(1)+" kg"+(m.deltaMme!=null?" ("+(m.deltaMme>0?"+":"")+m.deltaMme.toFixed(1)+")":"")+"%0A":"")+
     "• Entrenamientos: "+m.trainedDays.length+"/5%0A"+
     "• Cumplimiento dieta: "+m.mealPct+"%25%0A"+
     "• Antojos: "+Math.round(m.used/m.budget*100)+"%25 del presupuesto%0A"+
@@ -729,5 +1014,8 @@ document.querySelectorAll(".nb").forEach(b=>b.onclick=()=>{
 });
 
 /* arranque */
-renderMeals(); renderWater(); renderShop(); renderRoutine(); renderTrained(); renderBudget(); renderAntojos(); renderWeights(); renderReportDue();
+// prefijar la fecha de hoy en el formulario de medición
+$("bDate") && ($("bDate").value = dayKey);
+
+renderMeals(); renderWater(); renderShop(); renderUnitToggle(); renderRoutine(); renderTrained(); renderBudget(); renderAntojos(); renderBody(); renderReportDue();
 if(!canStore) showToast("Modo demo: el guardado no está disponible en este navegador");

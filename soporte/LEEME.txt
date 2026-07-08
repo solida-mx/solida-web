@@ -1,0 +1,41 @@
+╔══════════════════════════════════════════════════════════════════╗
+║   SOLIDA APLICACIONES — Carpeta "soporte" (formularios cliente)    ║
+╚══════════════════════════════════════════════════════════════════╝
+
+QUÉ ES ESTA CARPETA
+  Formularios para que tus clientes te manden su información sin
+  batallar. Ellos llenan campos; la página genera un resumen
+  ordenado (markdown) y lo mandan a tu WhatsApp con un botón.
+
+  soporte/                Menú de soporte (elige qué necesita)
+  soporte/levantamiento/  Formato 01 — info del negocio por giro
+                          y paquete (Básico/Intermedio/Premium)
+  soporte/cambios/        Formato 04 — solicitud de cambios de
+                          páginas ya publicadas
+
+CÓMO SE INSTALA
+  1. Copia la carpeta "soporte" COMPLETA adentro de tu carpeta
+     "Solida-Web" (al mismo nivel que restaurante, uniformes, etc.)
+  2. Sube los archivos a GitHub y Cloudflare publica solo (ver LEEME.txt principal).
+  3. Quedan en:
+       solida-web.j23salva.workers.dev/soporte
+       solida-web.j23salva.workers.dev/soporte/levantamiento
+       solida-web.j23salva.workers.dev/soporte/cambios
+
+CÓMO SE USA CON UN CLIENTE
+  • Cliente nuevo: mándale el enlace de /soporte/levantamiento
+    y dile qué paquete elegir. Su avance se guarda en su celular
+    aunque cierre la página.
+  • Cliente con página activa: mándale /soporte/cambios.
+  • Al terminar, el botón verde abre TU WhatsApp (844 360 4349)
+    con todo el resumen ya escrito. Fotos y logo los adjunta el
+    cliente en ese mismo chat.
+  • Si la información es muy larga para WhatsApp, la página la
+    descarga como archivo .md y le pide al cliente adjuntarlo.
+
+EL FORMATO QUE RECIBES
+  Es markdown: texto ordenado con títulos y listas. Se lee fácil
+  en WhatsApp y puedes pegarlo directo a tu asistente de IA para
+  construir la página sin retrabajar nada.
+
+  ── Hecho con Solida Aplicaciones ──
