@@ -170,6 +170,24 @@
   .ex-w button:active{transform:scale(.9)}
   .ex-w .wv{min-width:58px;text-align:center;font-family:"Space Grotesk";font-weight:700;font-size:15px;color:var(--em)}
   .ex-w .wv small{display:block;font-family:"Manrope";font-size:9px;color:var(--muted);font-weight:800;letter-spacing:.08em}
+  .ex-w .wv-in{width:64px;text-align:center;font-family:"Space Grotesk";font-weight:700;font-size:15px;color:var(--em);
+    background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:8px;padding:5px 2px;appearance:textfield;-moz-appearance:textfield}
+  .ex-w .wv-in::-webkit-outer-spin-button,.ex-w .wv-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .ex-w .wv-in:focus{outline:none;border-color:var(--em);background:rgba(61,220,151,.08)}
+
+  /* --- Camino a la meta --- */
+  .goal{margin-top:12px}
+  .goal .g-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:800}
+  .goal .g-top b{font-family:"Space Grotesk";font-size:15px}
+  .goal .g-bar{height:9px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid var(--line);overflow:hidden;margin:6px 0 4px}
+  .goal .g-bar i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+  .goal small{font-size:11px;color:var(--muted);font-weight:600}
+  .streak-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .streak-row span{font-size:11.5px;font-weight:800;background:rgba(255,255,255,.05);border:1px solid var(--line);
+    border-radius:999px;padding:6px 12px}
+  .pace{margin-top:8px;font-size:11.5px;font-weight:700;color:var(--muted);text-align:center;
+    background:rgba(255,255,255,.04);border:1px dashed var(--line);border-radius:9px;padding:7px 10px}
+  .pace b{color:var(--em)}
   .ex-done{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;align-items:center;gap:9px;cursor:pointer}
   .ex-done .box{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;display:flex;
     align-items:center;justify-content:center;color:#08130e;transition:all .15s}
@@ -233,18 +251,28 @@
   .set-btn.done{background:var(--em);color:#08130e;border-color:var(--em)}
 
   /* ===== Barra de timer de descanso (flotante) ===== */
-  .rest-bar{position:fixed;left:12px;right:12px;bottom:82px;z-index:120;background:rgba(12,21,18,.96);
-    border:1.5px solid rgba(61,220,151,.4);border-radius:15px;padding:12px 14px;display:none;align-items:center;gap:12px;
-    box-shadow:0 12px 34px rgba(0,0,0,.5);backdrop-filter:blur(8px)}
-  .rest-bar.show{display:flex;animation:slideUp .25s cubic-bezier(.2,.9,.3,1)}
-  @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
-  .rest-info{display:flex;flex-direction:column;flex:none;min-width:66px}
-  .rest-time{font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:22px;color:var(--em);line-height:1}
-  .rest-name{font-size:10.5px;color:var(--muted);font-weight:700;margin-top:2px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rest-track{flex:1;height:7px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
-  .rest-fill{display:block;height:100%;background:var(--em);border-radius:99px;transition:width 1s linear}
-  .rest-skip{flex:none;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.05);
-    color:var(--muted);font-size:13px;cursor:pointer}
+  /* --- Timer de descanso: reloj circular (solo en Rutina, esquina sup. der.) --- */
+  .rest-ring{position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:120;
+    width:118px;display:none;flex-direction:column;align-items:center;filter:drop-shadow(0 10px 24px rgba(0,0,0,.45))}
+  .rest-ring.show{display:flex;animation:ringIn .3s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes ringIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  .rest-ring svg{width:118px;height:118px;transform:rotate(-90deg)}
+  .rr-ticks{fill:none;stroke:var(--line);stroke-width:3;stroke-dasharray:1.5 4.47}  /* marcas de minutero */
+  .rr-bg{fill:rgba(12,21,18,.96);stroke:rgba(255,255,255,.09);stroke-width:7}
+  .rr-fg{fill:none;stroke:var(--em);stroke-width:7;stroke-linecap:round;
+    stroke-dasharray:314.16;stroke-dashoffset:0;transition:stroke-dashoffset .5s linear,stroke .3s}
+  .rest-ring.low .rr-fg{stroke:var(--amber)}
+  .rr-center{position:absolute;top:0;left:0;width:118px;height:118px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;pointer-events:none}
+  .rr-center b{font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:26px;color:var(--em);line-height:1;transition:color .3s}
+  .rest-ring.low .rr-center b{color:var(--amber)}
+  .rr-center small{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-top:3px}
+  .rr-skip{position:absolute;top:-4px;right:-4px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);
+    background:rgba(12,21,18,.96);color:var(--muted);font-size:12px;cursor:pointer;display:grid;place-items:center}
+  .rr-skip:active{transform:scale(.9)}
+  .rr-name{margin-top:5px;max-width:118px;font-size:9.5px;font-weight:800;color:var(--muted);
+    background:rgba(12,21,18,.92);border:1px solid var(--line);border-radius:999px;padding:3px 9px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   /* ===== Botón "Entrené hoy" tipo héroe con animación ===== */
   .trained-hero{width:100%;margin-top:14px;display:flex;align-items:center;gap:14px;text-align:left;
@@ -492,6 +520,20 @@
 
   <!-- ============ TAB: RUTINA ============ -->
   <section class="tab" id="tab-rutina">
+    <!-- Timer de descanso: reloj circular anclado a la hora real -->
+    <div class="rest-ring" id="restBar" role="timer" aria-live="off">
+      <svg viewBox="0 0 120 120">
+        <circle class="rr-ticks" cx="60" cy="60" r="57"/>
+        <circle class="rr-bg" cx="60" cy="60" r="50"/>
+        <circle class="rr-fg" id="restFill" cx="60" cy="60" r="50"/>
+      </svg>
+      <div class="rr-center">
+        <b id="restTime">0:00</b>
+        <small>descanso</small>
+      </div>
+      <button class="rr-skip" id="restSkip" aria-label="Saltar descanso">✕</button>
+      <div class="rr-name" id="restName">…</div>
+    </div>
     <div id="deloadBanner"></div>
     <div class="sec-title"><h2>Ciclo del mes</h2><span class="ln"></span><span class="chip" id="cycleChip">—</span></div>
     <div class="cycle-cal" id="cycleCal"></div>
@@ -548,6 +590,14 @@
 
     <!-- Indicadores de composición corporal con tendencia -->
     <div class="ind-grid" id="indGrid"></div>
+
+    <!-- Camino a la meta + constancia -->
+    <div class="card">
+      <b style="font-size:14.5px">Camino a tu meta</b>
+      <div class="subtle">Tu avance desde el estudio base hacia el objetivo que fijó tu coach.</div>
+      <div id="goalGrid"></div>
+      <div class="streak-row" id="streakBox"></div>
+    </div>
 
     <!-- Gráfica de tendencia con selector de métrica -->
     <div class="card">
@@ -616,15 +666,6 @@
   <button class="nb" data-tab="antojos"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 8.5c-1 1-1.5 2.3-1.5 3.5a5 5 0 0 0 10 0c0-1.2-.5-2.5-1.5-3.5L12 5 8.5 8.5Z"/><path d="M12 5V2"/></svg>Antojos</button>
   <button class="nb" data-tab="progreso"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Progreso</button>
 </nav>
-
-<div class="rest-bar" id="restBar">
-  <div class="rest-info">
-    <span class="rest-time" id="restTime">0:00</span>
-    <span class="rest-name" id="restName">Descanso</span>
-  </div>
-  <div class="rest-track"><span class="rest-fill" id="restFill"></span></div>
-  <button class="rest-skip" id="restSkip" aria-label="Saltar descanso">✕</button>
-</div>
 
 <div class="toast" id="toast"></div>
 

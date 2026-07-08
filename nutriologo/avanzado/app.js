@@ -38,10 +38,12 @@ const MEDICION_BASE = {
 const DAYS = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 const now = new Date();
-const dayKey = now.toISOString().slice(0,10);
+// Clave de fecha en hora LOCAL (toISOString usa UTC y adelantaba el día ~6 h en MX)
+function localKey(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+const dayKey = localKey(now);
 function weekKey(d){ // lunes como inicio de semana
   const t = new Date(d); const wd = (t.getDay()+6)%7; t.setDate(t.getDate()-wd);
-  return t.toISOString().slice(0,10);
+  return localKey(t);
 }
 const thisWeek = weekKey(now);
 
@@ -465,28 +467,41 @@ function toggleSet(exId, total){
   return S.sets[dayKey][exId];
 }
 
-/* --- Timer de descanso entre series --- */
-let restTimer=null, restLeft=0;
-function startRest(seconds, exName){
-  clearInterval(restTimer); restLeft=seconds;
-  const bar=$("restBar");
-  bar.classList.add("show");
-  const paint=()=>{
-    const m=Math.floor(restLeft/60), s=restLeft%60;
-    $("restTime").textContent = (m?m+":":"")+String(s).padStart(m?2:1,"0");
-    $("restName").textContent = "Descanso · "+exName;
-    $("restFill").style.width = (restLeft/seconds*100)+"%";
-  };
-  paint();
-  restTimer=setInterval(()=>{
-    restLeft--;
-    if(restLeft<=0){ clearInterval(restTimer); bar.classList.remove("show");
-      showToast("¡A darle! Siguiente serie 💪"); try{navigator.vibrate&&navigator.vibrate(200);}catch(e){} return; }
-    paint();
-  },1000);
+/* --- Timer de descanso entre series ---
+   Anclado a la HORA REAL (Date.now): aunque el navegador congele los
+   intervalos en segundo plano, al volver el conteo va exacto. */
+let restTimer=null, restEnd=0, restTotal=0, restActive=false;
+const RING_C = 314.16; // circunferencia del aro (2π·50)
+function paintRest(){
+  const left=Math.max(0, Math.ceil((restEnd-Date.now())/1000));
+  const m=Math.floor(left/60), s=left%60;
+  $("restTime").textContent = (m?m+":":"")+String(s).padStart(m?2:1,"0");
+  const frac = restTotal ? left/restTotal : 0;
+  $("restFill").style.strokeDashoffset = (RING_C*(1-frac)).toFixed(1); // el aro se va vaciando
+  $("restBar").classList.toggle("low", left<=5 && left>0);
+  return left;
 }
-function stopRest(){ clearInterval(restTimer); $("restBar").classList.remove("show"); }
+function startRest(seconds, exName){
+  clearInterval(restTimer);
+  restTotal=seconds; restEnd=Date.now()+seconds*1000; restActive=true;
+  $("restName").textContent=exName;
+  $("restBar").classList.add("show");
+  paintRest();
+  restTimer=setInterval(()=>{ if(paintRest()<=0) finishRest(); },500);
+}
+function finishRest(){
+  clearInterval(restTimer); restActive=false;
+  $("restBar").classList.remove("show","low");
+  showToast("¡A darle! Siguiente serie 💪");
+  try{navigator.vibrate&&navigator.vibrate(200);}catch(e){}
+}
+function stopRest(){ clearInterval(restTimer); restActive=false; $("restBar").classList.remove("show","low"); }
 $("restSkip") && ($("restSkip").onclick = stopRest);
+// al volver de otra app: repinta al instante (o cierra si ya terminó estando fuera)
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden || !restActive) return;
+  if(Date.now()>=restEnd) finishRest(); else paintRest();
+});
 
 function renderUnitToggle(){
   const t=$("unitToggle"); if(!t) return;
@@ -518,10 +533,11 @@ function renderRoutine(){
     return `<div class="ex${done>=ex.s?' ex-complete':''}" data-ex="${ex.id}">
       <div class="ex-top">
         <span class="nm"><b>${ex.n}</b><small>${ex.s}×${ex.r} · descanso ${fmtRest(rest)} · ${ex.grp==="inf"?"tren inferior (+"+toUnit(5)+" "+unitLabel()+")":"tren superior (+"+toUnit(2.5)+" "+unitLabel()+")"}</small></span>
-        ${bodyweight?`<span class="ex-w"><span class="wv">Corporal<small>peso</small></span></span>`:`
+        ${bodyweight?`<span class="ex-w"><span class="wv">Corporal<small>peso</small></span></span>`:isDeload?`
+        <span class="ex-w"><span class="wv">${fmtW(showW)}<small>descarga 62%</small></span></span>`:`
         <span class="ex-w">
           <button data-w="-" aria-label="Bajar peso">−</button>
-          <span class="wv">${fmtW(showW)}<small>${isDeload?"descarga 62%":"hoy"}</small></span>
+          <span class="wv"><input class="wv-in" data-exw="${ex.id}" type="number" inputmode="decimal" min="0" max="600" step="any" value="${+toUnit(w).toFixed(1)}" aria-label="Peso en ${unitLabel()}"><small>${unitLabel()} · escribe o usa ±</small></span>
           <button data-w="+" aria-label="Subir peso">+</button>
         </span>`}
       </div>
@@ -540,6 +556,20 @@ function renderRoutine(){
     </div>`;
   }).join("");
 }
+$("exList").addEventListener("change",e=>{
+  const inp=e.target.closest(".wv-in");
+  if(!inp) return;
+  let v=parseFloat(String(inp.value).replace(",","."));
+  if(isNaN(v)||v<0) v=0;
+  if(v>600) v=600;
+  const kg = S.unidad==="lb" ? v/KG2LB : v;   // se guarda siempre en kg
+  S.lifts[inp.dataset.exw]=Math.round(kg*100)/100;
+  save(); renderRoutine();
+  showToast("Peso guardado ✓");
+});
+$("exList").addEventListener("keydown",e=>{
+  if(e.key==="Enter" && e.target.classList.contains("wv-in")) e.target.blur();
+});
 $("exList").addEventListener("click",e=>{
   // marcar serie -> inicia timer de descanso
   const sb=e.target.closest("[data-set]");
@@ -712,25 +742,77 @@ function trendCard(label, unit, cur, prev, goalDir, color){
   </div>`;
 }
 
-function lineChart(series, color, unit){
+function lineChart(series, color, unit, goal){
   const pts=series.filter(p=>p.v!=null);
   if(pts.length<2) return `<div class="subtle" style="text-align:center;padding:12px 0">Registra 2+ mediciones para ver la tendencia</div>`;
-  const vals=pts.map(p=>p.v), min=Math.min(...vals), max=Math.max(...vals);
+  const vals=pts.map(p=>p.v).concat(goal!=null?[goal]:[]);
+  const min=Math.min(...vals), max=Math.max(...vals);
   const pad=(max-min)*0.15||1, lo=min-pad, hi=max+pad;
   const Wd=320,H=96,m=8;
   const X=i=>m+i*(Wd-2*m)/(pts.length-1);
   const Y=v=>m+(hi-v)*(H-2*m)/(hi-lo);
   const line=pts.map((p,i)=>X(i)+","+Y(p.v)).join(" ");
+  const goalLine = goal!=null ? `<line x1="${m}" x2="${Wd-m}" y1="${Y(goal)}" y2="${Y(goal)}" stroke="${color}" stroke-width="1.4" stroke-dasharray="5 5" opacity=".55"/>
+    <text x="${m+2}" y="${Y(goal)-4}" fill="${color}" font-size="9.5" font-weight="800" opacity=".85">meta ${goal}${unit}</text>` : "";
   const area=`${X(0)},${H-m} `+line+` ${X(pts.length-1)},${H-m}`;
   const gid="g"+color.replace('#','');
   return `<svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Tendencia">
     <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="${color}" stop-opacity=".28"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    ${goalLine}
     <polygon points="${area}" fill="url(#${gid})"/>
     <polyline points="${line}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     ${pts.map((p,i)=>`<circle cx="${X(i)}" cy="${Y(p.v)}" r="3" fill="#0c1512" stroke="${color}" stroke-width="2"/>`).join("")}
     <text x="${X(pts.length-1)}" y="${Y(pts[pts.length-1].v)-7}" fill="#ecf7f0" font-size="10.5" font-weight="700" text-anchor="end">${pts[pts.length-1].v.toFixed(1)}${unit}</text>
   </svg>`;
+}
+
+// barra de avance base → meta (sirve para bajar grasa o subir músculo)
+function goalBar(label, unit, base, cur, meta, color){
+  if(cur==null||base==null||meta==null) return "";
+  const total=Math.abs(meta-base);
+  if(total<0.01) return "";
+  const adv=Math.max(0, meta>base ? cur-base : base-cur);
+  const pct=Math.min(100, Math.round(adv/total*100));
+  const left=Math.max(0, +(total-Math.min(adv,total)).toFixed(1));
+  return `<div class="goal">
+    <div class="g-top"><span>${label}</span><b style="color:${color}">${pct}%</b></div>
+    <div class="g-bar"><i style="width:${pct}%;background:${color}"></i></div>
+    <small>Hoy: ${cur.toFixed(1)}${unit} · Meta: ${meta}${unit} · ${left>0?`Te faltan ${left}${unit}`:"¡Meta alcanzada! 🎉"}</small>
+  </div>`;
+}
+
+// racha de días consecutivos con TODAS las comidas registradas
+function mealStreak(){
+  const doneAll=k=>{const m=S.meals[k]; return !!m && m.length>0 && m.every(Boolean);};
+  let n=0; const d=new Date();
+  if(!doneAll(localKey(d))) d.setDate(d.getDate()-1); // hoy aún en curso no rompe la racha
+  while(doneAll(localKey(d))){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+
+// ritmo semanal de la métrica visible + proyección de fecha a la meta
+function paceLine(series, unit, meta){
+  const pts=series.filter(p=>p.v!=null);
+  if(pts.length<2) return "";
+  const a=pts[0], b=pts[pts.length-1];
+  const days=(new Date(b.d+"T00:00:00")-new Date(a.d+"T00:00:00"))/864e5;
+  if(days<6) return ""; // con menos de una semana el ritmo engaña
+  const rate=(b.v-a.v)/days*7;
+  if(Math.abs(rate)<0.005) return `<div class="pace">Ritmo: <b>estable</b> (sin cambio semanal)</div>`;
+  let txt=`Ritmo: <b>${(rate>0?"+":"")+rate.toFixed(2)} ${unit}/semana</b>`;
+  if(meta!=null){
+    const remaining=meta-b.v;
+    if(Math.abs(remaining)<0.05) txt+=" · ¡estás en tu meta! 🎉";
+    else{
+      const weeks=remaining/rate;
+      if(weeks>0 && weeks<160){
+        const eta=new Date(new Date(b.d+"T00:00:00").getTime()+weeks*7*864e5);
+        txt+=` · a este ritmo llegas ~<b>${eta.getDate()} ${MONTHS[eta.getMonth()]} ${eta.getFullYear()}</b>`;
+      } else if(weeks<=0) txt+=" · ojo: el ritmo actual te aleja de la meta";
+    }
+  }
+  return `<div class="pace">${txt}</div>`;
 }
 
 let bodyMetric="kg"; // qué serie muestra la gráfica: kg | grasa | mme
@@ -759,7 +841,21 @@ function renderBody(){
   const series = H.map(p=>({d:p.d, v: bodyMetric==="kg"?p.kg : bodyMetric==="grasa"?p.grasa : p.mme}));
   const col = bodyMetric==="kg"?"#5aa9e6":bodyMetric==="grasa"?"#ff6b57":"#3ddc97";
   const unit = bodyMetric==="grasa"?"%":"kg";
-  $("bodyChart").innerHTML = lineChart(series, col, unit);
+  const metaSel = bodyMetric==="grasa"?CONFIG.perfil.metaGrasa : bodyMetric==="mme"?CONFIG.perfil.metaMusculo : null;
+  $("bodyChart").innerHTML = lineChart(series, col, unit, metaSel) + paceLine(series, unit, metaSel);
+
+  // --- Camino a la meta (avance desde el estudio base) ---
+  $("goalGrid").innerHTML =
+    goalBar("% de grasa","%", MEDICION_BASE.grasa, last?last.grasa:null, CONFIG.perfil.metaGrasa, "#ff6b57")+
+    goalBar("Músculo (MME)","kg", MEDICION_BASE.mme, last?last.mme:null, CONFIG.perfil.metaMusculo, "#3ddc97")
+    || `<div class="subtle" style="margin-top:8px">Registra una medición para ver tu avance.</div>`;
+
+  // --- Constancia: racha de comidas + sesiones de la semana ---
+  const streak=mealStreak();
+  const sesSem=Object.keys(S.trained||{}).filter(k=>S.trained[k]===true && weekKey(new Date(k+"T00:00:00"))===thisWeek).length;
+  $("streakBox").innerHTML =
+    `<span>🔥 Comidas completas: <b style="color:var(--em)">${streak} día${streak===1?"":"s"} seguido${streak===1?"":"s"}</b></span>`+
+    `<span>🏋️ Sesiones esta semana: <b style="color:var(--amber,#f2b544)">${sesSem}</b></span>`;
 
   // historial
   $("bodyList").innerHTML = H.slice().reverse().slice(0,8).map(p=>{
@@ -1018,4 +1114,16 @@ document.querySelectorAll(".nb").forEach(b=>b.onclick=()=>{
 $("bDate") && ($("bDate").value = dayKey);
 
 renderMeals(); renderWater(); renderShop(); renderUnitToggle(); renderRoutine(); renderTrained(); renderBudget(); renderAntojos(); renderBody(); renderReportDue();
+
+/* ---------- cambio de día: al pasar la medianoche (o al volver a abrir
+   la app otro día) todo se reinicia: comidas, agua, series y rutina.
+   El historial no se pierde: cada día vive bajo su propia fecha. ---------- */
+function rolloverCheck(){
+  if(localKey(new Date())!==dayKey){
+    save();
+    location.reload(); // recalcula día, semana, ciclo y descarga desde cero
+  }
+}
+setInterval(rolloverCheck, 30000);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) rolloverCheck(); });
 if(!canStore) showToast("Modo demo: el guardado no está disponible en este navegador");

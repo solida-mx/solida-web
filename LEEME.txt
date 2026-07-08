@@ -94,7 +94,18 @@ en tu repositorio de GitHub; Cloudflare publica desde ahí.
                                  equivalencias + meal prep)
      nutriologo/avanzado ....... Coach Total (mandado inteligente,
                                  rutina con progresión y descarga,
-                                 antojos y progreso guardado)
+                                 antojos y progreso guardado).
+                                 Comidas/agua/series se REINICIAN
+                                 solas al cambiar el día (hora
+                                 local); peso de ejercicios editable
+                                 escribiendo o con ±; progreso con
+                                 metas, racha, ritmo semanal y fecha
+                                 proyectada de llegada al objetivo.
+                                 Timer de descanso: reloj circular
+                                 arriba a la derecha (solo en
+                                 Rutina), anclado a la hora real —
+                                 sigue contando aunque salgas del
+                                 navegador.
 
   invitacion/ ................. Selector + 3 niveles
      invitacion/basico ......... Esencial (boda, cuenta regresiva)
