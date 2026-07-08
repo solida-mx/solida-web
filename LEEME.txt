@@ -100,7 +100,11 @@ en tu repositorio de GitHub; Cloudflare publica desde ahí.
      invitacion/basico ......... Esencial (boda, cuenta regresiva)
      invitacion/intermedio ..... Pro (demo boda Ana & Diego)
      invitacion/avanzado ....... Deluxe (XV años temática celestial,
-                                 itinerario y confirmación RSVP)
+                                 FORMATO LIBRO: cambia de página al
+                                 tocar los lados y eso activa la
+                                 música; efectos de estrellas al
+                                 tocar; QR con logo que abre el
+                                 control de acceso en /acceso)
 
   barberia/ ................... Selector + 3 niveles  ★ NUEVO
      barberia/basico ........... Carta de Servicios (precios + QR)
@@ -118,6 +122,18 @@ en tu repositorio de GitHub; Cloudflare publica desde ahí.
      soporte/cambios .......... Formulario para clientes con página
                                 publicada: piden cambios y llegan a
                                 tu WhatsApp con todo el detalle.
+     soporte/pases ............ ★ NUEVO · Generador de pases con QR
+                                para eventos Deluxe: pegas la lista
+                                de invitados (nombre — pases — mesa)
+                                y genera los pases personalizados.
+                                Descarga ZIP de PNGs (para mandar
+                                por WhatsApp) o imprime 4 por hoja
+                                carta sin que se corten. Cada QR
+                                abre el control de acceso con los
+                                datos de ESE invitado, y el pase
+                                muestra nombre/pases/mesa a la
+                                vista por si la recepción no usa
+                                celular.
 
      Accesos desde el tabulador:
      • Botón "Soy cliente" arriba a la derecha.

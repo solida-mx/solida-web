@@ -117,6 +117,7 @@
     <div class="divider"><span class="l"></span><span class="d">✦</span><span class="l"></span></div>
     <div class="date">28 · NOVIEMBRE · 2026</div>
     <div class="place">Hacienda San Lorenzo, Saltillo</div>
+    <button id="musicBtn" class="music-inline"><span class="mi-ic">♪</span><span id="musicTxt">Presiona para escuchar nuestra canción</span></button>
   </div>
   <div class="scroll">DESLIZA<span>▽</span></div>
 </section>
@@ -238,10 +239,16 @@ function tick(){
 tick();setInterval(tick,1000);
 </script>
 <!-- MÚSICA DE FONDO -->
-<button id="musicBtn" aria-label="Música" style="position:fixed;bottom:18px;right:18px;z-index:60;width:52px;height:52px;border-radius:50%;border:1.5px solid var(--gold);background:var(--emerald);color:var(--gold-2);font-size:21px;cursor:pointer;box-shadow:0 8px 22px rgba(21,58,48,.35);display:grid;place-items:center;transition:.2s">♪</button>
 <style>
-  #musicBtn.playing{animation:pulse 2.2s ease-in-out infinite}
-  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+  .music-inline{margin-top:22px;display:inline-flex;align-items:center;gap:9px;border:1.5px solid var(--gold);
+    background:rgba(255,255,255,.06);color:var(--gold-2);font-family:"Jost",sans-serif;font-weight:400;
+    font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;padding:11px 20px;border-radius:999px;
+    cursor:pointer;backdrop-filter:blur(3px);transition:.2s}
+  .music-inline:active{transform:scale(.97)}
+  .music-inline .mi-ic{font-size:16px;line-height:1}
+  .music-inline.playing{background:var(--gold);color:var(--emerald-2);border-color:var(--gold)}
+  .music-inline.playing .mi-ic{animation:pulse 2.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 </style>
 <script>
 // Melodía suave tipo caja musical, generada en el navegador (demo).
@@ -274,8 +281,9 @@ tick();setInterval(tick,1000);
       master=ctx.createGain(); master.gain.value=0.8; master.connect(ctx.destination);
     }
     playing=!playing;
-    if(playing){ ctx.resume(); loop(); timer=setInterval(loop,430); btn.classList.add('playing'); btn.textContent='♫'; }
-    else{ clearInterval(timer); btn.classList.remove('playing'); btn.textContent='♪'; }
+    const txt=document.getElementById('musicTxt');
+    if(playing){ ctx.resume(); loop(); timer=setInterval(loop,430); btn.classList.add('playing'); txt.textContent='Sonando… toca para pausar'; }
+    else{ clearInterval(timer); btn.classList.remove('playing'); txt.textContent='Presiona para escuchar nuestra canción'; }
   });
 })();
 </script>

@@ -70,7 +70,7 @@
   <a class="tier" href="/invitacion/avanzado">
     <div class="lvl">Avanzado</div>
     <h2>Deluxe · Temática única</h2>
-    <div class="desc">Diseño 100% a medida. Este ejemplo: unos XV años con temática celestial y detalles ilustrados.</div>
+    <div class="desc">Diseño 100% a medida en formato libro. Este ejemplo: unos XV años con temática celestial, música y control de acceso.</div>
     <ul class="feats" id="f3"></ul>
     <span class="go">Ver ejemplo ▸</span>
   </a>
@@ -80,8 +80,8 @@
 <script>
 const CHK='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c6a15b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>';
 const F={f1:["Cuenta regresiva en vivo","Hasta 3 fotos y textos a tu gusto","Ubicación con mapa + QR para compartir"],
-  f2:["Confirmación de asistencia por WhatsApp","Galería, itinerario y código de vestimenta","Mesa de regalos y animaciones"],
-  f3:["Diseño y temática 100% a medida","Ilustraciones y detalles personalizados","QR diseñado para imprimir"]};
+  f2:["Confirmación de asistencia por WhatsApp","Galería, itinerario y música de fondo","Mesa de regalos y animaciones"],
+  f3:["Formato libro: cambia de página al tocar","Música al abrirla y efectos al tocar","QR con control de acceso de invitados"]};
 Object.entries(F).forEach(([id,arr])=>document.getElementById(id).innerHTML=arr.map(t=>`<li>${CHK}<span>${t}</span></li>`).join(''));
 </script>
 </body>

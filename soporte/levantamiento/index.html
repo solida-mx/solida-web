@@ -290,6 +290,10 @@ const SEGMENTS = {
    ]},
    {level:"Premium", name:"Deluxe", price:"$2,290", unit:"por evento", fields:[
      {id:"referencias", l:"Referencias visuales de la temática única", t:"area", ph:"Describe el estilo; las imágenes de referencia mándalas por WhatsApp"},
+     {id:"cancionDeluxe", l:"Canción que sonará al abrir la invitación", t:"input", ph:"Nombre y artista, o la versión exacta que te gusta",
+      help:"⚠️ IMPORTANTE: debe ser una versión LIBRE DE DERECHOS DE AUTOR. Las canciones comerciales tal cual infringen derechos y la invitación podría ser dada de baja. Te proponemos una versión instrumental libre de regalías de estilo parecido."},
+     {id:"listaAcceso", l:"Lista de invitados con número de pases y mesa (control de acceso)", t:"area", req:true, big:true,
+      ph:"Familia Herrera Luna — 4 pases — Mesa 7\nCarlos Medina — 2 pases — Mesa 3\n…", help:"Con esta lista generamos el QR único de cada invitado para el registro de entradas en la puerta."},
      {id:"qrUso", l:"¿Dónde imprimirás el QR y a qué tamaño?", t:"input", ph:"Ej. En las invitaciones físicas, 3x3 cm"},
    ]},
   ]},

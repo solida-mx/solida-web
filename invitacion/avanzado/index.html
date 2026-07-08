@@ -6,180 +6,247 @@
 <title>Valentina · Mis XV Años</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Great+Vibes&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
-  :root{--night:#141230;--night-2:#1e1b45;--violet:#6d5bd0;--lilac:#b9aef2;--star:#f4d98c;--blush:#f2c7dd;--paper:#fbf9ff;--ink:#2b2745;--muted:#7a75a0;--line:#e6e1f5;}
-  *{margin:0;padding:0;box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{font-family:"Jost",sans-serif;color:var(--ink);background:var(--paper);line-height:1.7;font-weight:300;-webkit-text-size-adjust:100%}
-  .script{font-family:"Great Vibes",cursive;font-weight:400}
-  h2,h3,.serif{font-family:"Cormorant Garamond",serif;font-weight:500}
+  :root{--night:#141230;--night-2:#1d1a42;--violet:#6d5bd0;--lilac:#b3a6f0;--star:#f4d98c;--ink:#2a2440;--muted:#8a83a8;--paper:#f7f4ff;--wa:#25d366;}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:"Jost",sans-serif;background:radial-gradient(circle at 50% 0%,#241f55,var(--night) 70%);color:var(--paper);user-select:none;-webkit-user-select:none}
 
-  .hero{min-height:100svh;background:radial-gradient(120% 90% at 50% -10%,var(--night-2),var(--night) 70%);color:#efeaff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:44px 24px;position:relative;overflow:hidden}
-  .stars{position:absolute;inset:0;pointer-events:none}
+  /* ====== LIBRO ====== */
+  .book{position:fixed;inset:0;perspective:1600px}
+  .page{position:absolute;inset:0;display:none;flex-direction:column;overflow-y:auto;overflow-x:hidden;
+    background:radial-gradient(circle at 50% -10%,#262058,var(--night) 75%);
+    transform-origin:left center;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+  .page.on{display:flex}
+  .page.flip-out{animation:flipOut .65s cubic-bezier(.5,.1,.4,1) forwards;z-index:5}
+  .page.flip-in{animation:flipIn .65s cubic-bezier(.5,.1,.4,1) forwards;z-index:5}
+  @keyframes flipOut{from{transform:rotateY(0)}to{transform:rotateY(-100deg);opacity:0}}
+  @keyframes flipIn{from{transform:rotateY(-100deg);opacity:0}to{transform:rotateY(0);opacity:1}}
+
+  /* zonas de toque */
+  .tap{position:fixed;top:0;bottom:0;width:17%;z-index:20}
+  .tap.l{left:0}.tap.r{right:0}
+  .edge-hint{position:fixed;top:50%;transform:translateY(-50%);z-index:21;font-size:20px;color:var(--lilac);
+    opacity:.55;pointer-events:none;animation:eh 2.4s ease-in-out infinite}
+  .edge-hint.l{left:8px}.edge-hint.r{right:8px}
+  @keyframes eh{0%,100%{opacity:.25}50%{opacity:.75}}
+
+  /* progreso */
+  .dots{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:22}
+  .dots i{width:6px;height:6px;border-radius:50%;background:rgba(179,166,240,.3);transition:.3s}
+  .dots i.on{background:var(--star);transform:scale(1.25)}
+
+  /* contenido de página */
+  .pin{margin:auto;width:100%;max-width:430px;padding:56px 30px 64px;text-align:center;position:relative;z-index:2}
+  .eyebrow{font-size:10.5px;letter-spacing:.42em;text-transform:uppercase;color:var(--lilac)}
+  h2{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:30px;color:#fff;margin:8px 0 18px}
+  .orn{color:var(--star);letter-spacing:10px;margin:14px 0;font-size:13px}
+
+  /* estrellas fijas */
+  .stars{position:absolute;inset:0;pointer-events:none;z-index:1}
   .st{position:absolute;background:#fff;border-radius:50%;opacity:.7;animation:tw 3s ease-in-out infinite}
-  @keyframes tw{0%,100%{opacity:.15}50%{opacity:.9}}
-  .moon{position:absolute;top:34px;right:30px;width:54px;height:54px;border-radius:50%;background:var(--star);box-shadow:0 0 40px rgba(244,217,140,.5);opacity:.9}
-  .moon::after{content:"";position:absolute;top:4px;left:-8px;width:48px;height:48px;border-radius:50%;background:var(--night)}
-  .hero-in{position:relative;z-index:1;opacity:0;animation:rise 1.6s ease .2s forwards}
-  @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
-  .pre{font-size:11px;letter-spacing:.5em;text-transform:uppercase;color:var(--lilac);margin-bottom:16px}
-  .big{font-family:"Great Vibes",cursive;font-size:clamp(64px,20vw,104px);line-height:1;color:#fff;text-shadow:0 0 30px rgba(185,174,242,.4)}
-  .xv{font-family:"Cormorant Garamond",serif;font-size:clamp(20px,6vw,26px);letter-spacing:.42em;color:var(--star);margin-top:10px;text-transform:uppercase}
-  .hero .date{margin-top:24px;font-size:13px;letter-spacing:.28em;color:#cfc8f3}
-  .orn{margin:18px auto 0;color:var(--star);font-size:14px;letter-spacing:.6em}
-  .scroll{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.34em;color:var(--lilac);text-transform:uppercase}
-  .scroll span{display:block;margin-top:6px;animation:bob 2s ease-in-out infinite}
-  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+  @keyframes tw{0%,100%{opacity:.15}50%{opacity:.85}}
 
-  .wrap{max-width:540px;margin:0 auto;padding:0 20px}
-  .sec{padding:42px 0 6px;text-align:center}
-  .eyebrow{font-size:10.5px;letter-spacing:.34em;text-transform:uppercase;color:var(--violet);margin-bottom:8px}
-  h2{font-size:30px;color:var(--night)}
-  .lead{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:19px;color:var(--muted);max-width:36ch;margin:8px auto 0}
+  /* chispas al tocar */
+  .spark{position:fixed;pointer-events:none;z-index:50;color:var(--star);font-size:13px;will-change:transform,opacity}
 
-  .countdown{display:flex;gap:10px;justify-content:center;margin-top:22px}
-  .cd{flex:1;max-width:88px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px 4px;box-shadow:0 10px 26px rgba(109,91,208,.1)}
-  .cd b{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:30px;color:var(--violet);display:block;line-height:1}
-  .cd span{font-size:9px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+  /* P1 portada */
+  .moon{width:88px;height:88px;border-radius:50%;margin:0 auto 22px;background:radial-gradient(circle at 34% 32%,#fff7de,var(--star) 58%,#c9a94f);box-shadow:0 0 44px rgba(244,217,140,.5)}
+  .pre{font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:var(--lilac)}
+  .big{font-family:"Great Vibes",cursive;font-size:clamp(58px,17vw,84px);color:#fff;line-height:1.05;margin:10px 0 2px;text-shadow:0 0 30px rgba(179,166,240,.45)}
+  .xv{font-family:"Cormorant Garamond",serif;font-size:21px;letter-spacing:.3em;color:var(--star);text-transform:uppercase}
+  .date{margin-top:18px;font-size:13px;letter-spacing:.24em;color:#d9d3f4}
+  .open-hint{margin-top:40px;font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--lilac);animation:eh 2.4s ease-in-out infinite}
 
-  .story{background:linear-gradient(180deg,#fff,var(--paper));border:1px solid var(--line);border-radius:20px;padding:26px 22px;margin-top:22px}
-  .story p{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:19px;color:#4a4570}
-  .story .sig{margin-top:12px;font-family:"Great Vibes",cursive;font-size:26px;color:var(--violet)}
+  /* P2 countdown */
+  .countdown{display:flex;gap:10px;justify-content:center}
+  .cd{flex:1;max-width:82px;background:rgba(255,255,255,.06);border:1px solid rgba(179,166,240,.3);border-radius:14px;padding:13px 4px}
+  .cd b{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:32px;color:var(--star);display:block;line-height:1}
+  .cd span{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--lilac)}
+  .story{margin-top:34px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:19px;line-height:1.6;color:#e6e1fb}
+  .sig{font-family:"Great Vibes",cursive;font-size:31px;color:var(--star);margin-top:12px}
 
-  .itin{margin-top:22px;text-align:left;position:relative;padding-left:26px}
-  .itin::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:1.5px;background:linear-gradient(var(--lilac),var(--blush))}
-  .it{position:relative;padding:0 0 20px}
-  .it::before{content:"✦";position:absolute;left:-25px;top:0;color:var(--star);background:var(--paper);font-size:13px}
-  .it b{font-family:"Cormorant Garamond",serif;font-size:19px;font-weight:600;color:var(--night);display:block}
-  .it span{font-size:12px;letter-spacing:.14em;color:var(--violet);text-transform:uppercase}
-  .it p{font-size:13px;color:var(--muted);margin-top:2px}
+  /* P3 itinerario */
+  .itin{text-align:left}
+  .it{display:flex;gap:14px;padding:13px 0;border-bottom:1px solid rgba(179,166,240,.16)}
+  .it:last-child{border-bottom:none}
+  .it span{font-family:"Cormorant Garamond",serif;font-size:17px;color:var(--star);white-space:nowrap;min-width:74px}
+  .it b{display:block;font-weight:500;font-size:14.5px;color:#fff}
+  .it p{font-size:12.5px;color:var(--muted)}
 
-  .venue{background:var(--night);color:#efeaff;border-radius:20px;padding:26px 22px;margin-top:22px;position:relative;overflow:hidden}
-  .venue .vst{position:absolute;inset:0;opacity:.25;background:radial-gradient(30% 30% at 20% 20%,rgba(185,174,242,.5),transparent),radial-gradient(24% 24% at 80% 70%,rgba(244,217,140,.4),transparent)}
-  .venue .in{position:relative}
-  .venue h3{font-size:24px;color:#fff}
-  .venue p{font-size:13.5px;color:#cfc8f3;margin:6px 0 16px}
-  .venue a{display:inline-block;font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--night);background:var(--star);text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:500}
-
-  .dress{display:flex;gap:12px;margin-top:22px}
-  .dcard{flex:1;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 12px;text-align:center}
+  /* P4 venue + dress */
+  .venue{background:rgba(255,255,255,.05);border:1px solid rgba(179,166,240,.28);border-radius:18px;padding:22px;margin-bottom:24px}
+  .venue h3{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:24px;color:#fff}
+  .venue p{font-size:13px;color:#cfc8ee;margin:6px 0 14px}
+  .venue a{display:inline-block;border:1px solid var(--star);color:var(--star);text-decoration:none;font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;padding:10px 20px;border-radius:999px}
+  .dress{display:flex;gap:12px}
+  .dcard{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(179,166,240,.28);border-radius:16px;padding:16px 10px}
   .dcard .e{font-size:26px}
-  .dcard b{display:block;font-family:"Cormorant Garamond",serif;font-size:17px;color:var(--night);margin-top:6px}
-  .dcard span{font-size:11.5px;color:var(--muted)}
+  .dcard b{display:block;font-weight:500;font-size:14px;color:#fff;margin:6px 0 3px}
+  .dcard span{font-size:11.5px;color:var(--muted);line-height:1.4;display:block}
 
-  .rsvp{background:linear-gradient(160deg,var(--violet),#8d7ce4);color:#fff;border-radius:22px;padding:28px 22px;margin-top:26px;text-align:center;box-shadow:0 18px 44px rgba(109,91,208,.35)}
-  .rsvp h3{font-size:26px;color:#fff}
-  .rsvp p{font-size:13.5px;color:#eae5ff;margin:8px 0 16px}
-  .rsvp select,.rsvp input{width:100%;font-family:inherit;font-size:14px;padding:12px;border-radius:12px;border:none;margin-bottom:10px;background:rgba(255,255,255,.92);color:var(--ink)}
-  .rsvp button{width:100%;font-family:inherit;font-weight:500;font-size:14.5px;letter-spacing:.06em;padding:14px;border:none;border-radius:999px;background:var(--night);color:var(--star);cursor:pointer}
+  /* P5 rsvp */
+  .rsvp input,.rsvp select{width:100%;font-family:inherit;font-size:14px;padding:13px;border-radius:12px;border:1px solid rgba(179,166,240,.4);margin-bottom:10px;background:rgba(255,255,255,.93);color:var(--ink)}
+  .rsvp button{width:100%;font-family:inherit;font-weight:500;font-size:14.5px;letter-spacing:.06em;padding:14px;border:none;border-radius:999px;background:var(--star);color:var(--night);cursor:pointer}
   .rsvp button:active{transform:translateY(1px)}
-  .rsvp .dl{margin-top:12px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:15px;color:#e5deff}
+  .rsvp .dl{margin-top:14px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:15px;color:#d9d3f4}
 
-  .qr-sec{margin-top:30px;text-align:center;background:#fff;border:1px dashed var(--lilac);border-radius:20px;padding:22px}
-  #qr{display:inline-block;background:#fff;padding:10px;border-radius:12px;box-shadow:0 8px 24px rgba(109,91,208,.16)}
-  #qr img{display:block;width:116px;height:116px}
-  .qr-sec p{font-size:12px;color:var(--muted);margin-top:10px}
+  /* P6 QR diseñado */
+  .qr-card{background:linear-gradient(160deg,#2a2460,var(--night-2));border:1.5px solid var(--star);border-radius:22px;padding:26px 20px;position:relative;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+  .qr-card .corner{position:absolute;color:var(--star);font-size:14px;opacity:.8}
+  .qr-card .c1{top:10px;left:14px}.qr-card .c2{top:10px;right:14px}.qr-card .c3{bottom:10px;left:14px}.qr-card .c4{bottom:10px;right:14px}
+  .qr-card .mini-moon{width:34px;height:34px;border-radius:50%;margin:0 auto 8px;background:radial-gradient(circle at 34% 32%,#fff7de,var(--star) 58%,#c9a94f);box-shadow:0 0 18px rgba(244,217,140,.5)}
+  .qr-card .qn{font-family:"Great Vibes",cursive;font-size:33px;color:#fff;line-height:1}
+  .qr-card .qxv{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--star);margin:4px 0 16px}
+  .qr-holder{display:inline-block;position:relative;background:#fff;padding:12px;border-radius:16px}
+  .qr-holder img{display:block;width:158px;height:158px;image-rendering:pixelated}
+  .qr-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;background:#fff;border-radius:10px;display:grid;place-items:center}
+  .qr-logo .lg{width:32px;height:32px;background:#1B396B;border-radius:8px;display:flex;align-items:flex-end;justify-content:center;gap:2.5px;padding:5px 0}
+  .qr-logo .lg i{width:4px;border-radius:2px;display:block}
+  .qr-logo .lg i:nth-child(1){height:8px;background:#2A9D8E}
+  .qr-logo .lg i:nth-child(2){height:13px;background:#8ED8CF}
+  .qr-logo .lg i:nth-child(3){height:18px;background:#2A9D8E}
+  .qr-card .qdate{margin-top:14px;font-size:11px;letter-spacing:.22em;color:#d9d3f4}
+  .qr-note{font-size:12px;color:var(--muted);margin-top:16px;line-height:1.55}
+  .qr-note b{color:var(--lilac);font-weight:500}
 
-  .made{background:var(--night);color:#cfc8f3;text-align:center;padding:28px 20px 32px;margin-top:38px}
-  .made .t{font-family:"Cormorant Garamond",serif;font-size:17px;color:#fff;margin-bottom:6px}
-  .made p{font-size:12.5px;max-width:36ch;margin:0 auto 14px}
-  .made a{display:inline-block;background:var(--star);color:var(--night);text-decoration:none;font-weight:500;font-size:13px;padding:11px 20px;border-radius:999px}
-  .made .hint{margin-top:14px;font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:#6d679a}
-  @media (prefers-reduced-motion:reduce){.st{animation:none}.hero-in{animation:none;opacity:1}.scroll span{animation:none}}
+  /* made by */
+  .made{margin-top:26px;background:rgba(255,255,255,.05);border:1px solid rgba(179,166,240,.25);border-radius:18px;padding:18px 16px}
+  .made .t{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--star)}
+  .made p{font-size:12.5px;color:#cfc8ee;margin:8px 0 12px;line-height:1.5}
+  .made a{display:inline-block;background:var(--wa);color:#0a3d1e;text-decoration:none;font-weight:500;font-size:13px;padding:11px 20px;border-radius:999px}
+  .hint{margin-top:12px;font-size:10.5px;letter-spacing:.2em;color:var(--muted)}
+
+  @media (prefers-reduced-motion:reduce){
+    .st,.edge-hint,.open-hint{animation:none}
+    .page.flip-out{animation:none;display:none}
+    .page.flip-in{animation:none}
+  }
 </style>
 </head>
 <body>
-<section class="hero">
-  <div class="stars" id="stars"></div>
-  <div class="moon"></div>
-  <div class="hero-in">
-    <div class="pre">Bajo las estrellas</div>
-    <div class="big">Valentina</div>
-    <div class="xv">Mis XV Años</div>
-    <div class="orn">✦ ✧ ✦</div>
-    <div class="date">SÁBADO · 12 DE DICIEMBRE · 2026</div>
-  </div>
-  <div class="scroll">Desliza<span>▾</span></div>
-</section>
 
-<div class="wrap">
-  <div class="sec">
-    <div class="eyebrow">Faltan</div>
-    <h2>Para brillar juntas</h2>
-    <div class="countdown">
-      <div class="cd"><b id="cdD">–</b><span>Días</span></div>
-      <div class="cd"><b id="cdH">–</b><span>Horas</span></div>
-      <div class="cd"><b id="cdM">–</b><span>Min</span></div>
-      <div class="cd"><b id="cdS">–</b><span>Seg</span></div>
+<div class="stars" id="stars"></div>
+
+<div class="book" id="book">
+
+  <!-- PÁGINA 1 · PORTADA -->
+  <section class="page on">
+    <div class="pin">
+      <div class="moon"></div>
+      <div class="pre">Bajo las estrellas</div>
+      <div class="big">Valentina</div>
+      <div class="xv">Mis XV Años</div>
+      <div class="orn">✦ ✧ ✦</div>
+      <div class="date">SÁBADO · 12 DE DICIEMBRE · 2026</div>
+      <div class="open-hint">Toca el lado derecho para abrir ▸</div>
     </div>
-  </div>
+  </section>
 
-  <div class="sec">
-    <div class="story">
-      <p>“Hay noches que se sueñan toda la vida. Esta es la mía, y quiero que brilles conmigo.”</p>
-      <div class="sig">Valentina</div>
+  <!-- PÁGINA 2 · CUENTA REGRESIVA -->
+  <section class="page">
+    <div class="pin">
+      <div class="eyebrow">Faltan</div>
+      <h2>Para brillar juntas</h2>
+      <div class="countdown">
+        <div class="cd"><b id="cdD">–</b><span>Días</span></div>
+        <div class="cd"><b id="cdH">–</b><span>Horas</span></div>
+        <div class="cd"><b id="cdM">–</b><span>Min</span></div>
+        <div class="cd"><b id="cdS">–</b><span>Seg</span></div>
+      </div>
+      <div class="story">“Hay noches que se sueñan toda la vida. Esta es la mía, y quiero que brilles conmigo.”
+        <div class="sig">Valentina</div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="sec">
-    <div class="eyebrow">La noche</div>
-    <h2>Itinerario</h2>
-    <div class="itin">
-      <div class="it"><span>6:30 pm</span><b>Misa de acción de gracias</b><p>Parroquia del Sagrado Corazón</p></div>
-      <div class="it"><span>8:00 pm</span><b>Recepción</b><p>Jardín Las Lunas · cóctel de bienvenida</p></div>
-      <div class="it"><span>9:00 pm</span><b>Vals y brindis</b><p>El momento estelar de la noche</p></div>
-      <div class="it"><span>9:45 pm</span><b>Cena</b><p>Menú de tres tiempos</p></div>
-      <div class="it"><span>11:00 pm</span><b>¡A bailar!</b><p>Hasta que las estrellas se apaguen</p></div>
+  <!-- PÁGINA 3 · ITINERARIO -->
+  <section class="page">
+    <div class="pin">
+      <div class="eyebrow">La noche</div>
+      <h2>Itinerario</h2>
+      <div class="itin">
+        <div class="it"><span>6:30 pm</span><div><b>Misa de acción de gracias</b><p>Parroquia del Sagrado Corazón</p></div></div>
+        <div class="it"><span>8:00 pm</span><div><b>Recepción</b><p>Jardín Las Lunas · cóctel de bienvenida</p></div></div>
+        <div class="it"><span>9:00 pm</span><div><b>Vals y brindis</b><p>El momento estelar de la noche</p></div></div>
+        <div class="it"><span>9:45 pm</span><div><b>Cena</b><p>Menú de tres tiempos</p></div></div>
+        <div class="it"><span>11:00 pm</span><div><b>¡A bailar!</b><p>Hasta que las estrellas se apaguen</p></div></div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="venue">
-    <div class="vst"></div>
-    <div class="in">
-      <div class="eyebrow" style="color:var(--lilac)">Recepción</div>
-      <h3>Jardín Las Lunas</h3>
-      <p>Camino a Los Pinos 120, Arteaga, Coahuila</p>
-      <a href="https://maps.google.com/?q=Jardin+Las+Lunas+Arteaga" target="_blank" rel="noopener">Cómo llegar</a>
+  <!-- PÁGINA 4 · LUGAR Y VESTIMENTA -->
+  <section class="page">
+    <div class="pin">
+      <div class="eyebrow">Recepción</div>
+      <h2>Jardín Las Lunas</h2>
+      <div class="venue">
+        <p>Camino a Los Pinos 120, Arteaga, Coahuila</p>
+        <a href="https://maps.google.com/?q=Jardin+Las+Lunas+Arteaga" target="_blank" rel="noopener">Cómo llegar</a>
+      </div>
+      <div class="eyebrow">Para esa noche</div>
+      <h2 style="font-size:24px">Código de vestimenta</h2>
+      <div class="dress">
+        <div class="dcard"><div class="e">🌙</div><b>Formal</b><span>Tonos noche: azul, violeta, plata</span></div>
+        <div class="dcard"><div class="e">✨</div><b>Reservado</b><span>El lila es de la quinceañera</span></div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="sec">
-    <div class="eyebrow">Para esa noche</div>
-    <h2>Código de vestimenta</h2>
-    <div class="dress">
-      <div class="dcard"><div class="e">🌙</div><b>Formal</b><span>Tonos noche: azul, violeta, plata</span></div>
-      <div class="dcard"><div class="e">✨</div><b>Reservado</b><span>El lila es de la quinceañera</span></div>
+  <!-- PÁGINA 5 · RSVP -->
+  <section class="page">
+    <div class="pin rsvp">
+      <div class="eyebrow">Tu lugar entre las estrellas</div>
+      <h2>Confirma tu asistencia</h2>
+      <p style="font-size:13px;color:#cfc8ee;margin-bottom:16px">Confírmalo antes del 28 de noviembre.</p>
+      <input id="rNombre" placeholder="Tu nombre y apellido">
+      <select id="rNum"><option>Asistiré · 1 persona</option><option>Asistiremos · 2 personas</option><option>Asistiremos · 3 personas</option><option>Asistiremos · 4 personas</option><option>No podré asistir 😔</option></select>
+      <button id="btnRsvp">Confirmar por WhatsApp ✦</button>
+      <div class="dl">Con cariño, familia Herrera Luna</div>
     </div>
-  </div>
+  </section>
 
-  <div class="rsvp">
-    <h3>Confirma tu asistencia</h3>
-    <p>Tu lugar entre las estrellas está apartado. Confírmalo antes del 28 de noviembre.</p>
-    <input id="rNombre" placeholder="Tu nombre y apellido">
-    <select id="rNum"><option>Asistiré · 1 persona</option><option>Asistiremos · 2 personas</option><option>Asistiremos · 3 personas</option><option>Asistiremos · 4 personas</option><option>No podré asistir 😔</option></select>
-    <button id="btnRsvp">Confirmar por WhatsApp ✦</button>
-    <div class="dl">Con cariño, familia Herrera Luna</div>
-  </div>
+  <!-- PÁGINA 6 · QR / ACCESO -->
+  <section class="page">
+    <div class="pin">
+      <div class="eyebrow">Tu pase de entrada</div>
+      <h2>Preséntalo esa noche</h2>
+      <div class="qr-card">
+        <span class="corner c1">✦</span><span class="corner c2">✦</span><span class="corner c3">✦</span><span class="corner c4">✦</span>
+        <div class="mini-moon"></div>
+        <div class="qn">Valentina</div>
+        <div class="qxv">Mis XV Años</div>
+        <a id="qrLink" href="acceso/" style="text-decoration:none">
+          <span class="qr-holder"><span id="qr"></span><span class="qr-logo"><span class="lg"><i></i><i></i><i></i></span></span></span>
+        </a>
+        <div class="qdate">12 · DICIEMBRE · 2026</div>
+      </div>
+      <p class="qr-note">Este diseño se imprime en la invitación física. En la puerta, el staff lo <b>escanea</b> y ve al instante el pase del invitado.<br><b>Pruébalo:</b> escanéalo con tu cámara o tócalo aquí mismo.</p>
 
-  <div class="qr-sec">
-    <div class="eyebrow">QR de la invitación</div>
-    <div id="qr"></div>
-    <p>Diseñado para imprimirse en las invitaciones físicas.</p>
-  </div>
+      <div class="made">
+        <div class="t">Invitación Deluxe · Solida Aplicaciones</div>
+        <p>Demostración a medida: formato libro, música, efectos al tocar y control de acceso con QR.</p>
+        <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20invitaci%C3%B3n%20Deluxe%20tipo%20libro%20y%20quiero%20una%20as%C3%AD%20para%20mi%20evento.">Quiero una invitación así</a>
+        <div class="hint">▸ Paquete Premium · Deluxe ◂</div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
-<div class="made">
-  <div class="t">Invitación Deluxe por Solida Aplicaciones</div>
-  <p>Demostración de diseño 100% a medida: temática celestial, ilustraciones y confirmación integrada.</p>
-  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20invitaci%C3%B3n%20Deluxe%20y%20quiero%20una%20tem%C3%A1tica%20%C3%BAnica%20para%20mi%20evento.">Quiero una invitación así</a>
-  <div class="hint">▸ Paquete Premium · Deluxe ◂</div>
-</div>
+<!-- zonas de toque y guías -->
+<div class="tap l" id="tapL"></div>
+<div class="tap r" id="tapR"></div>
+<div class="edge-hint l" id="ehL" style="display:none">◂</div>
+<div class="edge-hint r" id="ehR">▸</div>
+<div class="dots" id="dots"></div>
 
 <script>
 const WA="528443604349";
-/* estrellas */
+
+/* ====== estrellas de fondo ====== */
 const stars=document.getElementById('stars');
 for(let i=0;i<46;i++){
   const s=document.createElement('i'); s.className='st';
@@ -187,7 +254,98 @@ for(let i=0;i<46;i++){
   s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${(Math.random()*3).toFixed(2)}s`;
   stars.appendChild(s);
 }
-/* cuenta regresiva: demo viva a ~75 días */
+
+/* ====== libro: páginas ====== */
+const pages=[...document.querySelectorAll('.page')];
+let cur=0, turning=false;
+const dots=document.getElementById('dots');
+pages.forEach((_,i)=>{const d=document.createElement('i'); if(i===0)d.classList.add('on'); dots.appendChild(d);});
+function paint(){
+  [...dots.children].forEach((d,i)=>d.classList.toggle('on',i===cur));
+  document.getElementById('ehL').style.display=cur>0?'block':'none';
+  document.getElementById('ehR').style.display=cur<pages.length-1?'block':'none';
+}
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function goTo(n){
+  if(turning||n<0||n>=pages.length||n===cur) return;
+  startMusic(); // la música arranca con el primer cambio de página
+  const out=pages[cur], inn=pages[n];
+  cur=n; paint();
+  if(reduced){ out.classList.remove('on'); inn.classList.add('on'); inn.scrollTop=0; return; }
+  turning=true;
+  inn.classList.add('on','flip-in');
+  out.classList.add('flip-out');
+  setTimeout(()=>{
+    out.classList.remove('on','flip-out');
+    inn.classList.remove('flip-in');
+    inn.scrollTop=0;
+    turning=false;
+  },660);
+}
+document.getElementById('tapR').addEventListener('click',()=>goTo(cur+1));
+document.getElementById('tapL').addEventListener('click',()=>goTo(cur-1));
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')goTo(cur+1);
+  if(e.key==='ArrowLeft')goTo(cur-1);
+});
+
+/* ====== chispas al tocar ====== */
+document.addEventListener('pointerdown',e=>{
+  const n=7;
+  for(let i=0;i<n;i++){
+    const sp=document.createElement('span');
+    sp.className='spark'; sp.textContent=Math.random()<0.5?'✦':'✧';
+    sp.style.left=e.clientX+'px'; sp.style.top=e.clientY+'px';
+    document.body.appendChild(sp);
+    const a=(i/n)*Math.PI*2+Math.random()*0.6, r=34+Math.random()*46;
+    sp.animate([
+      {transform:'translate(-50%,-50%) scale(1)',opacity:1},
+      {transform:`translate(calc(-50% + ${Math.cos(a)*r}px), calc(-50% + ${Math.sin(a)*r - 16}px)) scale(.25) rotate(${Math.random()*180}deg)`,opacity:0}
+    ],{duration:700+Math.random()*350,easing:'cubic-bezier(.2,.6,.3,1)'}).onfinish=()=>sp.remove();
+  }
+},{passive:true});
+
+/* ====== música celestial (arranca al abrir el libro, sin botón) ======
+   Melodía tipo caja musical generada en el navegador (demo).
+   En la invitación real va la canción del cliente — SIEMPRE una
+   versión libre de derechos de autor. */
+let audio={ctx:null,timer:null,on:false,i:0};
+const NOTE={A4:440,B4:493.88,Cs5:554.37,E5:659.25,Fs5:739.99,A5:880,Cs6:1108.73,E6:1318.51};
+const SEQ=['A4','Cs5','E5','A5','Fs5','E5','Cs5','E5','B4','Cs5','E5','Fs5','E5','Cs5','A4','Cs5'];
+function tone(f,t){
+  const c=audio.ctx,o=c.createOscillator(),g=c.createGain();
+  o.type='sine'; o.frequency.value=f;
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.11,t+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+1.6);
+  o.connect(g); g.connect(audio.master);
+  o.start(t); o.stop(t+1.7);
+  // brillo una octava arriba, muy suave
+  const o2=c.createOscillator(),g2=c.createGain();
+  o2.type='triangle'; o2.frequency.value=f*2;
+  g2.gain.setValueAtTime(0.0001,t);
+  g2.gain.exponentialRampToValueAtTime(0.03,t+0.02);
+  g2.gain.exponentialRampToValueAtTime(0.0001,t+1.1);
+  o2.connect(g2); g2.connect(audio.master);
+  o2.start(t); o2.stop(t+1.2);
+}
+function step(){
+  const t=audio.ctx.currentTime+0.05;
+  tone(NOTE[SEQ[audio.i%SEQ.length]],t);
+  if(audio.i%4===0) tone(NOTE[SEQ[audio.i%SEQ.length]]/2,t);
+  audio.i++;
+}
+function startMusic(){
+  if(audio.on) return;
+  audio.on=true;
+  audio.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  audio.master=audio.ctx.createGain(); audio.master.gain.value=0.85;
+  audio.master.connect(audio.ctx.destination);
+  audio.ctx.resume();
+  step(); audio.timer=setInterval(step,520);
+}
+
+/* ====== cuenta regresiva: demo viva a ~75 días ====== */
 const target=new Date(); target.setDate(target.getDate()+75); target.setHours(20,0,0,0);
 function tick(){
   const t=target-new Date(); if(t<0) return;
@@ -195,18 +353,24 @@ function tick(){
   cdM.textContent=Math.floor(t%36e5/6e4); cdS.textContent=Math.floor(t%6e4/1e3);
 }
 tick(); setInterval(tick,1000);
-/* RSVP */
+
+/* ====== RSVP ====== */
 document.getElementById('btnRsvp').onclick=()=>{
   const n=document.getElementById('rNombre').value.trim()||"—";
   const c=document.getElementById('rNum').value;
   const txt=`✦ XV de Valentina ✦\n\nConfirmación de asistencia:\n• Nombre: ${n}\n• ${c}\n\n¡Gracias! 💜`;
   window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(txt),"_blank");
 };
-/* QR */
+
+/* ====== QR: apunta a la página de control de acceso ====== */
 try{
-  const q=qrcode(0,'M'); q.addData('https://solida-web.j23salva.workers.dev/invitacion/avanzado'); q.make();
-  document.getElementById('qr').innerHTML=q.createImgTag(4,0);
-}catch(e){document.querySelector('.qr-sec').style.display='none'}
+  const q=qrcode(0,'H'); // alta corrección: aguanta el logo encima
+  q.addData('https://solida-web.j23salva.workers.dev/invitacion/avanzado/acceso');
+  q.make();
+  document.getElementById('qr').innerHTML=q.createImgTag(3,0);
+}catch(e){document.querySelector('.qr-card').style.display='none'}
+
+paint();
 </script>
 </body>
 </html>

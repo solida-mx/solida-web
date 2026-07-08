@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Control de acceso · XV de Valentina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Great+Vibes&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--night:#141230;--night-2:#1d1a42;--violet:#6d5bd0;--lilac:#b3a6f0;--star:#f4d98c;--ok:#31c47e;--ok-d:#0d3b26;--muted:#8a83a8;--paper:#f7f4ff;}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:"Jost",sans-serif;min-height:100vh;color:var(--paper);
+    background:radial-gradient(circle at 50% 0%,#241f55,var(--night) 70%)}
+
+  header{text-align:center;padding:26px 20px 6px}
+  header .ev{font-family:"Great Vibes",cursive;font-size:34px;color:#fff;line-height:1}
+  header .sub{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--star);margin-top:5px}
+  header .role{display:inline-block;margin-top:12px;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--lilac);border:1px solid rgba(179,166,240,.4);border-radius:999px;padding:6px 14px}
+
+  .wrap{max-width:430px;margin:0 auto;padding:18px 20px 40px}
+
+  .pass{background:linear-gradient(165deg,#221d52,var(--night-2));border:1.5px solid var(--ok);border-radius:22px;
+    padding:26px 22px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.4);position:relative;overflow:hidden}
+  .pass::before{content:"";position:absolute;left:-30%;top:0;width:40%;height:100%;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.07),transparent);animation:sheen 3.2s ease-in-out infinite}
+  @keyframes sheen{0%{left:-40%}60%,100%{left:110%}}
+
+  .check{width:76px;height:76px;border-radius:50%;margin:0 auto 14px;background:var(--ok);display:grid;place-items:center;
+    box-shadow:0 0 0 0 rgba(49,196,126,.5);animation:pop .5s cubic-bezier(.3,1.6,.5,1) both, ring 2s ease-out .4s infinite}
+  @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes ring{from{box-shadow:0 0 0 0 rgba(49,196,126,.45)}to{box-shadow:0 0 0 22px rgba(49,196,126,0)}}
+  .check svg{width:38px;height:38px;stroke:var(--ok-d);stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .check svg path{stroke-dasharray:34;stroke-dashoffset:34;animation:draw .5s ease-out .25s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+
+  .valid{font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:var(--ok);font-weight:600}
+  .guest{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:30px;color:#fff;margin:10px 0 2px}
+  .meta{display:flex;justify-content:center;gap:10px;margin:14px 0 4px;flex-wrap:wrap}
+  .chip{background:rgba(255,255,255,.07);border:1px solid rgba(179,166,240,.3);border-radius:999px;padding:8px 16px;font-size:13px}
+  .chip b{color:var(--star);font-weight:600}
+
+  .btn-in{width:100%;margin-top:18px;font-family:inherit;font-weight:600;font-size:14.5px;letter-spacing:.05em;
+    padding:15px;border:none;border-radius:999px;background:var(--star);color:var(--night);cursor:pointer;transition:.2s}
+  .btn-in:active{transform:translateY(1px)}
+  .btn-in.done{background:rgba(255,255,255,.09);color:var(--lilac);border:1px solid rgba(179,166,240,.4);cursor:default}
+
+  .list{margin-top:24px;background:rgba(255,255,255,.045);border:1px solid rgba(179,166,240,.2);border-radius:18px;padding:16px}
+  .list h3{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--lilac);margin-bottom:10px;text-align:center}
+  .row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid rgba(179,166,240,.12);font-size:13.5px}
+  .row:last-child{border-bottom:none}
+  .row .st{width:9px;height:9px;border-radius:50%;flex:none}
+  .row .st.in{background:var(--ok)}.row .st.out{background:rgba(179,166,240,.35)}
+  .row b{font-weight:500;color:#fff}
+  .row small{margin-left:auto;color:var(--muted);font-size:11.5px;white-space:nowrap}
+
+  .demo-note{margin-top:22px;background:rgba(244,217,140,.07);border:1px dashed rgba(244,217,140,.45);border-radius:16px;
+    padding:16px;font-size:12.5px;color:#e6e1fb;line-height:1.6}
+  .demo-note b{color:var(--star);font-weight:500}
+
+  .back{display:block;text-align:center;margin-top:20px;color:var(--lilac);font-size:12.5px;letter-spacing:.14em;
+    text-transform:uppercase;text-decoration:none}
+
+  .made{margin-top:26px;text-align:center;background:rgba(255,255,255,.05);border:1px solid rgba(179,166,240,.25);border-radius:18px;padding:18px 16px}
+  .made .t{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--star)}
+  .made p{font-size:12.5px;color:#cfc8ee;margin:8px 0 12px;line-height:1.5}
+  .made a{display:inline-block;background:#25d366;color:#0a3d1e;text-decoration:none;font-weight:500;font-size:13px;padding:11px 20px;border-radius:999px}
+
+  @media (prefers-reduced-motion:reduce){.pass::before,.check{animation:none}.check svg path{animation:none;stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="ev">Valentina</div>
+  <div class="sub">Mis XV Años · 12 Dic 2026</div>
+  <div class="role">👁 Vista del staff en la puerta</div>
+</header>
+
+<div class="wrap">
+
+  <div class="pass">
+    <div class="check"><svg viewBox="0 0 24 24"><path d="M4.5 12.5 9.5 17.5 19.5 7"/></svg></div>
+    <div class="valid">Pase válido</div>
+    <div class="guest" id="gName">Familia Herrera Luna</div>
+    <div class="meta">
+      <span class="chip">Pases: <b id="gPass">4</b></span>
+      <span class="chip">Mesa: <b id="gMesa">7</b></span>
+    </div>
+    <button class="btn-in" id="btnIn">Registrar entrada ✦</button>
+  </div>
+
+  <div class="list">
+    <h3>Últimos ingresos</h3>
+    <div id="rows">
+      <div class="row"><span class="st in"></span><b>Fam. González Ríos</b> · 3 pases<small>8:42 pm</small></div>
+      <div class="row"><span class="st in"></span><b>Carlos Medina</b> · 2 pases<small>8:37 pm</small></div>
+      <div class="row"><span class="st out"></span><b id="rowName">Fam. Herrera Luna</b> · <span id="rowPass">4</span> pases<small>pendiente</small></div>
+    </div>
+  </div>
+
+  <div class="demo-note">
+    <b>¿Cómo funciona en un evento real?</b><br>
+    Cada invitado recibe su invitación con un <b>QR único</b>. En la puerta, el staff lo escanea con la cámara de cualquier celular y ve esta pantalla: nombre, pases y mesa. Al registrar la entrada, el pase queda marcado y <b>ya no puede reutilizarse</b>. Sin apps, sin equipo especial.
+  </div>
+
+  <a class="back" href="../">◂ Volver a la invitación</a>
+
+  <div class="made">
+    <div class="t">Control de acceso · Solida Aplicaciones</div>
+    <p>Incluido en la invitación Deluxe: lista de invitados con pases y registro de entradas por QR.</p>
+    <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20el%20control%20de%20acceso%20con%20QR%20de%20la%20invitaci%C3%B3n%20Deluxe%20y%20me%20interesa.">Lo quiero para mi evento</a>
+  </div>
+
+</div>
+
+<script>
+/* Pase personalizado: lee al invitado desde la URL (?n=Nombre&p=4&m=7).
+   Los QRs generados en /soporte/pases traen estos datos. Sin parámetros,
+   muestra al invitado de ejemplo. */
+const Q=new URLSearchParams(location.search);
+const gN=Q.get('n'), gP=Q.get('p'), gM=Q.get('m');
+if(gN){ document.getElementById('gName').textContent=gN; document.getElementById('rowName').textContent=gN; }
+if(gP){ document.getElementById('gPass').textContent=gP; document.getElementById('rowPass').textContent=gP; }
+if(gM){ document.getElementById('gMesa').textContent=gM; }
+
+/* Demo: registrar la entrada de la familia mostrada */
+const btn=document.getElementById('btnIn');
+btn.addEventListener('click',()=>{
+  if(btn.classList.contains('done')) return;
+  const now=new Date();
+  const hh=((now.getHours()+11)%12+1), mm=String(now.getMinutes()).padStart(2,'0');
+  const ampm=now.getHours()>=12?'pm':'am';
+  btn.classList.add('done');
+  btn.textContent=`✓ Ingresó a las ${hh}:${mm} ${ampm}`;
+  const rows=document.getElementById('rows');
+  const pend=rows.querySelector('.st.out');
+  if(pend){
+    const row=pend.parentElement;
+    pend.classList.remove('out'); pend.classList.add('in');
+    row.querySelector('small').textContent=`${hh}:${mm} ${ampm}`;
+    rows.prepend(row);
+  }
+});
+</script>
+</body>
+</html>

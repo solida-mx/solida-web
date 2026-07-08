@@ -21,6 +21,7 @@ CÓMO SE INSTALA
        solida-web.j23salva.workers.dev/soporte
        solida-web.j23salva.workers.dev/soporte/levantamiento
        solida-web.j23salva.workers.dev/soporte/cambios
+       solida-web.j23salva.workers.dev/soporte/pases  (interno)
 
 CÓMO SE USA CON UN CLIENTE
   • Cliente nuevo: mándale el enlace de /soporte/levantamiento
