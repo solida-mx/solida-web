@@ -270,7 +270,7 @@ const SEGMENTS = {
    ]},
   ]},
  invitaciones:{label:"Invitaciones de evento", short:"Bodas, XV, cumpleaños…",
-  materials:["Fotos para la invitación (hasta 3 en Básico)","Fotos para la galería (Pro y Deluxe)"],
+  materials:["Fotos para la invitación (hasta 3 en Básico)","Fotos para la galería (Pro y Deluxe)","Canción para la invitación: debe ser una versión LIBRE de derechos de autor (Pro y Deluxe)"],
   tiers:[
    {level:"Básico", name:"Esencial", price:"$690", unit:"por evento", fields:[
      {id:"tipoEvento", l:"Tipo de evento", t:"input", req:true, ph:"Boda, XV años, bautizo, cumpleaños…"},
@@ -282,7 +282,8 @@ const SEGMENTS = {
    ]},
    {level:"Intermedio", name:"Pro", price:"$1,290", unit:"por evento", fields:[
      {id:"waConfirma", l:"WhatsApp que recibirá las confirmaciones de asistencia", t:"input", req:true},
-     {id:"cancion", l:"Canción para la invitación", t:"input", ph:"Nombre y artista"},
+     {id:"cancion", l:"Canción para la invitación", t:"input", ph:"Nombre y artista, o la versión exacta que te gusta",
+      help:"⚠️ IMPORTANTE: la música de la invitación debe ser LIBRE DE DERECHOS DE AUTOR. Las canciones comerciales (las de Spotify, YouTube, radio) no se pueden poner tal cual en una página pública porque infringen derechos y la invitación podría ser dada de baja. Dinos cuál te gusta y te proponemos una versión instrumental libre de regalías o una melodía con licencia de estilo parecido."},
      {id:"itinerario", l:"Itinerario del evento", t:"area", ph:"7:00 Ceremonia · 8:30 Recepción · 9:00 Cena…"},
      {id:"dressCode", l:"Código de vestimenta", t:"input"},
      {id:"regalos", l:"Mesa de regalos", t:"area", ph:"Tienda y número de evento, o cuenta para transferencia"},

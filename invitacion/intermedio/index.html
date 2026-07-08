@@ -237,5 +237,47 @@ function tick(){
 }
 tick();setInterval(tick,1000);
 </script>
+<!-- MÚSICA DE FONDO -->
+<button id="musicBtn" aria-label="Música" style="position:fixed;bottom:18px;right:18px;z-index:60;width:52px;height:52px;border-radius:50%;border:1.5px solid var(--gold);background:var(--emerald);color:var(--gold-2);font-size:21px;cursor:pointer;box-shadow:0 8px 22px rgba(21,58,48,.35);display:grid;place-items:center;transition:.2s">♪</button>
+<style>
+  #musicBtn.playing{animation:pulse 2.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+</style>
+<script>
+// Melodía suave tipo caja musical, generada en el navegador (demo).
+// En la invitación real va la canción que elijan los novios.
+(function(){
+  const btn=document.getElementById('musicBtn');
+  let ctx=null, playing=false, timer=null, master=null;
+  const NOTES={C4:261.63,D4:293.66,E4:329.63,G4:392.0,A4:440.0,C5:523.25,E5:659.25,G5:783.99};
+  // arpegio sencillo C – Am – F(sim) – G
+  const SEQ=['C4','E4','G4','C5','A4','E5','C5','G4','C4','E4','A4','C5','D4','G4','G5','E5'];
+  let i=0;
+  function tone(f,t){
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type='triangle'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.16,t+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+1.15);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t+1.2);
+  }
+  function loop(){
+    const t=ctx.currentTime+0.05;
+    tone(NOTES[SEQ[i%SEQ.length]],t);
+    if(i%2===0) tone(NOTES[SEQ[i%SEQ.length]]/2,t); // bajo suave
+    i++;
+  }
+  btn.addEventListener('click',()=>{
+    if(!ctx){
+      ctx=new (window.AudioContext||window.webkitAudioContext)();
+      master=ctx.createGain(); master.gain.value=0.8; master.connect(ctx.destination);
+    }
+    playing=!playing;
+    if(playing){ ctx.resume(); loop(); timer=setInterval(loop,430); btn.classList.add('playing'); btn.textContent='♫'; }
+    else{ clearInterval(timer); btn.classList.remove('playing'); btn.textContent='♪'; }
+  });
+})();
+</script>
 </body>
 </html>
