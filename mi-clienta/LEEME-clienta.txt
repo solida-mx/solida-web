@@ -1,0 +1,30 @@
+╔══════════════════════════════════════════════════════════╗
+║   PLAN DE TU CLIENTA — Carpeta aislada (link independiente) ║
+╚══════════════════════════════════════════════════════════╝
+
+QUÉ ES
+------
+Página premium de nutrición + entrenamiento, temática femenina,
+calculada para tu clienta (64 kg, 155 cm, 25 años, adelgazar
+lento cuidando músculo). Es una carpeta SEPARADA de tu sitio de
+ventas: no aparece en el tabulador ni en los selectores de demo.
+
+CÓMO PUBLICARLA (link propio)
+-----------------------------
+1. Sube la carpeta "mi-clienta" (con index.html y app.js dentro)
+   a la RAÍZ de tu repo de GitHub, junto al index.html principal.
+2. Cloudflare publica solo en 1-2 min.
+3. El link queda:  solida-web.j23salva.workers.dev/mi-clienta
+   (Puedes renombrar la carpeta al nombre de tu clienta, ej.
+   "vero" -> el link sería .../vero)
+
+QUÉ DEBES CONFIRMAR / CAMBIAR (en app.js, hasta arriba)
+-------------------------------------------------------
+- WA y coachWa .......... TU WhatsApp (déjalo o cámbialo).
+- cliente ............... nombre de tu clienta (hoy: "Campeona").
+- MEDICION_BASE ......... grasa y músculo son ESTIMADOS.
+                          Actualízalos cuando ella se mida.
+
+Todo lo demás (comidas, mandado, antojos, rutina, metas) ya está
+calculado. Los datos que ingrese tu clienta se guardan en SU
+teléfono; cada semana te manda su reporte por WhatsApp a ti.
