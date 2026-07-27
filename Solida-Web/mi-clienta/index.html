@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mi Plan · Coaching con Salvador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1a1018;--bg-2:#20141d;--card:#2a1a26;--card-2:#33202e;--line:#3f2938;
+    --ink:#fdeef5;--muted:#c3a3b4;--faint:#97788a;
+    --em:#ff6fa5;--em-deep:#d64d86;--em-soft:rgba(255,111,165,.12);
+    --amber:#f2a154;--amber-soft:rgba(242,161,84,.12);
+    --coral:#ff7a90;--coral-soft:rgba(255,122,144,.12);
+    --sky:#b58bd6;--sky-soft:rgba(181,139,214,.14);
+    --violet:#c9a0ff;
+    --r:18px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Manrope",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;
+    -webkit-text-size-adjust:100%;padding-bottom:86px}
+  h1,h2,h3,.disp{font-family:"Space Grotesk",sans-serif;letter-spacing:-.01em}
+  button{font-family:inherit}
+
+  /* ---------- HEADER ---------- */
+  header{position:relative;overflow:hidden;padding:20px 18px 22px;
+    background:linear-gradient(160deg,#2a1526 0%,#1a1018 70%)}
+  header::before{content:"";position:absolute;width:340px;height:340px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,111,165,.16),transparent 65%);top:-170px;right:-120px;pointer-events:none}
+  .brandline{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--em)}
+  .brandline .dot{width:6px;height:6px;border-radius:50%;background:var(--amber)}
+  .brandline .pill{margin-left:auto;background:var(--em-soft);border:1px solid rgba(255,111,165,.3);
+    color:var(--em);font-size:10px;padding:4px 10px;border-radius:999px;letter-spacing:.1em}
+  .hello{margin-top:14px;font-family:"Space Grotesk";font-weight:700;font-size:26px;line-height:1.12}
+  .hello span{color:var(--em)}
+  .datemeta{margin-top:4px;font-size:13px;color:var(--muted);font-weight:600}
+  .macro-strip{margin-top:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .macro{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:13px;padding:10px 6px;text-align:center;
+    position:relative;overflow:hidden}
+  .macro::after{content:"";position:absolute;left:0;top:0;height:3px;width:100%;background:var(--c,#ff6fa5)}
+  .macro b{display:block;font-family:"Space Grotesk";font-size:16.5px;font-weight:700;color:var(--c,#ff6fa5)}
+  .macro span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+  .wrap{max-width:600px;margin:0 auto;padding:16px 14px 0}
+
+  /* ---------- GENERIC ---------- */
+  .sec-title{display:flex;align-items:center;gap:10px;margin:20px 0 12px}
+  .sec-title h2{font-size:17px;font-weight:700}
+  .sec-title .ln{flex:1;height:1px;background:var(--line)}
+  .sec-title .chip{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:4px 9px;border-radius:999px;background:var(--em-soft);color:var(--em)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
+  .subtle{font-size:12px;color:var(--muted);font-weight:500}
+  .tag{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:7px}
+  .tag.free{background:var(--em-soft);color:var(--em)}
+  .tag.mod{background:var(--amber-soft);color:var(--amber)}
+  .tag.high{background:var(--coral-soft);color:var(--coral)}
+  .tag.var{background:var(--sky-soft);color:var(--sky)}
+
+  /* ---------- TOP CARDS (ring + water) ---------- */
+  .top-cards{display:grid;grid-template-columns:1.05fr 1fr;gap:10px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;text-align:center}
+  .pcard .lbl{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}
+  .ring{position:relative;width:92px;height:92px;margin:10px auto 2px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring circle{transition:stroke-dashoffset .5s cubic-bezier(.3,1,.4,1)}
+  .ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .val b{font-family:"Space Grotesk";font-size:22px;font-weight:700;color:var(--em)}
+  .ring .val span{font-size:9.5px;color:var(--muted);font-weight:700}
+  .water-glasses{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0 8px}
+  .glass{width:24px;height:30px;border:2px solid var(--sky);border-radius:4px 4px 8px 8px;cursor:pointer;background:transparent;transition:transform .1s,background .2s}
+  .glass:active{transform:scale(.88)}
+  .glass.full{background:var(--sky)}
+  .water-count{font-family:"Space Grotesk";font-size:19px;font-weight:700;color:var(--sky)}
+  .water-count small{font-family:"Manrope";font-size:11px;color:var(--muted);font-weight:700}
+
+  /* ---------- MEALS ---------- */
+  .meal{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px;margin-bottom:11px;
+    transition:opacity .25s;position:relative;overflow:hidden}
+  .meal::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--mc,#ff6fa5)}
+  .meal.done{opacity:.55}
+  .meal-top{display:flex;align-items:center;gap:11px}
+  .check{width:27px;height:27px;border-radius:9px;border:2px solid var(--line);flex:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:#2a0a1a;transition:all .15s;background:transparent}
+  .check.on{background:var(--em);border-color:var(--em)}
+  .meal-time{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mc,#ff6fa5);font-weight:800}
+  .meal-name{font-family:"Space Grotesk";font-weight:700;font-size:16.5px}
+  .kcal{margin-left:auto;font-size:11px;font-weight:800;color:var(--muted);background:rgba(255,255,255,.05);
+    border:1px solid var(--line);padding:4px 8px;border-radius:8px;flex:none;text-align:right;line-height:1.3}
+  .kcal b{color:var(--ink)}
+  .foods{list-style:none;margin:11px 0 0;display:flex;flex-direction:column}
+  .food{display:flex;align-items:center;gap:10px;font-size:13.5px;padding:8px 0;border-top:1px dashed var(--line)}
+  .food .emoji{font-size:18px;width:22px;text-align:center}
+  .food .txt{flex:1;min-width:0}
+  .food .txt b{font-weight:700}
+  .food .txt small{color:var(--muted);font-weight:600;display:block;font-size:11.5px}
+  .food .amt{font-weight:800;color:var(--em);font-size:13px;white-space:nowrap}
+  .food.swapped .txt b{color:var(--amber)}
+  .food .sw-note{font-size:10px;color:var(--amber);font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+  .opt-toggle{display:flex;gap:7px;margin:10px 0 2px}
+  .opt-toggle button{flex:1;background:transparent;border:1.5px solid var(--line);color:var(--muted);border-radius:10px;
+    padding:8px;font-weight:800;font-size:11.5px;cursor:pointer;transition:all .15s}
+  .opt-toggle button.on{background:var(--em-soft);border-color:var(--em);color:var(--em)}
+
+  /* ---------- MANDADO ---------- */
+  .shop-cat{margin-bottom:14px}
+  .shop-cat-h{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .shop-cat-h .sq{width:10px;height:10px;border-radius:3px;background:var(--cc)}
+  .shop-cat-h h3{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--cc)}
+  .shop-item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:8px;
+    transition:border-color .2s}
+  .shop-item.swapped{border-color:rgba(242,161,84,.45);background:linear-gradient(0deg,var(--amber-soft),var(--amber-soft)),var(--card)}
+  .shop-row{display:flex;align-items:center;gap:10px}
+  .shop-row .emoji{font-size:19px;width:24px;text-align:center}
+  .shop-row .nm{flex:1;min-width:0}
+  .shop-row .nm b{font-size:14px;font-weight:700;display:block}
+  .shop-row .nm small{font-size:11px;color:var(--muted);font-weight:600}
+  .shop-row .qty{font-weight:800;font-size:13px;color:var(--em);white-space:nowrap}
+  .shop-item.swapped .shop-row .qty{color:var(--amber)}
+  .swap-btn{flex:none;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted);
+    width:32px;height:32px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .swap-btn:active{transform:scale(.9)}
+  .shop-item.swapped .swap-btn{border-color:var(--amber);color:var(--amber);background:var(--amber-soft)}
+  .alts{max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .alts.open{max-height:400px}
+  .alts-in{padding-top:11px;margin-top:11px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:7px}
+  .alts-lbl{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .alt{display:flex;align-items:center;gap:9px;background:transparent;border:1.5px solid var(--line);border-radius:11px;
+    padding:9px 11px;cursor:pointer;color:var(--ink);text-align:left;transition:all .15s;width:100%}
+  .alt .a-nm{flex:1;font-weight:700;font-size:13px}
+  .alt .a-nm small{display:block;font-weight:600;font-size:10.5px;color:var(--muted)}
+  .alt .a-q{font-weight:800;font-size:12px;color:var(--muted);white-space:nowrap}
+  .alt.on{border-color:var(--em);background:var(--em-soft)}
+  .alt.on .a-q{color:var(--em)}
+  .banner{border-radius:var(--r);padding:14px 15px;margin-bottom:12px;display:flex;gap:11px;align-items:flex-start;font-size:13px;font-weight:600;line-height:1.5}
+  .banner .i{font-size:19px;flex:none}
+  .banner.em{background:var(--em-soft);border:1px solid rgba(255,111,165,.3);color:#ffd6e6}
+  .banner.amber{background:var(--amber-soft);border:1px solid rgba(242,161,84,.35);color:#f7dcae}
+  .banner.coral{background:var(--coral-soft);border:1px solid rgba(255,122,144,.35);color:#ffccd5}
+  .banner b{color:#fff}
+
+  /* prep */
+  .prep-step{display:flex;gap:11px;padding:9px 0;border-top:1px dashed var(--line);font-size:13.5px;align-items:flex-start}
+  .prep-step:first-of-type{border-top:none}
+  .prep-step .n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--em-soft);color:var(--em);
+    font-weight:800;font-size:11.5px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+
+  /* ---------- RUTINA ---------- */
+  .cycle-cal{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+  .cw{border:1.5px solid var(--line);border-radius:12px;padding:9px 6px;text-align:center;position:relative}
+  .cw b{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:var(--muted)}
+  .cw span{display:block;font-size:10.5px;font-weight:700;margin-top:3px;color:var(--faint);line-height:1.25}
+  .cw.now{border-color:var(--wc);background:rgba(255,255,255,.03)}
+  .cw.now b{color:var(--wc)}
+  .cw.now span{color:var(--ink)}
+  .cw.now::after{content:"HOY";position:absolute;top:-8px;left:50%;transform:translateX(-50%);
+    background:var(--wc);color:#2a0a1a;font-size:8.5px;font-weight:800;letter-spacing:.08em;padding:2px 7px;border-radius:999px}
+  .ex{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:13px 14px;margin-bottom:9px}
+  .ex-top{display:flex;align-items:center;gap:10px}
+  .ex-top .nm{flex:1;min-width:0}
+  .ex-top .nm b{font-size:14.5px;font-weight:700;display:block}
+  .ex-top .nm small{font-size:11.5px;color:var(--muted);font-weight:700}
+  .ex-w{display:flex;align-items:center;gap:6px;flex:none}
+  .ex-w button{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.05);
+    color:var(--ink);font-weight:800;font-size:15px;cursor:pointer}
+  .ex-w button:active{transform:scale(.9)}
+  .ex-w .wv{min-width:58px;text-align:center;font-family:"Space Grotesk";font-weight:700;font-size:15px;color:var(--em)}
+  .ex-w .wv small{display:block;font-family:"Manrope";font-size:9px;color:var(--muted);font-weight:800;letter-spacing:.08em}
+  .ex-w .wv-in{width:64px;text-align:center;font-family:"Space Grotesk";font-weight:700;font-size:15px;color:var(--em);
+    background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:8px;padding:5px 2px;appearance:textfield;-moz-appearance:textfield}
+  .ex-w .wv-in::-webkit-outer-spin-button,.ex-w .wv-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .ex-w .wv-in:focus{outline:none;border-color:var(--em);background:rgba(255,111,165,.08)}
+
+  /* --- Camino a la meta --- */
+  .goal{margin-top:12px}
+  .goal .g-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:800}
+  .goal .g-top b{font-family:"Space Grotesk";font-size:15px}
+  .goal .g-bar{height:9px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid var(--line);overflow:hidden;margin:6px 0 4px}
+  .goal .g-bar i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+  .goal small{font-size:11px;color:var(--muted);font-weight:600}
+  .streak-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .streak-row span{font-size:11.5px;font-weight:800;background:rgba(255,255,255,.05);border:1px solid var(--line);
+    border-radius:999px;padding:6px 12px}
+  .pace{margin-top:8px;font-size:11.5px;font-weight:700;color:var(--muted);text-align:center;
+    background:rgba(255,255,255,.04);border:1px dashed var(--line);border-radius:9px;padding:7px 10px}
+  .pace b{color:var(--em)}
+  .ex-done{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;align-items:center;gap:9px;cursor:pointer}
+  .ex-done .box{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;display:flex;
+    align-items:center;justify-content:center;color:#2a0a1a;transition:all .15s}
+  .ex-done.on .box{background:var(--em);border-color:var(--em)}
+  .ex-done span{font-size:12px;font-weight:700;color:var(--muted)}
+  .ex-done.on span{color:var(--em)}
+  .ex .next-up{margin-top:8px;font-size:11.5px;font-weight:800;color:var(--amber);display:none}
+  .ex .next-up.show{display:block}
+  .cardio{display:flex;gap:10px;align-items:center;background:var(--sky-soft);border:1px solid rgba(181,139,214,.3);
+    border-radius:var(--r);padding:13px 15px;margin-bottom:12px}
+  .cardio .i{font-size:22px}
+  .cardio b{font-size:14px}
+  .cardio small{display:block;font-size:12px;color:#e6d2f2;font-weight:600}
+
+  /* ---------- ANTOJOS ---------- */
+  .budget-bar{height:14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);overflow:hidden;margin:10px 0 6px}
+  .budget-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--em),var(--amber));
+    width:0%;transition:width .5s cubic-bezier(.3,1,.4,1)}
+  .budget-bar.over i{background:linear-gradient(90deg,var(--amber),var(--coral))}
+  .budget-nums{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted)}
+  .budget-nums b{color:var(--ink)}
+  .antojo{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:8px;
+    display:flex;align-items:center;gap:11px}
+  .antojo .nm{flex:1;min-width:0}
+  .antojo .nm b{font-size:13.5px;font-weight:700;display:block}
+  .antojo .nm small{font-size:11px;color:var(--muted);font-weight:600}
+  .antojo .kc{font-weight:800;font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .log-btn{flex:none;background:var(--em-soft);border:1px solid rgba(255,111,165,.35);color:var(--em);
+    font-weight:800;font-size:11.5px;padding:8px 12px;border-radius:10px;cursor:pointer;transition:transform .1s}
+  .log-btn:active{transform:scale(.93)}
+
+  /* ---------- PROGRESO ---------- */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center}
+  .stat b{display:block;font-family:"Space Grotesk";font-size:18px;font-weight:700;color:var(--sc,#ff6fa5)}
+  .stat span{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:800}
+  .w-input{display:flex;gap:9px;margin-top:11px}
+  .w-input input{flex:1;background:rgba(255,255,255,.05);border:1.5px solid var(--line);border-radius:12px;
+    color:var(--ink);font-family:"Space Grotesk";font-weight:700;font-size:16px;padding:11px 14px;min-width:0}
+  .w-input input:focus{outline:none;border-color:var(--em)}
+  .w-input button{background:var(--em);border:none;color:#2a0a1a;font-weight:800;font-size:13.5px;
+    padding:0 18px;border-radius:12px;cursor:pointer}
+  .w-input button:active{transform:scale(.96)}
+
+  /* ===== Toggle de unidad kg/lb ===== */
+  .routine-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 10px}
+  .unit-toggle{display:flex;background:rgba(255,255,255,.05);border:1.5px solid var(--line);border-radius:11px;padding:3px;flex:none}
+  .unit-toggle button{border:none;background:none;color:var(--muted);font-family:"Space Grotesk",sans-serif;font-weight:700;
+    font-size:12.5px;padding:6px 14px;border-radius:8px;cursor:pointer;transition:all .16s}
+  .unit-toggle button.on{background:var(--em);color:#2a0a1a}
+
+  /* ===== Series marcables + timer ===== */
+  .ex.ex-complete{border-color:rgba(255,111,165,.4);background:linear-gradient(0deg,var(--em-soft),var(--em-soft)),var(--card)}
+  .set-track{display:flex;align-items:center;gap:11px;margin-top:11px}
+  .set-dots{display:flex;gap:5px;flex:none}
+  .set-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--line);transition:all .2s}
+  .set-dot.on{background:var(--em);border-color:var(--em);box-shadow:0 0 0 3px var(--em-soft)}
+  .set-btn{flex:1;border:1.5px solid rgba(255,111,165,.3);background:var(--em-soft);color:var(--em);
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:12.5px;padding:9px;border-radius:11px;cursor:pointer;transition:transform .12s}
+  .set-btn:active{transform:scale(.97)}
+  .set-btn.done{background:var(--em);color:#2a0a1a;border-color:var(--em)}
+
+  /* ===== Barra de timer de descanso (flotante) ===== */
+  /* --- Timer de descanso: reloj circular (solo en Rutina, esquina sup. der.) --- */
+  .rest-ring{position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:120;
+    width:118px;display:none;flex-direction:column;align-items:center;filter:drop-shadow(0 10px 24px rgba(0,0,0,.45))}
+  .rest-ring.show{display:flex;animation:ringIn .3s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes ringIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  .rest-ring svg{width:118px;height:118px;transform:rotate(-90deg)}
+  .rr-ticks{fill:none;stroke:var(--line);stroke-width:3;stroke-dasharray:1.5 4.47}  /* marcas de minutero */
+  .rr-bg{fill:rgba(26,16,24,.96);stroke:rgba(255,255,255,.09);stroke-width:7}
+  .rr-fg{fill:none;stroke:var(--em);stroke-width:7;stroke-linecap:round;
+    stroke-dasharray:314.16;stroke-dashoffset:0;transition:stroke-dashoffset .5s linear,stroke .3s}
+  .rest-ring.low .rr-fg{stroke:var(--amber)}
+  .rr-center{position:absolute;top:0;left:0;width:118px;height:118px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;pointer-events:none}
+  .rr-center b{font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:26px;color:var(--em);line-height:1;transition:color .3s}
+  .rest-ring.low .rr-center b{color:var(--amber)}
+  .rr-center small{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-top:3px}
+  .rr-skip{position:absolute;top:-4px;right:-4px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);
+    background:rgba(26,16,24,.96);color:var(--muted);font-size:12px;cursor:pointer;display:grid;place-items:center}
+  .rr-skip:active{transform:scale(.9)}
+  .rr-name{margin-top:5px;max-width:118px;font-size:9.5px;font-weight:800;color:var(--muted);
+    background:rgba(26,16,24,.92);border:1px solid var(--line);border-radius:999px;padding:3px 9px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ===== Botón "Entrené hoy" tipo héroe con animación ===== */
+  .trained-hero{width:100%;margin-top:14px;display:flex;align-items:center;gap:14px;text-align:left;
+    background:linear-gradient(135deg,rgba(255,111,165,.14),rgba(242,161,84,.1));border:1.5px solid rgba(255,111,165,.35);
+    border-radius:18px;padding:15px 16px;cursor:pointer;position:relative;overflow:hidden;transition:transform .14s,border-color .2s}
+  .trained-hero:active{transform:scale(.98)}
+  .trained-hero.on{background:linear-gradient(135deg,var(--em),var(--em-deep));border-color:var(--em)}
+  .trained-hero.on .t-txt b,.trained-hero.on .t-txt small{color:#2a0a1a}
+  .trained-hero.on .lifter{color:#2a0a1a}
+  .t-txt{flex:1;display:flex;flex-direction:column;gap:2px}
+  .t-txt b{font-family:"Space Grotesk",sans-serif;font-size:16px;color:var(--ink)}
+  .t-txt small{font-size:11.5px;color:var(--muted);font-weight:600}
+  .t-check{flex:none;width:30px;height:30px;border-radius:50%;background:rgba(42,10,26,.25);display:flex;align-items:center;justify-content:center;color:#2a0a1a}
+  /* Muñeco levantando pesa (CSS puro) */
+  .lifter{position:relative;width:42px;height:42px;flex:none;color:var(--em)}
+  .lifter .l-head{position:absolute;left:16px;top:8px;width:10px;height:10px;border-radius:50%;background:currentColor}
+  .lifter .l-body{position:absolute;left:19px;top:17px;width:4px;height:15px;background:currentColor;border-radius:2px}
+  .lifter .l-arm{position:absolute;left:11px;top:15px;width:20px;height:4px;background:currentColor;border-radius:2px;
+    transform-origin:50% 50%;transition:transform .3s}
+  .lifter .l-bar{position:absolute;left:5px;top:9px;width:32px;height:4px;background:currentColor;border-radius:2px;transition:transform .3s}
+  .lifter .l-bar i{position:absolute;top:-5px;width:6px;height:14px;background:currentColor;border-radius:2px}
+  .lifter .l-bar i:first-child{left:-3px}
+  .lifter .l-bar i:last-child{right:-3px}
+  .trained-hero.celebrate .l-arm{animation:lift .5s ease}
+  .trained-hero.celebrate .l-bar{animation:liftbar .5s ease}
+  @keyframes lift{0%,100%{transform:rotate(0)}40%{transform:rotate(-8deg)}}
+  @keyframes liftbar{0%{transform:translateY(6px)}45%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+  .trained-hero.on .lifter .l-bar{transform:translateY(-3px)}
+  .trained-hero.on .lifter .l-arm{transform:rotate(-6deg)}
+  .session-count{display:flex;align-items:baseline;gap:7px;margin-top:9px;padding-left:4px}
+  .session-count .sc-num{font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:22px;color:var(--amber)}
+  .session-count .sc-lbl{font-size:12px;color:var(--muted);font-weight:600}
+
+  /* Confeti + felicitación */
+  .confetti{position:fixed;width:9px;height:9px;border-radius:2px;z-index:300;pointer-events:none;
+    animation:confetti-fly .9s ease-out forwards}
+  @keyframes confetti-fly{0%{transform:translate(0,0) rotate(0);opacity:1}
+    100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}}
+  .congrats{position:fixed;inset:0;z-index:290;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s}
+  .congrats.show{opacity:1}
+  .congrats-in{background:rgba(26,16,24,.95);border:1.5px solid var(--em);border-radius:20px;padding:22px 30px;text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);transform:scale(.8);transition:transform .35s cubic-bezier(.3,1.5,.4,1)}
+  .congrats.show .congrats-in{transform:scale(1)}
+  .congrats .c-emoji{font-size:44px;display:block;animation:bounce .6s ease infinite alternate}
+  @keyframes bounce{to{transform:translateY(-7px)}}
+  .congrats-in b{display:block;font-family:"Space Grotesk",sans-serif;font-size:20px;color:var(--em);margin-top:6px}
+  .congrats-in small{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+
+  /* ===== Indicadores de composición corporal ===== */
+  .ind-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+  .ind{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 11px;position:relative;overflow:hidden}
+  .ind::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ic)}
+  .ind-lbl{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .ind-val{display:block;font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:23px;color:var(--ink);margin:5px 0 4px}
+  .ind-val i{font-size:12px;font-weight:600;color:var(--muted);font-style:normal;margin-left:2px}
+  .ind-tr{font-size:11px;font-weight:800}
+  .ind-tr.good{color:var(--em)} .ind-tr.bad{color:var(--coral)} .ind-tr.flat{color:var(--muted)}
+
+  /* ===== Selector de métrica + gráfica corporal ===== */
+  .metric-tabs{display:flex;gap:7px;margin-bottom:12px}
+  .metric-tabs button{flex:1;border:1.5px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:12px;padding:8px;border-radius:10px;cursor:pointer;transition:all .16s}
+  .metric-tabs button.on{border-color:var(--em);background:var(--em-soft);color:var(--em)}
+  .body-chart{min-height:96px}
+
+  /* ===== Formulario de medición ===== */
+  .body-form{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+  .body-form label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .body-form label span{color:var(--faint);font-weight:600}
+  .body-form input{background:rgba(255,255,255,.05);border:1.5px solid var(--line);border-radius:11px;color:var(--ink);
+    font-family:inherit;font-size:15px;font-weight:600;padding:11px 12px}
+  .body-form input:focus{outline:none;border-color:var(--em)}
+  .bf-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .bf-row label{text-transform:none;letter-spacing:0}
+  .body-form>button{background:var(--em);border:none;color:#2a0a1a;font-family:"Space Grotesk",sans-serif;
+    font-weight:800;font-size:14px;padding:13px;border-radius:12px;cursor:pointer;transition:transform .12s}
+  .body-form>button:active{transform:scale(.98)}
+  .body-list{list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:2px}
+  .body-list li{display:flex;align-items:center;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--line);font-size:12.5px}
+  .body-list li:last-child{border-bottom:none}
+  .bl-date{color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px}
+  .base-tag{font-style:normal;font-size:9px;background:var(--em-soft);color:var(--em);padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:.04em}
+  .bl-vals{display:flex;align-items:center;gap:11px;color:var(--ink);font-weight:700}
+  .bl-vals span{display:flex;align-items:baseline;gap:2px}
+  .bl-vals i{font-size:9px;color:var(--muted);font-weight:600;font-style:normal}
+  .bl-vals .del{background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:2px 4px}
+
+  /* --- Botón Entrené hoy --- */
+  .trained-btn{width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:9px;
+    background:var(--em-soft);border:1.5px solid rgba(255,111,165,.35);color:var(--em);font-family:"Space Grotesk",sans-serif;
+    font-weight:700;font-size:14px;padding:14px;border-radius:14px;cursor:pointer;transition:transform .12s,background .2s}
+  .trained-btn:active{transform:scale(.98)}
+  .trained-btn.on{background:var(--em);border-color:var(--em);color:#2a0a1a}
+  .trained-btn .bx{width:22px;height:22px;border-radius:7px;border:2px solid currentColor;display:flex;align-items:center;justify-content:center}
+  .trained-btn.on .bx{background:#2a0a1a;border-color:#2a0a1a;color:var(--em)}
+
+  /* --- Nota para el coach --- */
+  .note-area{width:100%;margin-top:10px;background:rgba(255,255,255,.05);border:1.5px solid var(--line);border-radius:12px;
+    color:var(--ink);font-family:inherit;font-size:13.5px;padding:12px;resize:vertical;min-height:66px;line-height:1.5}
+  .note-area:focus{outline:none;border-color:var(--em)}
+  .note-area::placeholder{color:var(--faint)}
+
+  /* --- Aviso "toca reportar" --- */
+  .report-due{display:flex;gap:11px;align-items:center;background:var(--amber-soft);border:1px solid rgba(242,161,84,.4);
+    border-radius:14px;padding:13px 15px;margin-bottom:12px}
+  .report-due .i{font-size:22px}
+  .report-due b{color:var(--amber)}
+
+  /* --- Botón generar reporte --- */
+  .report-btn{width:100%;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:9px;
+    background:linear-gradient(135deg,var(--em),var(--em-deep));border:none;color:#2a0a1a;
+    font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:15px;padding:15px;border-radius:14px;cursor:pointer;
+    box-shadow:0 10px 26px rgba(255,111,165,.28);transition:transform .12s}
+  .report-btn:active{transform:scale(.98)}
+
+  /* --- Overlay de vista previa del reporte --- */
+  .rp-overlay{position:fixed;inset:0;z-index:200;background:rgba(16,8,14,.82);backdrop-filter:blur(4px);
+    display:none;align-items:flex-start;justify-content:center;padding:22px 16px;overflow-y:auto}
+  .rp-overlay.show{display:flex}
+  .rp-sheet{background:var(--card);border:1px solid var(--line);border-radius:20px;max-width:380px;width:100%;padding:18px;margin:auto}
+  .rp-sheet h3{font-family:"Space Grotesk",sans-serif;font-size:17px;margin-bottom:4px}
+  .rp-sheet .subtle{margin-bottom:12px}
+  .rp-canvas-wrap{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#180f16}
+  .rp-canvas-wrap img{display:block;width:100%;height:auto}
+  .rp-actions{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+  .rp-actions a,.rp-actions button{width:100%;text-align:center;text-decoration:none;border:none;cursor:pointer;
+    font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:14.5px;padding:14px;border-radius:13px;transition:transform .12s}
+  .rp-actions a:active,.rp-actions button:active{transform:scale(.98)}
+  .rp-share{background:var(--em);color:#2a0a1a}
+  .rp-wa{background:#25d366;color:#062e16;display:flex;align-items:center;justify-content:center;gap:8px}
+  .rp-dl{background:rgba(255,255,255,.06);color:var(--ink);border:1.5px solid var(--line)}
+  .rp-close{background:none;color:var(--muted);font-weight:600!important;font-size:13px!important;padding:8px!important}
+  .rp-hint{font-size:11.5px;color:var(--faint);text-align:center;margin-top:2px;line-height:1.5}
+  .chart-box{margin-top:14px}
+  .chart-box svg{width:100%;height:auto;display:block}
+  .w-list{list-style:none;margin-top:10px}
+  .w-list li{display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:7px 0;border-top:1px dashed var(--line)}
+  .w-list li span{color:var(--muted);font-weight:600}
+  .w-list li .del{background:none;border:none;color:var(--faint);cursor:pointer;font-size:12px;margin-left:10px}
+
+  /* ---------- TABS / NAV ---------- */
+  .tab{display:none;animation:tabIn .3s ease}
+  .tab.active{display:block}
+  @keyframes tabIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(32,20,29,.92);backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
+  .nb{flex:1;max-width:96px;background:none;border:none;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:5px 2px;border-radius:12px;transition:color .2s}
+  .nb svg{transition:transform .2s}
+  .nb.active{color:var(--em)}
+  .nb.active svg{transform:translateY(-2px) scale(1.08)}
+
+  .contact{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;text-align:center;margin:18px 0 8px}
+  .contact p{font-size:13px;color:var(--muted);margin-bottom:10px;font-weight:600}
+  .contact a{display:inline-flex;align-items:center;gap:8px;background:var(--em);color:#2a0a1a;text-decoration:none;
+    font-weight:800;font-size:13.5px;padding:11px 20px;border-radius:999px}
+  .made{background:#150d13;text-align:center;padding:26px 20px 30px;margin-top:24px;border-top:1px solid var(--line)}
+  .made .disp{font-size:14.5px;font-weight:700;margin-bottom:6px}
+  .made p{font-size:12.5px;color:var(--muted);max-width:38ch;margin:0 auto 14px;font-weight:600}
+  .made a{display:inline-flex;align-items:center;gap:8px;background:var(--amber);color:#2a1508;text-decoration:none;
+    font-weight:800;font-size:13.5px;padding:11px 20px;border-radius:999px}
+  .made .demo-hint{margin-top:15px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:800}
+
+  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(16px);background:#3a2030;color:#ffeaf3;
+    border:1px solid rgba(255,111,165,.4);padding:11px 17px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;
+    transition:all .25s;z-index:99;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.5);max-width:88vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brandline"><span class="dot"></span> COACHING · <span id="brandCoach">SALVADOR</span> <span class="pill">PREMIUM</span></div>
+  <div class="hello">Hola, <span id="helloName">Maggie</span> 💗</div>
+  <div class="datemeta" id="dateMeta">—</div>
+  <div class="macro-strip">
+    <div class="macro" style="--c:#ff7a90"><b>1,500</b><span>kcal</span></div>
+    <div class="macro" style="--c:#ff6fa5"><b>128 g</b><span>prot</span></div>
+    <div class="macro" style="--c:#f2a154"><b>130 g</b><span>carbos</span></div>
+    <div class="macro" style="--c:#b58bd6"><b>50 g</b><span>grasas</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ TAB: HOY ============ -->
+  <section class="tab active" id="tab-hoy">
+    <div class="top-cards">
+      <div class="pcard">
+        <div class="lbl">Comidas de hoy</div>
+        <div class="ring">
+          <svg width="92" height="92"><circle cx="46" cy="46" r="38" stroke="#3f2938" stroke-width="9" fill="none"/>
+          <circle id="ringProg" cx="46" cy="46" r="38" stroke="#ff6fa5" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="238.8" stroke-dashoffset="238.8"/></svg>
+          <div class="val"><b id="ringNum">0/4</b><span>completadas</span></div>
+        </div>
+      </div>
+      <div class="pcard">
+        <div class="lbl">Agua</div>
+        <div class="water-glasses" id="water"></div>
+        <div class="water-count"><span id="waterNum">0</span><small> / 8 vasos</small></div>
+      </div>
+    </div>
+
+    <div class="banner em">
+      <span class="i">💗</span>
+      <div><b>Tu estrategia, sin presión:</b> sigue este plan <b>4 días a la semana</b> y los otros <b>3 días come libre</b> (¡tus antojos favoritos entran!). Con eso ya avanzas. Empezar así, tranquila, es lo que hace que dure.</div>
+    </div>
+
+    <div class="sec-title"><h2 id="todayName">Hoy</h2><span class="ln"></span><span class="chip" id="dietChip">Plan del día</span></div>
+    <div id="meals"></div>
+
+    <div class="banner amber" id="stallRule">
+      <span class="i">⚖️</span>
+      <div><b>Si el peso no baja en 2–3 semanas:</b> quita el pan de la cena o baja el arroz a media taza. <b>Nunca recortes la proteína</b> — es la que cuida tu músculo.</div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: MANDADO ============ -->
+  <section class="tab" id="tab-mandado">
+    <div class="sec-title"><h2>Mandado semanal</h2><span class="ln"></span><span class="chip">7 días</span></div>
+    <div class="banner em">
+      <span class="i">🔄</span>
+      <div><b>Equivalencias inteligentes.</b> Toca el ícono de cambio en cualquier alimento: te sugerimos alternativas con la cantidad ajustada para cubrir los mismos macros, y <b>tus platillos de la semana se actualizan solos.</b></div>
+    </div>
+    <div id="shopList"></div>
+    <div class="banner coral">
+      <span class="i">🛒</span>
+      <div><b>Los boneles, papas y flautas NO van en el mandado.</b> Son de tus <b>días libres</b> y se llevan en el presupuesto de antojos.</div>
+    </div>
+
+    <div class="sec-title"><h2>Prep semanal</h2><span class="ln"></span><span class="chip">1 vez / semana</span></div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <span style="font-size:22px">🍱</span>
+        <div><b style="font-size:15px">Pollo (o carne) con verduras · 4–5 porciones</b>
+        <div class="subtle" id="prepMacros">~250 kcal · 40 g prot por porción · úsalo en tus comidas de plan</div></div>
+      </div>
+      <div id="prepSteps"></div>
+      <div class="subtle" style="margin-top:10px;border-top:1px dashed var(--line);padding-top:10px">
+        <b style="color:var(--em)">Dura en refri:</b> 4–5 días ·
+        <b style="color:var(--em)">Recalienta:</b> 2–3 min en micro ·
+        <b style="color:var(--em)">Día ideal para prep:</b> domingo por la tarde.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: RUTINA ============ -->
+  <section class="tab" id="tab-rutina">
+    <!-- Timer de descanso: reloj circular anclado a la hora real -->
+    <div class="rest-ring" id="restBar" role="timer" aria-live="off">
+      <svg viewBox="0 0 120 120">
+        <circle class="rr-ticks" cx="60" cy="60" r="57"/>
+        <circle class="rr-bg" cx="60" cy="60" r="50"/>
+        <circle class="rr-fg" id="restFill" cx="60" cy="60" r="50"/>
+      </svg>
+      <div class="rr-center">
+        <b id="restTime">0:00</b>
+        <small>descanso</small>
+      </div>
+      <button class="rr-skip" id="restSkip" aria-label="Saltar descanso">✕</button>
+      <div class="rr-name" id="restName">…</div>
+    </div>
+    <div id="deloadBanner"></div>
+    <div class="sec-title"><h2>Ciclo del mes</h2><span class="ln"></span><span class="chip" id="cycleChip">—</span></div>
+    <div class="cycle-cal" id="cycleCal"></div>
+
+    <div class="routine-head">
+      <div class="sec-title" style="margin:0"><h2 id="routineDayTitle">Rutina de hoy</h2></div>
+      <div class="unit-toggle" id="unitToggle"></div>
+    </div>
+    <div class="cardio" id="cardioBox"></div>
+    <div id="exList"></div>
+    <div id="trainedBox"></div>
+
+    <div class="banner em">
+      <span class="i">📈</span>
+      <div><b>Cómo progresar sin gym.</b> Cuando un ejercicio ya se sienta fácil, sube así: primero <b>+1 o 2 repeticiones</b>, luego <b>una serie más</b>, y por último <b>más peso</b> (botellas más llenas o mochila con algo dentro). Poco a poco, sin dolor. Tu cuerpo es tu equipo. 💪</div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: ANTOJOS ============ -->
+  <section class="tab" id="tab-antojos">
+    <div class="sec-title"><h2>Tus días libres</h2><span class="ln"></span><span class="chip">3 días / semana</span></div>
+    <div class="banner em">
+      <span class="i">🎉</span>
+      <div><b>Aquí es donde te das tus gustos.</b> En tus 3 días libres puedes comer boneles, papas o flautas. La única regla: no pasarte del presupuesto de abajo, para que lo que bajaste en los 4 días buenos <b>no se te regrese</b>.</div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <b style="font-family:'Space Grotesk';font-size:22px" id="budgetLeft">1,400</b>
+        <span class="subtle">kcal de antojo esta semana</span>
+      </div>
+      <div class="budget-bar" id="budgetBar"><i id="budgetFill"></i></div>
+      <div class="budget-nums"><span>Usado: <b id="budgetUsed">0</b> kcal</span><span>≈ <b>1 antojo grande al día libre</b></span></div>
+    </div>
+    <div class="banner em" id="budgetMsg">
+      <span class="i">✅</span>
+      <div><b>Con este margen sigues bajando.</b> Si te lo acabas antes, elige las versiones <b>al horno/airfryer</b> el resto de la semana.</div>
+    </div>
+    <div class="sec-title"><h2>Cuánto cuesta cada antojo</h2><span class="ln"></span></div>
+    <div id="antojoList"></div>
+    <div class="banner amber">
+      <span class="i">🔁</span>
+      <div><b>Truco para no pasarte.</b> Prueba la versión al horno de tu antojo (boneles, papas o flautas): <b>casi el mismo sabor por la mitad de calorías</b>, y hasta te alcanza para repetir.</div>
+    </div>
+    <div class="banner coral">
+      <span class="i">💡</span>
+      <div><b>Ojo con lo invisible:</b> refrescos, jugos y "picar" mientras cocinas suman calorías que no ves. Toma agua o agua fresca sin azúcar y notarás la diferencia.</div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: PROGRESO ============ -->
+  <section class="tab" id="tab-progreso">
+    <div class="sec-title"><h2>Tu progreso</h2><span class="ln"></span><span class="chip">se guarda aquí</span></div>
+    <div class="stat-grid">
+      <div class="stat" style="--sc:#ff6fa5"><b id="stMeals">0/4</b><span>comidas hoy</span></div>
+      <div class="stat" style="--sc:#f2a154"><b id="stBudget">0%</b><span>antojos usados</span></div>
+      <div class="stat" style="--sc:#b58bd6"><b id="stDelta">—</b><span>peso vs. anterior</span></div>
+    </div>
+
+    <!-- Indicadores de composición corporal con tendencia -->
+    <div class="ind-grid" id="indGrid"></div>
+
+    <!-- Camino a la meta + constancia -->
+    <div class="card">
+      <b style="font-size:14.5px">Camino a tu meta</b>
+      <div class="subtle">Tu avance desde el estudio base hacia el objetivo que fijó tu coach.</div>
+      <div id="goalGrid"></div>
+      <div class="streak-row" id="streakBox"></div>
+    </div>
+
+    <!-- Gráfica de tendencia con selector de métrica -->
+    <div class="card">
+      <div class="metric-tabs" id="metricTabs"></div>
+      <div class="body-chart" id="bodyChart"></div>
+    </div>
+
+    <!-- Registro de medición con fecha -->
+    <div class="card">
+      <b style="font-size:14.5px">Nueva medición</b>
+      <div class="subtle">Pon la fecha de tu pesaje o estudio. Puedes registrar peso, % de grasa y músculo (los que tengas).</div>
+      <div class="body-form">
+        <label>Fecha <input type="date" id="bDate"></label>
+        <div class="bf-row">
+          <label>Peso <span>kg</span><input type="number" step="0.1" min="30" max="250" inputmode="decimal" id="bKg" placeholder="64.0"></label>
+          <label>% grasa <span>%</span><input type="number" step="0.1" min="3" max="70" inputmode="decimal" id="bFat" placeholder="30.0"></label>
+          <label>Músculo <span>MME kg</span><input type="number" step="0.1" min="10" max="80" inputmode="decimal" id="bMme" placeholder="22.5"></label>
+        </div>
+        <button id="bodySave">Guardar medición</button>
+      </div>
+      <ul class="body-list" id="bodyList"></ul>
+    </div>
+
+    <div class="banner em">
+      <span class="i">🎯</span>
+      <div><b>Tu objetivo, con calma.</b> Bajando <b>0.25–0.4 kg por semana</b> (grasa, no músculo), en unos <b>3–4 meses</b> notarás un cambio grande en cómo te queda la ropa y cómo te sientes. Lento es más rápido de lo que parece. 💗</div>
+    </div>
+
+    <!-- ===== REPORTE SEMANAL PARA EL COACH ===== -->
+    <div class="sec-title" style="margin-top:22px"><h2>Reporte para tu coach</h2><span class="ln"></span><span class="chip" id="reportChip">semanal</span></div>
+    <div class="card">
+      <div id="reportDue"></div>
+      <b style="font-size:14.5px">¿Cómo te fue esta semana?</b>
+      <div class="subtle">Deja una nota para <span id="coachName2">tu coach</span> (opcional) y genera tu reporte con foto para compartírselo.</div>
+      <textarea class="note-area" id="noteArea" placeholder="Ej. Me sentí con energía, dormí bien. El press de banca ya se sintió ligero. Batallé con los antojos el fin de semana…"></textarea>
+      <button class="report-btn" id="genReport">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M3 15l4-4 4 4 3-3 4 4"/><circle cx="9" cy="9" r="1.4"/></svg>
+        Generar reporte de la semana
+      </button>
+      <div class="rp-hint">Se crea una imagen con tu progreso. La compartes por WhatsApp con tu coach.</div>
+    </div>
+
+    <div class="banner amber" style="align-items:center">
+      <span class="i">📱</span>
+      <div>Tu progreso se guarda <b>en este dispositivo</b>. Usa siempre el mismo navegador para conservarlo — y manda tu reporte cada semana para que tu coach lo tenga.</div>
+    </div>
+  </section>
+
+  <div class="contact">
+    <p>¿Dudas con tu plan, tus ejercicios o quieres ajustar algo? Escríbeme y platicamos 💬</p>
+    <a id="consulta" href="#">Escribir a Salvador</a>
+  </div>
+</div>
+
+<div class="made">
+  <div class="disp">Bienvenida a tu plan 💗</div>
+  <p>Para arrancar bien, mándame por WhatsApp tus datos: nombre, tu peso de hoy, y cómo te sientes. Con eso afino tu plan a ti. Cualquier duda, aquí estoy.</p>
+  <a id="firstContact" href="#">Enviar mis datos a Salvador</a>
+  <div class="demo-hint">▸ Tu coach: Salvador ◂</div>
+</div>
+
+<nav id="nav">
+  <button class="nb active" data-tab="hoy"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>Hoy</button>
+  <button class="nb" data-tab="mandado"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Mandado</button>
+  <button class="nb" data-tab="rutina"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m21 21-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/></svg>Rutina</button>
+  <button class="nb" data-tab="antojos"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 8.5c-1 1-1.5 2.3-1.5 3.5a5 5 0 0 0 10 0c0-1.2-.5-2.5-1.5-3.5L12 5 8.5 8.5Z"/><path d="M12 5V2"/></svg>Antojos</button>
+  <button class="nb" data-tab="progreso"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Progreso</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== OVERLAY: vista previa del reporte ===== -->
+<div class="rp-overlay" id="rpOverlay">
+  <div class="rp-sheet">
+    <h3>Tu reporte semanal</h3>
+    <div class="subtle">Así lo verá tu coach. Compártelo por WhatsApp 👇</div>
+    <div class="rp-canvas-wrap"><img id="rpImg" alt="Reporte semanal"></div>
+    <div class="rp-actions">
+      <button class="rp-share" id="rpShare" style="display:none">Compartir imagen</button>
+      <a class="rp-wa" id="rpWa" target="_blank" rel="noopener">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 .9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.1.1.3 0 .5-.1.2-.2.3-.3.5l-.4.4c-.1.1-.3.3-.1.5.1.3.6 1 1.3 1.7.9.8 1.6 1 1.9 1.1.2.1.4.1.5-.1.1-.2.6-.7.8-.9.2-.3.3-.2.6-.1.2.1 1.5.7 1.7.9.3.1.4.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
+        Abrir WhatsApp del coach
+      </a>
+      <button class="rp-dl" id="rpDl">Descargar imagen</button>
+      <div class="rp-hint" id="rpHint">Tip: primero descarga o comparte la imagen, luego ábre el chat del coach y adjúntala.</div>
+      <button class="rp-close" id="rpClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
