@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#070b13">
+<title>Mi Plan · Salvador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b13;--bg-2:#0a1019;--card:#0f1724;--card-2:#141d2d;--line:#1c2839;
+    --ink:#e9eefb;--muted:#8797b2;--faint:#5a6b88;
+    --em:#4d8dff;--em-deep:#1d5ad6;--em-soft:rgba(77,141,255,.13);
+    --amber:#f2b544;--amber-soft:rgba(242,181,68,.12);
+    --coral:#ff6b6b;--coral-soft:rgba(255,107,107,.12);
+    --sky:#38d6e8;--sky-soft:rgba(56,214,232,.13);
+    --violet:#b09bff;--violet-soft:rgba(176,155,255,.14);
+    --lime:#7ee081;
+    --on-em:#04101f;
+    --r:18px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Manrope",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;
+    -webkit-text-size-adjust:100%;padding-bottom:86px}
+  h1,h2,h3,.disp{font-family:"Space Grotesk",sans-serif;letter-spacing:-.01em}
+  button{font-family:inherit}
+  a{color:var(--em)}
+
+  /* ---------- HEADER ---------- */
+  header{position:relative;overflow:hidden;padding:20px 18px 22px;
+    background:linear-gradient(160deg,#101c30 0%,#070b13 70%)}
+  header::before{content:"";position:absolute;width:340px;height:340px;border-radius:50%;
+    background:radial-gradient(circle,rgba(77,141,255,.18),transparent 65%);top:-170px;right:-120px;pointer-events:none}
+  .brandline{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--em)}
+  .brandline .dot{width:6px;height:6px;border-radius:50%;background:var(--sky)}
+  .brandline .pill{margin-left:auto;background:var(--em-soft);border:1px solid rgba(77,141,255,.3);
+    color:var(--em);font-size:10px;padding:4px 10px;border-radius:999px;letter-spacing:.1em}
+  .hello{margin-top:14px;font-family:"Space Grotesk";font-weight:700;font-size:26px;line-height:1.12}
+  .hello span{color:var(--em)}
+  .datemeta{margin-top:4px;font-size:13px;color:var(--muted);font-weight:600}
+  .macro-strip{margin-top:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .macro{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:13px;padding:10px 6px;text-align:center;
+    position:relative;overflow:hidden}
+  .macro::after{content:"";position:absolute;left:0;top:0;height:3px;width:100%;background:var(--c,#4d8dff)}
+  .macro b{display:block;font-family:"Space Grotesk";font-size:16.5px;font-weight:700;color:var(--c,#4d8dff)}
+  .macro span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+  .wrap{max-width:600px;margin:0 auto;padding:16px 14px 0}
+
+  /* ---------- GENERIC ---------- */
+  .sec-title{display:flex;align-items:center;gap:10px;margin:20px 0 12px}
+  .sec-title h2{font-size:17px;font-weight:700}
+  .sec-title .ln{flex:1;height:1px;background:var(--line)}
+  .sec-title .chip{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:4px 9px;border-radius:999px;background:var(--em-soft);color:var(--em)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
+  .subtle{font-size:12px;color:var(--muted);font-weight:500}
+  .tag{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:7px}
+  .tag.free{background:var(--em-soft);color:var(--em)}
+  .tag.mod{background:var(--amber-soft);color:var(--amber)}
+  .tag.high{background:var(--coral-soft);color:var(--coral)}
+  .tag.var{background:var(--sky-soft);color:var(--sky)}
+  .banner{border-radius:var(--r);padding:14px 15px;margin-bottom:12px;display:flex;gap:11px;align-items:flex-start;font-size:13px;font-weight:600;line-height:1.5}
+  .banner .i{font-size:19px;flex:none}
+  .banner.em{background:var(--em-soft);border:1px solid rgba(77,141,255,.3);color:#c5daff}
+  .banner.amber{background:var(--amber-soft);border:1px solid rgba(242,181,68,.35);color:#f5d9a0}
+  .banner.coral{background:var(--coral-soft);border:1px solid rgba(255,107,107,.35);color:#ffc4c4}
+  .banner.violet{background:var(--violet-soft);border:1px solid rgba(176,155,255,.35);color:#ddd3ff}
+  .banner b{color:#fff}
+
+  /* ---------- BADGES cabello / esfuerzo ---------- */
+  .hair-b{display:inline-flex;align-items:center;gap:4px;background:var(--violet-soft);color:var(--violet);
+    border:1px solid rgba(176,155,255,.32);font-size:9.5px;font-weight:800;letter-spacing:.04em;
+    padding:2px 7px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+  .prep-b{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:800;letter-spacing:.04em;
+    padding:2px 7px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+  .prep-b.listo{background:rgba(126,224,129,.13);color:var(--lime);border-color:rgba(126,224,129,.3)}
+  .prep-b.rapido{background:var(--sky-soft);color:var(--sky);border-color:rgba(56,214,232,.3)}
+  .prep-b.cocina{background:var(--amber-soft);color:var(--amber);border-color:rgba(242,181,68,.3)}
+  .badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+
+  /* ---------- TOP CARDS (ring + water) ---------- */
+  .top-cards{display:grid;grid-template-columns:1.05fr 1fr;gap:10px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;text-align:center}
+  .pcard .lbl{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}
+  .ring{position:relative;width:92px;height:92px;margin:10px auto 2px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring circle{transition:stroke-dashoffset .5s cubic-bezier(.3,1,.4,1)}
+  .ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .val b{font-family:"Space Grotesk";font-size:22px;font-weight:700;color:var(--em)}
+  .ring .val span{font-size:9.5px;color:var(--muted);font-weight:700}
+  .water-glasses{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0 8px}
+  .glass{width:24px;height:30px;border:2px solid var(--sky);border-radius:4px 4px 8px 8px;cursor:pointer;background:transparent;transition:transform .1s,background .2s}
+  .glass:active{transform:scale(.88)}
+  .glass.full{background:var(--sky)}
+  .water-count{font-family:"Space Grotesk";font-size:19px;font-weight:700;color:var(--sky)}
+  .water-count small{font-family:"Manrope";font-size:11px;color:var(--muted);font-weight:700}
+
+  /* ---------- MEALS ---------- */
+  .meal{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px;margin-bottom:11px;
+    transition:opacity .25s;position:relative;overflow:hidden}
+  .meal::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--mc,#4d8dff)}
+  .meal.done{opacity:.55}
+  .meal-top{display:flex;align-items:center;gap:11px}
+  .check{width:27px;height:27px;border-radius:9px;border:2px solid var(--line);flex:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:var(--on-em);transition:all .15s;background:transparent}
+  .check.on{background:var(--em);border-color:var(--em)}
+  .meal-time{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mc,#4d8dff);font-weight:800}
+  .meal-name{font-family:"Space Grotesk";font-weight:700;font-size:16.5px}
+  .kcal{margin-left:auto;font-size:11px;font-weight:800;color:var(--muted);background:rgba(255,255,255,.05);
+    border:1px solid var(--line);padding:4px 8px;border-radius:8px;flex:none;text-align:right;line-height:1.3}
+  .kcal b{color:var(--ink)}
+  .foods{list-style:none;margin:11px 0 0;display:flex;flex-direction:column}
+  .food{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;padding:9px 0;border-top:1px dashed var(--line)}
+  .food .emoji{font-size:18px;width:22px;text-align:center;flex:none;line-height:1.4}
+  .food .txt{flex:1;min-width:0}
+  .food .txt b{font-weight:700}
+  .food .txt small{color:var(--muted);font-weight:600;display:block;font-size:11.5px}
+  .food .amt{font-weight:800;color:var(--em);font-size:13px;white-space:nowrap;flex:none;padding-top:1px}
+  .food.swapped .txt b{color:var(--amber)}
+  .food .sw-note{font-size:10px;color:var(--amber);font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+  .opt-toggle{display:flex;gap:7px;margin:10px 0 2px;flex-wrap:wrap}
+  .opt-toggle button{flex:1;min-width:110px;background:transparent;border:1.5px solid var(--line);color:var(--muted);border-radius:10px;
+    padding:8px;font-weight:800;font-size:11.5px;cursor:pointer;transition:all .15s}
+  .opt-toggle button.on{background:var(--em-soft);border-color:var(--em);color:var(--em)}
+
+  /* ---------- MANDADO ---------- */
+  .shop-cat{margin-bottom:14px}
+  .shop-cat-h{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .shop-cat-h .sq{width:10px;height:10px;border-radius:3px;background:var(--cc)}
+  .shop-cat-h h3{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--cc)}
+  .shop-item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:8px;
+    transition:border-color .2s}
+  .shop-item.swapped{border-color:rgba(242,181,68,.45);background:linear-gradient(0deg,var(--amber-soft),var(--amber-soft)),var(--card)}
+  .shop-row{display:flex;align-items:flex-start;gap:10px}
+  .shop-row .emoji{font-size:19px;width:24px;text-align:center;flex:none;line-height:1.4}
+  .shop-row .nm{flex:1;min-width:0}
+  .shop-row .nm b{font-size:14px;font-weight:700;display:block}
+  .shop-row .nm small{font-size:11px;color:var(--muted);font-weight:600;display:block}
+  .shop-row .qty{font-weight:800;font-size:13px;color:var(--em);white-space:nowrap;flex:none;padding-top:1px}
+  .shop-item.swapped .shop-row .qty{color:var(--amber)}
+  .swap-btn{flex:none;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted);
+    width:32px;height:32px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .swap-btn:active{transform:scale(.9)}
+  .shop-item.swapped .swap-btn{border-color:var(--amber);color:var(--amber);background:var(--amber-soft)}
+  .buy-tip{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.035);
+    border:1px dashed var(--line);font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.45;display:flex;gap:7px}
+  .buy-tip .bt-i{flex:none;font-size:13px}
+  .buy-tip b{color:var(--ink)}
+  .alts{max-height:0;overflow:hidden;transition:max-height .35s ease}
+  .alts.open{max-height:1400px}
+  .alts-in{padding-top:11px;margin-top:11px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:7px}
+  .alts-lbl{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .alt{display:flex;align-items:flex-start;gap:9px;background:transparent;border:1.5px solid var(--line);border-radius:11px;
+    padding:10px 11px;cursor:pointer;color:var(--ink);text-align:left;transition:all .15s;width:100%}
+  .alt .a-nm{flex:1;font-weight:700;font-size:13px;min-width:0}
+  .alt .a-nm small{display:block;font-weight:600;font-size:10.5px;color:var(--muted);margin-top:2px}
+  .alt .a-q{font-weight:800;font-size:12px;color:var(--muted);white-space:nowrap;flex:none;padding-top:1px}
+  .alt.on{border-color:var(--em);background:var(--em-soft)}
+  .alt.on .a-q{color:var(--em)}
+
+  /* ---------- COMPRA INTELIGENTE ---------- */
+  .smart-group{margin-bottom:14px}
+  .smart-head{display:flex;align-items:center;gap:10px;background:var(--card-2);border:1px solid var(--line);
+    border-radius:14px;padding:12px 13px;cursor:pointer}
+  .smart-head .si{font-size:20px;flex:none}
+  .smart-head .st{flex:1;min-width:0}
+  .smart-head .st b{display:block;font-size:14px;font-family:"Space Grotesk"}
+  .smart-head .st small{font-size:11px;color:var(--muted);font-weight:600}
+  .smart-head .sv{font-size:11px;font-weight:800;color:var(--lime);white-space:nowrap;flex:none}
+  .smart-head .caret{transition:transform .3s;color:var(--faint);flex:none}
+  .smart-group.open .caret{transform:rotate(180deg)}
+  .smart-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+  .smart-group.open .smart-body{max-height:2600px}
+  .smart-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-top:8px}
+  .smart-item .si-top{display:flex;align-items:baseline;gap:8px}
+  .smart-item .si-top b{font-size:13.5px;flex:1}
+  .smart-item .si-top .save{font-size:11px;font-weight:800;color:var(--lime);white-space:nowrap}
+  .smart-item p{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:4px;line-height:1.5}
+  .smart-item .metrics{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .metric{font-size:10px;font-weight:800;padding:3px 8px;border-radius:7px;background:rgba(255,255,255,.05);
+    border:1px solid var(--line);color:var(--muted)}
+  .metric.good{color:var(--lime);border-color:rgba(126,224,129,.28)}
+  .metric.time{color:var(--sky);border-color:rgba(56,214,232,.28)}
+  .metric.cost{color:var(--amber);border-color:rgba(242,181,68,.28)}
+
+  /* prep */
+  .prep-step{display:flex;gap:11px;padding:9px 0;border-top:1px dashed var(--line);font-size:13.5px;align-items:flex-start}
+  .prep-step:first-of-type{border-top:none}
+  .prep-step .n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--em-soft);color:var(--em);
+    font-weight:800;font-size:11.5px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+
+  /* ---------- RUTINA: selector de día ---------- */
+  .week-nav{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .week-nav button{width:32px;height:32px;flex:none;border-radius:10px;border:1px solid var(--line);
+    background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;font-size:15px;font-weight:800}
+  .week-nav button:active{transform:scale(.92)}
+  .week-nav .wl{flex:1;text-align:center;font-size:11px;font-weight:800;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--muted)}
+  .day-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:14px}
+  .day-btn{border:1.5px solid var(--line);background:rgba(255,255,255,.03);border-radius:12px;padding:8px 2px 7px;
+    cursor:pointer;text-align:center;color:var(--muted);transition:all .16s;position:relative;overflow:hidden}
+  .day-btn .dn{display:block;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  .day-btn .dd{display:block;font-family:"Space Grotesk";font-size:16px;font-weight:700;color:var(--ink);margin:1px 0 3px}
+  .day-btn .dt{display:block;font-size:8.5px;font-weight:800;letter-spacing:.03em;line-height:1.2;color:var(--faint)}
+  .day-btn.rest .dt{color:var(--violet)}
+  .day-btn.train .dt{color:var(--em)}
+  .day-btn.sel{border-color:var(--em);background:var(--em-soft)}
+  .day-btn.sel .dd{color:var(--em)}
+  .day-btn.today::after{content:"";position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--sky)}
+  .day-btn.done-day{border-color:rgba(126,224,129,.4)}
+  .day-btn.done-day .dn{color:var(--lime)}
+
+  /* bloques marcables (calentamiento / cardio) */
+  .block{display:flex;align-items:center;gap:11px;border-radius:15px;padding:13px 14px;margin-bottom:9px;
+    border:1.5px solid var(--bc,var(--line));background:var(--bbg,var(--card));cursor:pointer;transition:all .16s}
+  .block:active{transform:scale(.99)}
+  .block .b-i{font-size:21px;flex:none}
+  .block .b-t{flex:1;min-width:0}
+  .block .b-t b{display:block;font-size:14px;font-weight:700}
+  .block .b-t small{display:block;font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.45}
+  .block .b-c{width:26px;height:26px;border-radius:9px;border:2px solid var(--line);flex:none;
+    display:flex;align-items:center;justify-content:center;color:var(--on-em);transition:all .15s}
+  .block.on{border-color:var(--bc2,var(--em));background:var(--bbg2,var(--em-soft))}
+  .block.on .b-c{background:var(--bc2,var(--em));border-color:var(--bc2,var(--em))}
+
+  /* ---------- EJERCICIOS ---------- */
+  .ex{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:13px 14px;margin-bottom:9px}
+  .ex-top{display:flex;align-items:flex-start;gap:10px}
+  .ex-top .nm{flex:1;min-width:0}
+  .ex-top .nm b{font-size:14.5px;font-weight:700;display:block;line-height:1.3}
+  .ex-top .nm small{font-size:11.5px;color:var(--muted);font-weight:700;display:block;margin-top:2px}
+  .ex-w{display:flex;align-items:center;gap:6px;flex:none}
+  .ex-w button{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.05);
+    color:var(--ink);font-weight:800;font-size:15px;cursor:pointer}
+  .ex-w button:active{transform:scale(.9)}
+  .ex-w .wv{min-width:58px;text-align:center;font-family:"Space Grotesk";font-weight:700;font-size:15px;color:var(--em)}
+  .ex-w .wv small{display:block;font-family:"Manrope";font-size:9px;color:var(--muted);font-weight:800;letter-spacing:.08em}
+  .ex-w .wv-in{width:64px;text-align:center;font-family:"Space Grotesk";font-weight:700;font-size:15px;color:var(--em);
+    background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:8px;padding:5px 2px;appearance:textfield;-moz-appearance:textfield}
+  .ex-w .wv-in::-webkit-outer-spin-button,.ex-w .wv-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .ex-w .wv-in:focus{outline:none;border-color:var(--em);background:rgba(77,141,255,.09)}
+
+  /* indicador de activación */
+  .act{display:flex;align-items:center;gap:8px;margin-top:9px}
+  .act .a-bar{flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+  .act .a-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--em-deep),var(--em));transition:width .4s}
+  .act .a-num{font-family:"Space Grotesk";font-size:12.5px;font-weight:800;color:var(--em);white-space:nowrap}
+  .act .a-lbl{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+
+  /* selector de variantes */
+  .var-btn{width:100%;margin-top:9px;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);
+    border:1px dashed var(--line);border-radius:11px;padding:8px 11px;cursor:pointer;color:var(--muted);
+    font-size:11.5px;font-weight:800;letter-spacing:.03em;text-align:left;transition:all .15s}
+  .var-btn:active{transform:scale(.99)}
+  .var-btn .vb-c{margin-left:auto;transition:transform .3s;flex:none}
+  .var-wrap{max-height:0;overflow:hidden;transition:max-height .35s ease}
+  .var-wrap.open{max-height:1200px}
+  .var-wrap.open + .var-btn .vb-c,.var-btn.open .vb-c{transform:rotate(180deg)}
+  .var-in{display:flex;flex-direction:column;gap:7px;padding-top:9px}
+  .var{display:flex;align-items:flex-start;gap:9px;background:transparent;border:1.5px solid var(--line);
+    border-radius:11px;padding:10px 11px;cursor:pointer;color:var(--ink);text-align:left;width:100%;transition:all .15s}
+  .var.on{border-color:var(--em);background:var(--em-soft)}
+  .var .v-nm{flex:1;min-width:0}
+  .var .v-nm b{font-size:12.8px;font-weight:700;display:block;line-height:1.35}
+  .var .v-nm small{display:block;font-size:10.5px;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.45}
+  .var .v-act{flex:none;text-align:center;min-width:42px}
+  .var .v-act b{display:block;font-family:"Space Grotesk";font-size:15px;font-weight:800;color:var(--muted);line-height:1}
+  .var.on .v-act b{color:var(--em)}
+  .var .v-act span{display:block;font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--faint);margin-top:2px}
+  .var .v-top{font-size:9px;font-weight:800;letter-spacing:.05em;color:var(--lime);display:block;margin-bottom:3px}
+
+  .ex-done{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;align-items:center;gap:9px;cursor:pointer}
+  .ex-done .box{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;display:flex;
+    align-items:center;justify-content:center;color:var(--on-em);transition:all .15s}
+  .ex-done.on .box{background:var(--em);border-color:var(--em)}
+  .ex-done span{font-size:12px;font-weight:700;color:var(--muted)}
+  .ex-done.on span{color:var(--em)}
+  .ex .next-up{margin-top:8px;font-size:11.5px;font-weight:800;color:var(--amber);display:none}
+  .ex .next-up.show{display:block}
+
+  /* cardio rezagado */
+  .pend{display:flex;align-items:center;gap:11px;background:var(--amber-soft);border:1px solid rgba(242,181,68,.38);
+    border-radius:15px;padding:13px 14px;margin-bottom:9px}
+  .pend .p-i{font-size:21px;flex:none}
+  .pend .p-t{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:#f5d9a0;line-height:1.5}
+  .pend .p-t b{color:#fff;display:block;font-size:13.5px;margin-bottom:2px}
+  .pend .p-n{flex:none;font-family:"Space Grotesk";font-size:24px;font-weight:800;color:var(--amber)}
+  .pend-list{list-style:none;margin-top:9px;display:flex;flex-direction:column;gap:6px}
+  .pend-list li{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+    border-radius:11px;padding:9px 11px;font-size:12.5px;font-weight:700}
+  .pend-list li .pl-d{flex:1;color:var(--muted)}
+  .pend-list li button{border:1px solid rgba(242,181,68,.4);background:var(--amber-soft);color:var(--amber);
+    font-weight:800;font-size:11px;padding:6px 11px;border-radius:9px;cursor:pointer}
+
+  /* ---------- SNACKS / ANTOJOS ---------- */
+  .budget-bar{height:14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);overflow:hidden;margin:10px 0 6px}
+  .budget-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--em),var(--sky));
+    width:0%;transition:width .5s cubic-bezier(.3,1,.4,1)}
+  .budget-bar.over i{background:linear-gradient(90deg,var(--amber),var(--coral))}
+  .budget-nums{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted)}
+  .budget-nums b{color:var(--ink)}
+  .antojo{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:8px;
+    display:flex;align-items:flex-start;gap:11px}
+  .antojo .nm{flex:1;min-width:0}
+  .antojo .nm b{font-size:13.5px;font-weight:700;display:block;line-height:1.35}
+  .antojo .nm small{font-size:11px;color:var(--muted);font-weight:600;display:block;margin-top:2px}
+  .antojo .kc{font-weight:800;font-size:12.5px;color:var(--muted);white-space:nowrap;flex:none;padding-top:2px}
+  .log-btn{flex:none;background:var(--em-soft);border:1px solid rgba(77,141,255,.35);color:var(--em);
+    font-weight:800;font-size:11.5px;padding:8px 12px;border-radius:10px;cursor:pointer;transition:transform .1s;align-self:center}
+  .log-btn:active{transform:scale(.93)}
+
+  /* ---------- PROGRESO ---------- */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center}
+  .stat b{display:block;font-family:"Space Grotesk";font-size:18px;font-weight:700;color:var(--sc,#4d8dff)}
+  .stat span{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:800}
+  .goal{margin-top:12px}
+  .goal .g-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:800}
+  .goal .g-top b{font-family:"Space Grotesk";font-size:15px}
+  .goal .g-bar{height:9px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid var(--line);overflow:hidden;margin:6px 0 4px}
+  .goal .g-bar i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+  .goal small{font-size:11px;color:var(--muted);font-weight:600}
+  .streak-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .streak-row span{font-size:11.5px;font-weight:800;background:rgba(255,255,255,.05);border:1px solid var(--line);
+    border-radius:999px;padding:6px 12px}
+  .pace{margin-top:8px;font-size:11.5px;font-weight:700;color:var(--muted);text-align:center;
+    background:rgba(255,255,255,.04);border:1px dashed var(--line);border-radius:9px;padding:7px 10px}
+  .pace b{color:var(--em)}
+  .ind-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+  .ind{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 11px;position:relative;overflow:hidden}
+  .ind::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ic)}
+  .ind-lbl{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .ind-val{display:block;font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:23px;color:var(--ink);margin:5px 0 4px}
+  .ind-val i{font-size:12px;font-weight:600;color:var(--muted);font-style:normal;margin-left:2px}
+  .ind-tr{font-size:11px;font-weight:800}
+  .ind-tr.good{color:var(--lime)} .ind-tr.bad{color:var(--coral)} .ind-tr.flat{color:var(--muted)}
+  .metric-tabs{display:flex;gap:7px;margin-bottom:12px}
+  .metric-tabs button{flex:1;border:1.5px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:12px;padding:8px;border-radius:10px;cursor:pointer;transition:all .16s}
+  .metric-tabs button.on{border-color:var(--em);background:var(--em-soft);color:var(--em)}
+  .body-chart{min-height:96px}
+  .body-form{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+  .body-form label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .body-form label span{color:var(--faint);font-weight:600}
+  .body-form input{background:rgba(255,255,255,.05);border:1.5px solid var(--line);border-radius:11px;color:var(--ink);
+    font-family:inherit;font-size:15px;font-weight:600;padding:11px 12px}
+  .body-form input:focus{outline:none;border-color:var(--em)}
+  .bf-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .bf-row label{text-transform:none;letter-spacing:0}
+  .body-form>button{background:var(--em);border:none;color:var(--on-em);font-family:"Space Grotesk",sans-serif;
+    font-weight:800;font-size:14px;padding:13px;border-radius:12px;cursor:pointer;transition:transform .12s}
+  .body-form>button:active{transform:scale(.98)}
+  .body-list{list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:2px}
+  .body-list li{display:flex;align-items:center;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--line);font-size:12.5px}
+  .body-list li:last-child{border-bottom:none}
+  .bl-date{color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px}
+  .base-tag{font-style:normal;font-size:9px;background:var(--em-soft);color:var(--em);padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:.04em}
+  .bl-vals{display:flex;align-items:center;gap:11px;color:var(--ink);font-weight:700}
+  .bl-vals span{display:flex;align-items:baseline;gap:2px}
+  .bl-vals i{font-size:9px;color:var(--muted);font-weight:600;font-style:normal}
+  .bl-vals .del{background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:2px 4px}
+  .note-area{width:100%;margin-top:10px;background:rgba(255,255,255,.05);border:1.5px solid var(--line);border-radius:12px;
+    color:var(--ink);font-family:inherit;font-size:13.5px;padding:12px;resize:vertical;min-height:66px;line-height:1.5}
+  .note-area:focus{outline:none;border-color:var(--em)}
+  .note-area::placeholder{color:var(--faint)}
+  .report-btn{width:100%;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:9px;
+    background:linear-gradient(135deg,var(--em),var(--em-deep));border:none;color:#fff;
+    font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:15px;padding:15px;border-radius:14px;cursor:pointer;
+    box-shadow:0 10px 26px rgba(77,141,255,.25);transition:transform .12s}
+  .report-btn:active{transform:scale(.98)}
+  .rp-overlay{position:fixed;inset:0;z-index:200;background:rgba(3,6,12,.85);backdrop-filter:blur(4px);
+    display:none;align-items:flex-start;justify-content:center;padding:22px 16px;overflow-y:auto}
+  .rp-overlay.show{display:flex}
+  .rp-sheet{background:var(--card);border:1px solid var(--line);border-radius:20px;max-width:380px;width:100%;padding:18px;margin:auto}
+  .rp-sheet h3{font-family:"Space Grotesk",sans-serif;font-size:17px;margin-bottom:4px}
+  .rp-sheet .subtle{margin-bottom:12px}
+  .rp-canvas-wrap{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#070b13}
+  .rp-canvas-wrap img{display:block;width:100%;height:auto}
+  .rp-actions{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+  .rp-actions button{width:100%;text-align:center;border:none;cursor:pointer;
+    font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:14.5px;padding:14px;border-radius:13px;transition:transform .12s}
+  .rp-actions button:active{transform:scale(.98)}
+  .rp-share{background:var(--em);color:#fff}
+  .rp-dl{background:rgba(255,255,255,.06);color:var(--ink);border:1.5px solid var(--line)!important}
+  .rp-close{background:none;color:var(--muted);font-weight:600!important;font-size:13px!important;padding:8px!important}
+  .rp-hint{font-size:11.5px;color:var(--faint);text-align:center;margin-top:2px;line-height:1.5}
+
+  /* ---------- ciclo / semana ---------- */
+  .cycle-cal{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+  .cw{border:1.5px solid var(--line);border-radius:12px;padding:9px 6px;text-align:center;position:relative}
+  .cw b{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:var(--muted)}
+  .cw span{display:block;font-size:10.5px;font-weight:700;margin-top:3px;color:var(--faint);line-height:1.25}
+  .cw.now{border-color:var(--wc);background:rgba(255,255,255,.03)}
+  .cw.now b{color:var(--wc)}
+  .cw.now span{color:var(--ink)}
+  .cw.now::after{content:"HOY";position:absolute;top:-8px;left:50%;transform:translateX(-50%);
+    background:var(--wc);color:#04101f;font-size:8.5px;font-weight:800;letter-spacing:.08em;padding:2px 7px;border-radius:999px}
+
+  /* ===== Toggle de unidad kg/lb + ajuste de ciclo ===== */
+  .routine-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 10px;flex-wrap:wrap}
+  .unit-toggle{display:flex;background:rgba(255,255,255,.05);border:1.5px solid var(--line);border-radius:11px;padding:3px;flex:none}
+  .unit-toggle button{border:none;background:none;color:var(--muted);font-family:"Space Grotesk",sans-serif;font-weight:700;
+    font-size:12.5px;padding:6px 14px;border-radius:8px;cursor:pointer;transition:all .16s}
+  .unit-toggle button.on{background:var(--em);color:#fff}
+  .shift-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;background:var(--card);border:1px dashed var(--line);
+    border-radius:12px;padding:10px 12px}
+  .shift-row .sr-t{flex:1;font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.45}
+  .shift-row .sr-t b{color:var(--ink);display:block;font-size:12.5px}
+  .shift-row button{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);
+    font-weight:800;font-size:11px;padding:7px 10px;border-radius:9px;cursor:pointer;flex:none}
+  .shift-row button:active{transform:scale(.94)}
+
+  /* ===== Series marcables + timer ===== */
+  .ex.ex-complete{border-color:rgba(77,141,255,.42);background:linear-gradient(0deg,var(--em-soft),var(--em-soft)),var(--card)}
+  .set-track{display:flex;align-items:center;gap:11px;margin-top:11px}
+  .set-dots{display:flex;gap:5px;flex:none}
+  .set-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--line);transition:all .2s}
+  .set-dot.on{background:var(--em);border-color:var(--em);box-shadow:0 0 0 3px var(--em-soft)}
+  .set-btn{flex:1;border:1.5px solid rgba(77,141,255,.3);background:var(--em-soft);color:var(--em);
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:12.5px;padding:9px;border-radius:11px;cursor:pointer;transition:transform .12s}
+  .set-btn:active{transform:scale(.97)}
+  .set-btn.done{background:var(--em);color:#fff;border-color:var(--em)}
+
+  .rest-ring{position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:120;
+    width:118px;display:none;flex-direction:column;align-items:center;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5))}
+  .rest-ring.show{display:flex;animation:ringIn .3s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes ringIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  .rest-ring svg{width:118px;height:118px;transform:rotate(-90deg)}
+  .rr-ticks{fill:none;stroke:var(--line);stroke-width:3;stroke-dasharray:1.5 4.47}
+  .rr-bg{fill:rgba(7,11,19,.96);stroke:rgba(255,255,255,.09);stroke-width:7}
+  .rr-fg{fill:none;stroke:var(--em);stroke-width:7;stroke-linecap:round;
+    stroke-dasharray:314.16;stroke-dashoffset:0;transition:stroke-dashoffset .5s linear,stroke .3s}
+  .rest-ring.low .rr-fg{stroke:var(--amber)}
+  .rr-center{position:absolute;top:0;left:0;width:118px;height:118px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;pointer-events:none}
+  .rr-center b{font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:26px;color:var(--em);line-height:1;transition:color .3s}
+  .rest-ring.low .rr-center b{color:var(--amber)}
+  .rr-center small{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-top:3px}
+  .rr-skip{position:absolute;top:-4px;right:-4px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);
+    background:rgba(7,11,19,.96);color:var(--muted);font-size:12px;cursor:pointer;display:grid;place-items:center}
+  .rr-skip:active{transform:scale(.9)}
+  .rr-name{margin-top:5px;max-width:118px;font-size:9.5px;font-weight:800;color:var(--muted);
+    background:rgba(7,11,19,.92);border:1px solid var(--line);border-radius:999px;padding:3px 9px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ===== Botón "Entrené hoy" ===== */
+  .trained-hero{width:100%;margin-top:14px;display:flex;align-items:center;gap:14px;text-align:left;
+    background:linear-gradient(135deg,rgba(77,141,255,.16),rgba(56,214,232,.1));border:1.5px solid rgba(77,141,255,.35);
+    border-radius:18px;padding:15px 16px;cursor:pointer;position:relative;overflow:hidden;transition:transform .14s,border-color .2s}
+  .trained-hero:active{transform:scale(.98)}
+  .trained-hero.on{background:linear-gradient(135deg,var(--em),var(--em-deep));border-color:var(--em)}
+  .trained-hero.on .t-txt b,.trained-hero.on .t-txt small{color:#fff}
+  .trained-hero.on .lifter{color:#fff}
+  .t-txt{flex:1;display:flex;flex-direction:column;gap:2px}
+  .t-txt b{font-family:"Space Grotesk",sans-serif;font-size:16px;color:var(--ink)}
+  .t-txt small{font-size:11.5px;color:var(--muted);font-weight:600}
+  .t-check{flex:none;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;color:#fff}
+  .lifter{position:relative;width:42px;height:42px;flex:none;color:var(--em)}
+  .lifter .l-head{position:absolute;left:16px;top:8px;width:10px;height:10px;border-radius:50%;background:currentColor}
+  .lifter .l-body{position:absolute;left:19px;top:17px;width:4px;height:15px;background:currentColor;border-radius:2px}
+  .lifter .l-arm{position:absolute;left:11px;top:15px;width:20px;height:4px;background:currentColor;border-radius:2px;
+    transform-origin:50% 50%;transition:transform .3s}
+  .lifter .l-bar{position:absolute;left:5px;top:9px;width:32px;height:4px;background:currentColor;border-radius:2px;transition:transform .3s}
+  .lifter .l-bar i{position:absolute;top:-5px;width:6px;height:14px;background:currentColor;border-radius:2px}
+  .lifter .l-bar i:first-child{left:-3px}
+  .lifter .l-bar i:last-child{right:-3px}
+  .trained-hero.celebrate .l-arm{animation:lift .5s ease}
+  .trained-hero.celebrate .l-bar{animation:liftbar .5s ease}
+  @keyframes lift{0%,100%{transform:rotate(0)}40%{transform:rotate(-8deg)}}
+  @keyframes liftbar{0%{transform:translateY(6px)}45%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+  .trained-hero.on .lifter .l-bar{transform:translateY(-3px)}
+  .trained-hero.on .lifter .l-arm{transform:rotate(-6deg)}
+  .session-count{display:flex;align-items:baseline;gap:7px;margin-top:9px;padding-left:4px}
+  .session-count .sc-num{font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:22px;color:var(--sky)}
+  .session-count .sc-lbl{font-size:12px;color:var(--muted);font-weight:600}
+
+  .confetti{position:fixed;width:9px;height:9px;border-radius:2px;z-index:300;pointer-events:none;
+    animation:confetti-fly .9s ease-out forwards}
+  @keyframes confetti-fly{0%{transform:translate(0,0) rotate(0);opacity:1}
+    100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}}
+  .congrats{position:fixed;inset:0;z-index:290;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s}
+  .congrats.show{opacity:1}
+  .congrats-in{background:rgba(7,11,19,.96);border:1.5px solid var(--em);border-radius:20px;padding:22px 30px;text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);transform:scale(.8);transition:transform .35s cubic-bezier(.3,1.5,.4,1)}
+  .congrats.show .congrats-in{transform:scale(1)}
+  .congrats .c-emoji{font-size:44px;display:block;animation:bounce .6s ease infinite alternate}
+  @keyframes bounce{to{transform:translateY(-7px)}}
+  .congrats-in b{display:block;font-family:"Space Grotesk",sans-serif;font-size:20px;color:var(--em);margin-top:6px}
+  .congrats-in small{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+
+  /* ---------- nutrientes del cabello ---------- */
+  .nut{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px dashed var(--line)}
+  .nut:first-of-type{border-top:none}
+  .nut .n-i{font-size:17px;width:24px;text-align:center;flex:none}
+  .nut .n-t{flex:1;min-width:0}
+  .nut .n-t b{font-size:13px;font-weight:700;display:block}
+  .nut .n-t small{font-size:11.5px;color:var(--muted);font-weight:600;display:block;line-height:1.45;margin-top:2px}
+  .ev{font-size:9px;font-weight:800;letter-spacing:.05em;padding:2px 7px;border-radius:999px;flex:none;margin-top:2px}
+  .ev.alta{background:rgba(126,224,129,.14);color:var(--lime)}
+  .ev.media{background:var(--amber-soft);color:var(--amber)}
+  .ev.baja{background:rgba(255,255,255,.06);color:var(--faint)}
+
+  /* ---------- TABS / NAV ---------- */
+  .tab{display:none;animation:tabIn .3s ease}
+  .tab.active{display:block}
+  @keyframes tabIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(10,16,25,.94);backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
+  .nb{flex:1;max-width:96px;background:none;border:none;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:5px 2px;border-radius:12px;transition:color .2s}
+  .nb svg{transition:transform .2s}
+  .nb.active{color:var(--em)}
+  .nb.active svg{transform:translateY(-2px) scale(1.08)}
+
+  footer.mine{text-align:center;padding:26px 20px 30px;margin-top:24px;border-top:1px solid var(--line);color:var(--faint)}
+  footer.mine .disp{font-size:13px;font-weight:700;color:var(--muted)}
+  footer.mine p{font-size:11.5px;max-width:40ch;margin:6px auto 0;font-weight:600;line-height:1.6}
+
+  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(16px);background:#16243a;color:#eaf2ff;
+    border:1px solid rgba(77,141,255,.4);padding:11px 17px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;
+    transition:all .25s;z-index:99;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.5);max-width:88vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  :focus-visible{outline:2px solid var(--em);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brandline"><span class="dot"></span> MI PLAN PERSONAL <span class="pill" id="fasePill">—</span></div>
+  <div class="hello">Hola, <span>Salvador</span> 💪</div>
+  <div class="datemeta" id="dateMeta">—</div>
+  <div class="macro-strip">
+    <div class="macro" style="--c:#ff6b6b"><b id="mKcal">2,400</b><span>kcal</span></div>
+    <div class="macro" style="--c:#4d8dff"><b id="mProt">195 g</b><span>prot</span></div>
+    <div class="macro" style="--c:#f2b544"><b id="mCarb">236 g</b><span>carbos</span></div>
+    <div class="macro" style="--c:#38d6e8"><b id="mFat">75 g</b><span>grasas</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ TAB: HOY ============ -->
+  <section class="tab active" id="tab-hoy">
+    <div class="top-cards">
+      <div class="pcard">
+        <div class="lbl">Comidas de hoy</div>
+        <div class="ring">
+          <svg width="92" height="92"><circle cx="46" cy="46" r="38" stroke="#1c2839" stroke-width="9" fill="none"/>
+          <circle id="ringProg" cx="46" cy="46" r="38" stroke="#4d8dff" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="238.8" stroke-dashoffset="238.8"/></svg>
+          <div class="val"><b id="ringNum">0/5</b><span>completadas</span></div>
+        </div>
+      </div>
+      <div class="pcard">
+        <div class="lbl">Agua</div>
+        <div class="water-glasses" id="water"></div>
+        <div class="water-count"><span id="waterNum">0</span><small> / 8 vasos</small></div>
+      </div>
+    </div>
+
+    <div class="sec-title"><h2 id="todayName">Hoy</h2><span class="ln"></span><span class="chip">Plan del día</span></div>
+    <div id="meals"></div>
+
+    <div class="banner violet">
+      <span class="i">💇</span>
+      <div>Los alimentos marcados con <span class="hair-b">CABELLO</span> aportan los nutrientes con evidencia real para el crecimiento capilar. Los ves también en el mandado.</div>
+    </div>
+
+    <div class="sec-title"><h2>Nutrientes para el cabello</h2><span class="ln"></span><span class="chip">y piel, uñas, huesos</span></div>
+    <div class="card"><div id="nutList"></div></div>
+
+    <div class="banner amber">
+      <span class="i">⚖️</span>
+      <div><b>Si el peso no se mueve 3 semanas seguidas:</b> quita 20 g de avena y 1 tortilla al día antes que tocar la proteína. <b>La proteína nunca se recorta.</b></div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: MANDADO ============ -->
+  <section class="tab" id="tab-mandado">
+    <div class="sec-title"><h2>Mandado semanal</h2><span class="ln"></span><span class="chip">7 días</span></div>
+    <div class="banner em">
+      <span class="i">🔄</span>
+      <div><b>Toca el ícono de cambio</b> en cualquier alimento: verás de 4 a 6 equivalencias con la cantidad ya ajustada para cubrir los mismos macros, y <b>tus platillos del día se actualizan solos.</b></div>
+    </div>
+    <div class="banner violet" style="align-items:center">
+      <span class="i">🏷️</span>
+      <div><span class="hair-b">CABELLO</span> = aporta nutrientes capilares · <span class="prep-b listo">LISTO</span> = cero cocina · <span class="prep-b rapido">RÁPIDO</span> = menos de 8 min · <span class="prep-b cocina">COCINA</span> = requiere sartén u olla</div>
+    </div>
+    <div id="shopList"></div>
+
+    <div class="sec-title"><h2>Compra inteligente</h2><span class="ln"></span><span class="chip">dinero · tiempo</span></div>
+    <div class="banner amber">
+      <span class="i">💡</span>
+      <div>Precios aproximados de Monterrey. Lo que importa es la <b>proporción</b>: cuánto ahorras y cuánto tiempo te quitas de encima. Ajústalos a lo que veas en tu súper.</div>
+    </div>
+    <div id="smartList"></div>
+
+    <div class="sec-title"><h2>Prep del domingo · 35 min</h2><span class="ln"></span><span class="chip">1 vez / semana</span></div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:22px">🍱</span>
+        <div><b style="font-size:15px">Base de la semana</b>
+        <div class="subtle" id="prepMacros">Sin cocinar pollo: solo armar, porcionar y congelar</div></div>
+      </div>
+      <div id="prepSteps"></div>
+      <div class="subtle" style="margin-top:10px;border-top:1px dashed var(--line);padding-top:10px">
+        <b style="color:var(--em)">Refri:</b> 4–5 días · <b style="color:var(--em)">Congelador:</b> porciones de los días 6 y 7 ·
+        <b style="color:var(--em)">Recalienta:</b> 2–3 min en micro con las verduras congeladas encima (se descongelan con el vapor).
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: RUTINA ============ -->
+  <section class="tab" id="tab-rutina">
+    <div class="rest-ring" id="restBar" role="timer" aria-live="off">
+      <svg viewBox="0 0 120 120">
+        <circle class="rr-ticks" cx="60" cy="60" r="57"/>
+        <circle class="rr-bg" cx="60" cy="60" r="50"/>
+        <circle class="rr-fg" id="restFill" cx="60" cy="60" r="50"/>
+      </svg>
+      <div class="rr-center"><b id="restTime">0:00</b><small>descanso</small></div>
+      <button class="rr-skip" id="restSkip" aria-label="Saltar descanso">✕</button>
+      <div class="rr-name" id="restName">…</div>
+    </div>
+
+    <div class="sec-title"><h2>Tu semana</h2><span class="ln"></span><span class="chip" id="cicloChip">3-1-3-1</span></div>
+    <div class="week-nav">
+      <button id="wPrev" aria-label="Semana anterior">‹</button>
+      <span class="wl" id="weekLabel">—</span>
+      <button id="wNext" aria-label="Semana siguiente">›</button>
+    </div>
+    <div class="day-strip" id="dayStrip"></div>
+
+    <div class="shift-row">
+      <div class="sr-t"><b>¿Se te recorrió el ciclo?</b>Si faltaste o entrenaste en otro día, mueve el ciclo un día para que vuelva a cuadrar.</div>
+      <button data-shift="-1">◀ −1 día</button>
+      <button data-shift="1">+1 día ▶</button>
+    </div>
+
+    <div id="deloadBanner"></div>
+    <div class="sec-title"><h2>Bloque del mes</h2><span class="ln"></span><span class="chip" id="cycleChip">—</span></div>
+    <div class="cycle-cal" id="cycleCal"></div>
+
+    <div class="routine-head">
+      <div class="sec-title" style="margin:0"><h2 id="routineDayTitle">Rutina</h2></div>
+      <div class="unit-toggle" id="unitToggle"></div>
+    </div>
+
+    <div id="pendCardio"></div>
+    <div id="warmBox"></div>
+    <div id="exList"></div>
+    <div id="cardioBox"></div>
+    <div id="trainedBox"></div>
+
+    <div class="banner em">
+      <span class="i">📈</span>
+      <div><b>Doble progreso.</b> Cuando completes TODAS las series en el extremo alto del rango con técnica limpia, la próxima sesión sube: <b>+2.5 kg arriba · +5 kg abajo.</b> Si no lo completas, el peso se queda hasta que lo logres.</div>
+    </div>
+    <div class="banner violet">
+      <span class="i">🔬</span>
+      <div><b>El número de activación</b> es un índice relativo (0–100) que combina electromiografía y estudios de hipertrofia. Sirve para elegir entre variantes del mismo patrón — <b>no</b> para comparar un press con un curl. La técnica y la progresión pesan más que el número.</div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: SNACKS ============ -->
+  <section class="tab" id="tab-antojos">
+    <div class="sec-title"><h2>Snacks del plan</h2><span class="ln"></span><span class="chip">ya incluidos</span></div>
+    <div class="banner em">
+      <span class="i">🎒</span>
+      <div><b>Estos ya están contados en tus 2,400 kcal.</b> No son antojo: son parte del plan y están pensados para llevarlos al trabajo. Rota el que quieras cada día.</div>
+    </div>
+    <div id="snackList"></div>
+
+    <div class="sec-title"><h2>Antojos libres</h2><span class="ln"></span><span class="chip" id="antojoChip">fin de semana</span></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <b style="font-family:'Space Grotesk';font-size:22px" id="budgetLeft">1,200</b>
+        <span class="subtle">kcal disponibles esta semana</span>
+      </div>
+      <div class="budget-bar" id="budgetBar"><i id="budgetFill"></i></div>
+      <div class="budget-nums"><span>Usado: <b id="budgetUsed">0</b> kcal</span><span id="budgetSplit">Sáb + dom: ~600 c/u</span></div>
+    </div>
+    <div class="banner em" id="budgetMsg">
+      <span class="i">✅</span>
+      <div><b>Este presupuesto es tuyo, úsalo.</b> Está calculado para que aun gastándolo completo sigas bajando grasa.</div>
+    </div>
+    <div id="antojoList"></div>
+    <div class="banner amber">
+      <span class="i">🗓️</span>
+      <div><b>La regla de los fines de semana.</b> Entre semana tienes los snacks del plan; el antojo libre se guarda para sábado y domingo. Así el antojo deja de ser un descarrilamiento y pasa a ser parte del plan.</div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: PROGRESO ============ -->
+  <section class="tab" id="tab-progreso">
+    <div class="sec-title"><h2>Tu progreso</h2><span class="ln"></span><span class="chip">se guarda aquí</span></div>
+    <div class="stat-grid">
+      <div class="stat" style="--sc:#4d8dff"><b id="stMeals">0/5</b><span>comidas hoy</span></div>
+      <div class="stat" style="--sc:#f2b544"><b id="stBudget">0%</b><span>antojos usados</span></div>
+      <div class="stat" style="--sc:#38d6e8"><b id="stDelta">—</b><span>peso vs. anterior</span></div>
+    </div>
+
+    <div class="ind-grid" id="indGrid"></div>
+
+    <div class="card">
+      <b style="font-size:14.5px">Camino a tu meta</b>
+      <div class="subtle">Avance desde tu estudio base hacia 15 % de grasa manteniendo el músculo.</div>
+      <div id="goalGrid"></div>
+      <div class="streak-row" id="streakBox"></div>
+    </div>
+
+    <div class="card">
+      <div class="metric-tabs" id="metricTabs"></div>
+      <div class="body-chart" id="bodyChart"></div>
+    </div>
+
+    <div class="card">
+      <b style="font-size:14.5px">Nueva medición</b>
+      <div class="subtle">Pésate 3–4 veces por semana, siempre en ayunas y después del baño. Lo que importa es el promedio, no el número de un día.</div>
+      <div class="body-form">
+        <label>Fecha <input type="date" id="bDate"></label>
+        <div class="bf-row">
+          <label>Peso <span>kg</span><input type="number" step="0.1" min="30" max="250" inputmode="decimal" id="bKg" placeholder="94.3"></label>
+          <label>% grasa <span>%</span><input type="number" step="0.1" min="3" max="70" inputmode="decimal" id="bFat" placeholder="23.2"></label>
+          <label>Músculo <span>MME kg</span><input type="number" step="0.1" min="10" max="80" inputmode="decimal" id="bMme" placeholder="47.0"></label>
+        </div>
+        <button id="bodySave">Guardar medición</button>
+      </div>
+      <ul class="body-list" id="bodyList"></ul>
+    </div>
+
+    <div class="banner em">
+      <span class="i">🎯</span>
+      <div><b>Proyección realista.</b> A 0.4–0.5 kg por semana, de 94.3 kg llegas a <b>~85–86 kg (15 % de grasa)</b> en unas <b>18–22 semanas</b>. Más rápido que eso y empiezas a perder músculo y a tener los antojos de vuelta.</div>
+    </div>
+
+    <div class="sec-title" style="margin-top:22px"><h2>Resumen semanal</h2><span class="ln"></span><span class="chip" id="reportChip">semanal</span></div>
+    <div class="card">
+      <div id="reportDue"></div>
+      <b style="font-size:14.5px">¿Cómo te fue esta semana?</b>
+      <div class="subtle">Escribe cómo te sentiste (energía, hambre, sueño, antojos). Sirve para detectar patrones cuando lo leas en un mes.</div>
+      <textarea class="note-area" id="noteArea" placeholder="Ej. Dormí 6 h el martes y ese día me dio antojo de dulce en la tarde. El press ya se sintió ligero…"></textarea>
+      <button class="report-btn" id="genReport">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M3 15l4-4 4 4 3-3 4 4"/><circle cx="9" cy="9" r="1.4"/></svg>
+        Generar resumen de la semana
+      </button>
+      <div class="rp-hint">Crea una imagen con tu progreso. Guárdala para tener tu historial fuera del navegador.</div>
+    </div>
+
+    <div class="banner amber" style="align-items:center">
+      <span class="i">📱</span>
+      <div>Todo se guarda <b>en este dispositivo</b>. Usa siempre el mismo navegador y no borres los datos del sitio. Guarda el resumen semanal como respaldo.</div>
+    </div>
+  </section>
+
+</div>
+
+<footer class="mine">
+  <div class="disp">Mi plan · dieta y entrenamiento</div>
+  <p>Objetivo: 15 % de grasa corporal conservando la mayor cantidad de músculo, con energía y sin antojos descontrolados.</p>
+</footer>
+
+<nav id="nav">
+  <button class="nb active" data-tab="hoy"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>Hoy</button>
+  <button class="nb" data-tab="mandado"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Mandado</button>
+  <button class="nb" data-tab="rutina"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m21 21-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/></svg>Rutina</button>
+  <button class="nb" data-tab="antojos"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 8.5c-1 1-1.5 2.3-1.5 3.5a5 5 0 0 0 10 0c0-1.2-.5-2.5-1.5-3.5L12 5 8.5 8.5Z"/><path d="M12 5V2"/></svg>Snacks</button>
+  <button class="nb" data-tab="progreso"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Progreso</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<div class="rp-overlay" id="rpOverlay">
+  <div class="rp-sheet">
+    <h3>Tu resumen semanal</h3>
+    <div class="subtle">Guárdalo o compártelo contigo mismo para tener el historial fuera del navegador.</div>
+    <div class="rp-canvas-wrap"><img id="rpImg" alt="Resumen semanal"></div>
+    <div class="rp-actions">
+      <button class="rp-share" id="rpShare" style="display:none">Compartir imagen</button>
+      <button class="rp-dl" id="rpDl">Descargar imagen</button>
+      <div class="rp-hint" id="rpHint">Tip: guárdala en un álbum del celular para ver tu avance mes a mes.</div>
+      <button class="rp-close" id="rpClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
