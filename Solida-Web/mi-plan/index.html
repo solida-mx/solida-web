@@ -147,6 +147,13 @@
     width:32px;height:32px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
   .swap-btn:active{transform:scale(.9)}
   .shop-item.swapped .swap-btn{border-color:var(--amber);color:var(--amber);background:var(--amber-soft)}
+  .shop-row .qty small{display:block;font-size:9.5px;font-weight:700;color:var(--faint);margin-top:3px;letter-spacing:.02em}
+  .rot-b{display:inline-flex;align-items:center;background:var(--amber-soft);color:var(--amber);
+    border:1px solid rgba(242,181,68,.35);font-size:9.5px;font-weight:800;letter-spacing:.04em;
+    padding:2px 7px;border-radius:999px;white-space:nowrap}
+  .ext-b{display:inline-flex;align-items:center;background:rgba(255,255,255,.06);color:var(--faint);
+    border:1px solid var(--line);font-size:9.5px;font-weight:800;letter-spacing:.04em;
+    padding:2px 7px;border-radius:999px;white-space:nowrap}
   .buy-tip{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.035);
     border:1px dashed var(--line);font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.45;display:flex;gap:7px}
   .buy-tip .bt-i{flex:none;font-size:13px}
@@ -274,6 +281,9 @@
   .var .v-act span{display:block;font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--faint);margin-top:2px}
   .var .v-top{font-size:9px;font-weight:800;letter-spacing:.05em;color:var(--lime);display:block;margin-bottom:3px}
 
+  .deload-line{margin-top:9px;font-size:11.5px;font-weight:600;color:#c5daff;line-height:1.5;
+    background:var(--em-soft);border:1px solid rgba(77,141,255,.28);border-radius:10px;padding:8px 10px}
+  .deload-line b{color:#fff}
   .ex-done{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;align-items:center;gap:9px;cursor:pointer}
   .ex-done .box{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;display:flex;
     align-items:center;justify-content:center;color:var(--on-em);transition:all .15s}
@@ -587,6 +597,14 @@
     <div class="banner em">
       <span class="i">🔄</span>
       <div><b>Toca el ícono de cambio</b> en cualquier alimento: verás de 4 a 6 equivalencias con la cantidad ya ajustada para cubrir los mismos macros, y <b>tus platillos del día se actualizan solos.</b></div>
+    </div>
+    <div class="banner amber">
+      <span class="i">🧾</span>
+      <div><b>Cómo se lee esta lista.</b> Todo lo que aparece aquí se compra: es el mandado completo de la semana.
+      Debajo de cada cantidad dice <b>para cuántas comidas alcanza</b>.
+      Lo marcado como <span class="rot-b">↻ ROTACIÓN</span> <b>no se suma</b>: sustituye al pollo un día de la semana
+      (por eso el pollo alcanza para 5 comidas y no para 7).
+      Y las equivalencias del botón ↻ tampoco se suman: son para <b>cambiar</b> un alimento por otro. Los alimentos que aparecen en varias comidas (yogurt, leche, fruta) ya traen la cantidad calculada suponiendo que <b>vas alternando las opciones</b> de snack y pre-entreno.</div>
     </div>
     <div class="banner violet" style="align-items:center">
       <span class="i">🏷️</span>

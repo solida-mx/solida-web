@@ -4,7 +4,7 @@
    ============================================================ */
 const CONFIG = {
   cliente: "Salvador",
-  kcal: 2400, prot: 195, carb: 235, fat: 75,
+  kcal: 2440, prot: 193, carb: 245, fat: 77,
   // Presupuesto semanal de antojos LIBRES (aparte de los snacks del plan)
   antojosSemana: 1200,
   cardioMin: 20,
@@ -50,9 +50,9 @@ function save(){ if(!canStore) return; try{ localStorage.setItem(LS_KEY, JSON.st
    ============================================================ */
 const SHOP = [
  /* ---------- PROTEÍNAS ---------- */
- {id:"pollo", cat:"prot", e:"🍗", name:"Pechuga de pollo deshebrada (ya cocida)", total:1200, unit:"g",
+ {id:"pollo", cat:"prot", e:"🍗", name:"Pechuga de pollo deshebrada (ya cocida)", total:850, unit:"g", dur:"5 comidas", rol:"base",
   hair:"proteína + zinc", prep:"listo",
-  tip:"1 kg ya cocido equivale a ~1.45 kg de pechuga cruda. Cómpralo en paquete de 1 kg o en la rostisería y <b>congélalo el mismo día en bolsas de 200 g</b> ya porcionado: sacas una en la noche y al día siguiente está lista. Enjuágala si viene muy salada.",
+  tip:"1 kg ya cocido equivale a ~1.45 kg de pechuga cruda. Cómpralo en paquete de 1 kg o en la rostisería y <b>congélalo el mismo día en bolsas de 170 g (una por comida)</b> ya porcionado: sacas una en la noche y al día siguiente está lista. Enjuágala si viene muy salada.",
   alts:[
    {n:"Pollo rostizado entero, desmenuzado", f:1, prep:"listo", hair:"proteína + zinc + hierro",
     note:"El más barato ya cocido. 1 pollo ≈ 650 g de carne. La pierna aporta más hierro y zinc que la pechuga."},
@@ -67,7 +67,7 @@ const SHOP = [
    {n:"Carne molida de res 90/10", f:1.2, prep:"cocina", hair:"hierro hemo + zinc + B12",
     note:"El hierro de la res se absorbe 3 veces mejor que el vegetal. 15 min en sartén."}
   ]},
- {id:"res", cat:"prot", e:"🥩", name:"Res magra (molida 90/10 o bistec)", total:500, unit:"g",
+ {id:"res", cat:"prot", e:"🥩", name:"Res magra (molida 90/10 o bistec)", total:200, unit:"g", dur:"1 comida", rol:"rot",
   hair:"hierro hemo + zinc + B12", prep:"cocina",
   tip:"Cómprala en pieza de 1 kg cuando esté en oferta y congélala en porciones de 250 g planas (se descongelan en 20 min). Cocínala los domingos junto con el resto del prep.",
   alts:[
@@ -78,14 +78,14 @@ const SHOP = [
    {n:"Sardina en tomate", f:1.3, prep:"listo", hair:"omega-3 + vitamina D", note:"Sustituto sin cocina."},
    {n:"Camarón congelado precocido", f:1.15, prep:"listo", hair:"zinc + selenio", note:"Se descongela en agua fría en 5 min. Más caro."}
   ]},
- {id:"huevos", cat:"prot", e:"🥚", name:"Huevo entero", total:14, unit:"pzas",
+ {id:"huevos", cat:"prot", e:"🥚", name:"Huevo entero", total:14, unit:"pzas", dur:"7 cenas", rol:"base",
   hair:"biotina + zinc + selenio + vitamina D (en la yema)", prep:"rapido",
   tip:"<b>Siempre el cartón de 30.</b> Sale ~25 % más barato por pieza que el paquete de 12 y dura 4 semanas en refri. No tires la yema: ahí está todo lo del cabello.",
   alts:[
    {n:"Huevo cocido (los preparas de golpe)", f:1, prep:"listo", hair:"biotina + zinc + selenio",
     note:"Cuece 12 el domingo en 12 min. Duran 7 días en refri con cáscara."}
   ]},
- {id:"claras", cat:"prot", e:"🥛", name:"Claras pasteurizadas", total:2100, unit:"g",
+ {id:"claras", cat:"prot", e:"🥛", name:"Claras pasteurizadas", total:2100, unit:"g", dur:"7 cenas", rol:"base",
   hair:"proteína (queratina)", prep:"rapido",
   tip:"El bote de 1 L sale mejor que el de 500 ml y no hay que cascar ni separar nada. Si te da igual el trabajo, 6 claras frescas cuestan ~35 % menos que 200 ml de bote.",
   alts:[
@@ -94,7 +94,7 @@ const SHOP = [
    {n:"Queso cottage", f:0.85, prep:"listo", hair:"proteína + calcio", note:"Se come frío directo del bote."},
    {n:"Atún en agua", f:0.5, prep:"listo", hair:"selenio + omega-3", note:"Para cenas rápidas."}
   ]},
- {id:"yogurt", cat:"prot", e:"🥣", name:"Yogurt griego natural", total:2100, unit:"g",
+ {id:"yogurt", cat:"prot", e:"🥣", name:"Yogurt griego natural", total:2800, unit:"g", dur:"desayunos + pre-entrenos", rol:"base",
   hair:"proteína + calcio + B12", prep:"listo",
   tip:"<b>Bote de 1 kg, nunca los vasitos individuales:</b> los individuales cuestan casi el doble por gramo y suelen traer azúcar. Compra 2 botes de golpe, duran las 2 semanas.",
   alts:[
@@ -103,7 +103,7 @@ const SHOP = [
    {n:"Skyr natural", f:1, prep:"listo", hair:"proteína", note:"Macros casi idénticos, más caro."},
    {n:"Requesón", f:1.1, prep:"listo", hair:"proteína + calcio", note:"El más barato de todos, se consigue en cualquier lado."}
   ]},
- {id:"queso", cat:"prot", e:"🧀", name:"Queso panela", total:560, unit:"g",
+ {id:"queso", cat:"prot", e:"🧀", name:"Queso panela", total:560, unit:"g", dur:"7 cenas", rol:"base",
   hair:"proteína + calcio", prep:"listo",
   tip:"La pieza entera de 1 kg sale ~30 % más barata que las rebanadas empacadas. Se corta en 7 rebanadas gruesas y listo.",
   alts:[
@@ -112,7 +112,7 @@ const SHOP = [
    {n:"Queso Oaxaca (poca cantidad)", f:0.75, prep:"listo", note:"Más grasa; ajusta el aceite del día."},
    {n:"Requesón", f:1.2, prep:"listo", hair:"proteína + calcio", note:"El más económico."}
   ]},
- {id:"sardina", cat:"prot", e:"🐟", name:"Sardina en tomate (lata 425 g)", total:2, unit:"latas",
+ {id:"sardina", cat:"prot", e:"🐟", name:"Sardina en tomate (lata 425 g)", total:3, unit:"latas", dur:"1 comida + snacks", rol:"rot",
   hair:"omega-3 EPA/DHA + vitamina D + calcio + selenio", prep:"listo",
   tip:"Cómprala por paquete de 4–6 latas: es de lo más barato por gramo de omega-3 y no caduca pronto. 2 latas por semana ya te cubren la cuota de omega-3.",
   alts:[
@@ -123,7 +123,7 @@ const SHOP = [
   ]},
 
  /* ---------- CARBOHIDRATOS ---------- */
- {id:"avena", cat:"carb", e:"🌾", name:"Avena en hojuela", total:490, unit:"g",
+ {id:"avena", cat:"carb", e:"🌾", name:"Avena en hojuela", total:420, unit:"g", dur:"desayunos + pre", rol:"base",
   hair:"zinc + hierro + silicio + fibra", prep:"rapido",
   tip:"<b>A granel siempre.</b> El kilo a granel cuesta la mitad que la caja de marca y es exactamente el mismo grano. Compra 2 kg de una vez y guárdala en un frasco hermético.",
   alts:[
@@ -132,7 +132,7 @@ const SHOP = [
    {n:"Salvado de trigo + avena", f:1, prep:"rapido", hair:"zinc + fibra", note:"Más fibra, mejor saciedad."},
    {n:"Granola sin azúcar", f:0.8, prep:"listo", note:"Más densa: menos gramos. Cara."}
   ]},
- {id:"arroz", cat:"carb", e:"🍚", name:"Arroz (crudo)", total:350, unit:"g",
+ {id:"arroz", cat:"carb", e:"🍚", name:"Arroz (crudo)", total:350, unit:"g", dur:"7 comidas", rol:"base",
   hair:null, prep:"cocina",
   tip:"Bolsa de 5 kg a granel: sale ~40 % más barato y dura meses. Cuece 1 kg el domingo en la arrocera (0 esfuerzo) y porciona en topers; aguanta 5 días en refri.",
   alts:[
@@ -141,7 +141,7 @@ const SHOP = [
    {n:"Pasta integral", f:1, prep:"cocina", hair:"selenio + fibra"},
    {n:"Arroz precocido en bolsa (90 s)", f:2.6, prep:"listo", note:"3 veces más caro. Solo para días de emergencia.", totalTxt:"~5 bolsas"}
   ]},
- {id:"tortillas", cat:"carb", e:"🫓", name:"Tortillas de maíz", total:21, unit:"pzas",
+ {id:"tortillas", cat:"carb", e:"🫓", name:"Tortillas de maíz", total:21, unit:"pzas", dur:"7 cenas", rol:"base",
   hair:"calcio + niacina", prep:"listo",
   tip:"De tortillería, no empacadas: mitad de precio y mejor sabor. Compra 1 kg (~35 pzas) y congela la mitad en bolsa; se descongelan en 20 s de micro.",
   alts:[
@@ -149,7 +149,7 @@ const SHOP = [
    {n:"Tostadas horneadas", f:1, unit:"pzas", prep:"listo", note:"Mismas piezas, más crujiente."},
    {n:"Pan integral de caja", f:0.6, unit:"reb", prep:"listo", note:"2 rebanadas ≈ 3 tortillas."}
   ]},
- {id:"frijoles", cat:"carb", e:"🫘", name:"Frijoles cocidos", total:840, unit:"g",
+ {id:"frijoles", cat:"carb", e:"🫘", name:"Frijoles cocidos", total:840, unit:"g", dur:"7 comidas", rol:"base",
   hair:"hierro vegetal + zinc + folato", prep:"listo",
   tip:"<b>Frijol seco a granel + olla express.</b> 1 kg seco (~$40) rinde 2.5 kg cocido: sale a menos de un tercio de lo que cuestan los de lata. 35 min en la express una vez al mes y congelas en bolsas planas de 500 g.",
   alts:[
@@ -158,7 +158,7 @@ const SHOP = [
    {n:"Garbanzo cocido", f:1, prep:"listo", hair:"hierro + zinc + proteína"},
    {n:"Habas o alubias", f:1, prep:"listo", hair:"hierro vegetal"}
   ]},
- {id:"leche", cat:"carb", e:"🥛", name:"Leche alta en proteína", total:2100, unit:"ml",
+ {id:"leche", cat:"carb", e:"🥛", name:"Leche alta en proteína", total:2100, unit:"ml", dur:"7 pre-entrenos", rol:"base",
   hair:"proteína + calcio + vitamina D", prep:"listo",
   tip:"<b>Paquete completo de 12 piezas, no sueltas.</b> Sale ~12–15 % más barata por litro, es leche UHT (no necesita refri hasta abrirse) y te ahorra ir al súper cada tercer día. Guárdala en la alacena.",
   alts:[
@@ -168,13 +168,24 @@ const SHOP = [
    {n:"Bebida de soya sin azúcar", f:1.2, prep:"listo", note:"Si te cae pesada la leche."},
    {n:"Yogurt griego bebible sin azúcar", f:0.9, prep:"listo", hair:"proteína + calcio"}
   ]},
- {id:"cacao", cat:"carb", e:"🍫", name:"Cacao en polvo sin azúcar", total:70, unit:"g",
+ {id:"chispas", cat:"carb", e:"🍫", name:"Chispas de chocolate", total:140, unit:"g", dur:"7 desayunos", rol:"base",
+  hair:null, prep:"listo",
+  tip:"La bolsa de 225 g te dura ~2 semanas. <b>Pésalas, no las eches a ojo:</b> 20 g es una cucharada copeteada. Si las mides, son parte del plan; si van a ojo se vuelven 40 g sin darte cuenta.",
+  alts:[
+   {n:"Chocolate amargo 70 %+ troceado", f:1, prep:"listo", hair:"magnesio + hierro",
+    note:"Mismo gusto con la mitad del azúcar y nutrientes de regalo. Pruébalo algún día."},
+   {n:"Cacao nibs", f:0.9, prep:"listo", hair:"magnesio + hierro",
+    note:"Crujiente, casi sin azúcar, sabor más intenso."},
+   {n:"Granola con chocolate sin azúcar añadida", f:1.2, prep:"listo",
+    note:"Más volumen, menos golpe dulce."}
+  ]},
+ {id:"cacao", cat:"carb", e:"🍫", name:"Cacao en polvo sin azúcar", total:100, unit:"g", dur:"desayunos + pre", rol:"base",
   hair:"magnesio + hierro + antioxidantes", prep:"listo",
   tip:"La bolsa grande de 400 g a granel dura 6 semanas y cuesta lo mismo que 2 latitas. Es tu mejor aliado contra el antojo de chocolate: sabor a chocolate con casi cero azúcar.",
   alts:[{n:"Cocoa sin azúcar de marca", f:1, prep:"listo", note:"Equivalente directo, algo más cara."}]},
 
  /* ---------- FRUTAS Y VERDURAS ---------- */
- {id:"verdura", cat:"veg", e:"🥦", name:"Mezcla de verduras congeladas", total:1750, unit:"g",
+ {id:"verdura", cat:"veg", e:"🥦", name:"Mezcla de verduras congeladas", total:1750, unit:"g", dur:"7 comidas", rol:"base",
   hair:"vitamina C + folato + antioxidantes", prep:"listo",
   tip:"<b>El mejor cambio de todos.</b> Se congela en el punto máximo de maduración (a veces con MÁS vitamina C que la 'fresca' que viajó 5 días), no se echa a perder, no hay que lavar ni picar y son 4 min de microondas. Bolsas de 1 kg, compra 2.",
   alts:[
@@ -185,7 +196,7 @@ const SHOP = [
    {n:"Ejotes congelados", f:1, prep:"listo", hair:"vitamina C"},
    {n:"Verdura fresca de mercado (a granel)", f:1, prep:"cocina", note:"Lo más barato si vas al mercado el domingo; el precio baja hasta 40 %."}
   ]},
- {id:"espinaca", cat:"veg", e:"🥬", name:"Espinaca (fresca en bolsa o congelada)", total:700, unit:"g",
+ {id:"espinaca", cat:"veg", e:"🥬", name:"Espinaca (fresca en bolsa o congelada)", total:800, unit:"g", dur:"7 cenas + guarnición", rol:"base",
   hair:"hierro + folato + vitamina A + vitamina C", prep:"listo",
   tip:"La bolsa de espinaca baby ya lavada cuesta poco más que la de manojo y te ahorra lavar y desinfectar. La congelada sale aún más barata y rinde el triple (viene sin agua).",
   alts:[
@@ -194,7 +205,7 @@ const SHOP = [
    {n:"Kale", f:1, prep:"rapido", hair:"vitamina C + vitamina A"},
    {n:"Nopal en frasco", f:1.2, prep:"listo", hair:"calcio + fibra", note:"Cero preparación, muy barato."}
   ]},
- {id:"fruta", cat:"veg", e:"🍎", name:"Manzana o plátano", total:910, unit:"g",
+ {id:"fruta", cat:"veg", e:"🍎", name:"Manzana o plátano", total:1700, unit:"g", dur:"desayunos + snacks + pre", rol:"base",
   hair:"vitamina C + antioxidantes", prep:"listo",
   tip:"Compra por caja o por kilo en el mercado, nunca por pieza en el súper: la diferencia llega al 50 %. La manzana aguanta 3 semanas en refri.",
   alts:[
@@ -205,7 +216,7 @@ const SHOP = [
    {n:"Fresa congelada", f:1.1, prep:"listo", hair:"vitamina C", note:"No se echa a perder, ideal para el yogurt."},
    {n:"Sandía o melón", f:1.6, prep:"rapido", note:"Mucho volumen y pocas calorías: la mejor arma contra el antojo."}
   ]},
- {id:"zanahoria", cat:"veg", e:"🥕", name:"Zanahoria o camote", total:700, unit:"g",
+ {id:"zanahoria", cat:"veg", e:"🥕", name:"Zanahoria o camote", total:700, unit:"g", dur:"para picar", rol:"extra",
   hair:"vitamina A (betacaroteno) + vitamina C", prep:"rapido",
   tip:"El betacaroteno de estos NO es tóxico como el retinol de los suplementos: puedes comerlo diario sin riesgo. Compra 1 kg, dura 3 semanas en refri.",
   alts:[
@@ -214,7 +225,7 @@ const SHOP = [
    {n:"Chayote", f:1.3, prep:"rapido", note:"El más barato del mercado."},
    {n:"Pepino con limón y chile", f:1.5, prep:"listo", note:"Casi cero calorías, perfecto para picar en la tarde."}
   ]},
- {id:"limon", cat:"veg", e:"🍋", name:"Limón", total:500, unit:"g",
+ {id:"limon", cat:"veg", e:"🍋", name:"Limón", total:250, unit:"g", dur:"toda la semana", rol:"base",
   hair:"vitamina C (multiplica la absorción de hierro)", prep:"listo",
   tip:"Compra 1 kg cuando esté barato y congela el jugo en cubitera. <b>Truco clave:</b> exprime limón sobre los frijoles, las lentejas y la espinaca — triplica el hierro que realmente absorbes.",
   alts:[
@@ -224,7 +235,7 @@ const SHOP = [
   ]},
 
  /* ---------- GRASAS, SEMILLAS Y EXTRAS ---------- */
- {id:"linaza", cat:"fat", e:"🌱", name:"Linaza molida", total:100, unit:"g",
+ {id:"linaza", cat:"fat", e:"🌱", name:"Linaza molida", total:100, unit:"g", dur:"7 desayunos", rol:"base",
   hair:"omega-3 vegetal + lignanos + zinc", prep:"listo",
   tip:"<b>A granel es 3 veces más barata</b> que empacada. Cómprala entera y muélela en la licuadora en tandas de 2 semanas (entera pasa de largo sin digerirse). Guárdala en el refri.",
   alts:[
@@ -232,7 +243,7 @@ const SHOP = [
    {n:"Nuez de Castilla", f:1.5, prep:"listo", hair:"omega-3 + biotina + zinc", note:"La nuez más rica en omega-3. Cara: úsala en poca cantidad."},
    {n:"Semilla de girasol", f:1.4, prep:"listo", hair:"vitamina E + selenio", note:"Muy barata a granel."}
   ]},
- {id:"pepitas", cat:"fat", e:"🎃", name:"Pepitas (semilla de calabaza)", total:200, unit:"g",
+ {id:"pepitas", cat:"fat", e:"🎃", name:"Pepitas (semilla de calabaza)", total:200, unit:"g", dur:"desayunos + snacks", rol:"base",
   hair:"zinc (de lo más alto que existe) + hierro + magnesio", prep:"listo",
   tip:"A granel cuesta la mitad que empacada. Es tu snack más útil: zinc y magnesio en un puño, sin cocinar. Lleva 30 g al trabajo en un frasquito.",
   alts:[
@@ -243,7 +254,7 @@ const SHOP = [
    {n:"Crema de cacahuate natural", f:1.1, prep:"listo", hair:"biotina + niacina",
     note:"Revisa que solo diga cacahuate y sal. Perfecta con manzana."}
   ]},
- {id:"aceite", cat:"fat", e:"🫒", name:"Aceite de oliva o aguacate", total:60, unit:"ml",
+ {id:"aceite", cat:"fat", e:"🫒", name:"Aceite de oliva o aguacate", total:100, unit:"ml", dur:"toda la semana", rol:"base",
   hair:"vitamina E + grasas para la piel", prep:"listo",
   tip:"Botella de 1 L, no la chica: sale ~30 % más barato por mililitro y dura 4 meses. Guárdala lejos del calor de la estufa.",
   alts:[
@@ -251,11 +262,11 @@ const SHOP = [
     note:"20 g de aguacate ≈ 8 ml de aceite. Mejores nutrientes, más volumen."},
    {n:"Aceite de canola", f:1, prep:"listo", note:"Más barato, perfil de grasa aceptable."}
   ]},
- {id:"sazon", cat:"fat", e:"🧂", name:"Sal, pimienta, ajo, comino, chile", total:0, unit:"al gusto",
+ {id:"sazon", cat:"fat", e:"🧂", name:"Sal, pimienta, ajo, comino, chile", total:0, unit:"al gusto", dur:"toda la semana", rol:"base",
   hair:null, prep:"listo",
   tip:"A granel en el mercado: pagas por gramo lo que en el súper cuesta el frasco. El ajo en polvo y el comino son lo que hace que la comida repetida no se vuelva insoportable.",
   alts:[]},
- {id:"galletas", cat:"fat", e:"🍪", name:"Galletas de avena (tipo Quaker)", total:5, unit:"paquetes",
+ {id:"galletas", cat:"fat", e:"🍪", name:"Galletas de avena (tipo Quaker)", total:6, unit:"paquetes", dur:"snacks del trabajo", rol:"base",
   hair:"fibra + zinc de la avena", prep:"listo",
   tip:"Compra la caja multipack de 6–8 paquetes: sale ~25 % más barata por paquete y ya viene porcionada, así no te comes media caja. Deja 2 paquetes en el cajón del trabajo.",
   alts:[
@@ -319,7 +330,7 @@ const COMPRA = [
     m:[["good","~$130/kg"],["time","8 min"],["good","Proteína magra"]]},
    {n:"Fruta congelada (fresa, mango)", save:"Cero desperdicio", p:"Para el yogurt y los licuados. No se echa a perder y en temporada baja es más barata que la fresca.",
     m:[["time","0 min"],["good","Dura meses"]]},
-   {n:"Tu propio pollo deshebrado, porcionado", save:"−20 min/sem", p:"Compra 1 kg ya cocido y el mismo día congélalo en bolsas planas de 200 g. Sacas una en la noche y amanece lista. Las bolsas planas se descongelan 3 veces más rápido que un bloque.",
+   {n:"Tu propio pollo deshebrado, porcionado", save:"−20 min/sem", p:"Compra 850 g ya cocidos y el mismo día congélalas en bolsas planas de 170 g. Sacas una en la noche y amanece lista. Las bolsas planas se descongelan 3 veces más rápido que un bloque.",
     m:[["good","Cero desperdicio"],["time","10 min una vez"]]},
    {n:"Frijol cocido en bolsas planas de 500 g", save:"−65 % vs lata", p:"Una tanda mensual de olla express y congelas. Se descongela en 4 min de micro.",
     m:[["good","Ahorro ~$120/mes"],["cost","35 min al mes"]]}
@@ -349,13 +360,14 @@ const COMPRA = [
    DIETA DIARIA
    ============================================================ */
 const MEALS = [
- {name:"Desayuno", time:"7:00–8:30 am", kcal:530, prot:39, color:"#4d8dff",
+ {name:"Desayuno", time:"7:00–8:30 am", kcal:570, prot:37, color:"#4d8dff",
   items:[
    {ref:"yogurt", g:300},
-   {ref:"avena", g:40},
+   {ref:"avena", g:30},
    {ref:"fruta", g:130},
+   {ref:"chispas", g:20, tag:"máx"},
    {ref:"linaza", g:12},
-   {ref:"pepitas", g:15},
+   {ref:"pepitas", g:10},
    {ref:"cacao", g:5, tag:"opcional"}
   ]},
  {name:"Snack del trabajo", time:"10:30–11:30 am", kcal:240, prot:14, color:"#38d6e8", optLabel:["Galleta + café","Pepitas + fruta","Atún"],
@@ -364,15 +376,28 @@ const MEALS = [
    B:[{ref:"pepitas", g:30},{ref:"fruta", g:130}],
    C:[{ref:"sardina", g:0.35, unit:"lata", extra:"o 1 lata de atún"},{ref:"galletas", g:1, unit:"paquete"}]
   }},
- {name:"Comida", time:"2:00–3:30 pm", kcal:720, prot:62, color:"#f2b544",
-  items:[
-   {ref:"pollo", g:170, tag:"cocido ·", tagBase:true},
-   {ref:"verdura", g:250},
-   {ref:"frijoles", g:120},
-   {ref:"arroz", g:50, extra:"crudo (≈150 g cocidos) o 2 tortillas"},
-   {ref:"aceite", g:8, unit:"ml"},
-   {ref:"limon", g:15, extra:"exprimido sobre los frijoles"}
-  ]},
+ {name:"Comida", time:"2:00\u20133:30 pm", kcal:720, prot:62, color:"#f2b544",
+  optLabel:["Pollo \u00b7 5 d\u00edas","Res \u00b7 1 d\u00eda","Sardina \u00b7 1 d\u00eda"],
+  options:{
+   A:[{ref:"pollo", g:170, tag:"cocido \u00b7", tagBase:true},
+      {ref:"verdura", g:250},
+      {ref:"frijoles", g:120},
+      {ref:"arroz", g:50, extra:"crudo (\u2248150 g cocidos) o 2 tortillas"},
+      {ref:"aceite", g:8, unit:"ml"},
+      {ref:"limon", g:15, extra:"exprimido sobre los frijoles"}],
+   B:[{ref:"res", g:200, extra:"en crudo \u00b7 el d\u00eda del hierro"},
+      {ref:"verdura", g:250},
+      {ref:"frijoles", g:120},
+      {ref:"arroz", g:50, extra:"crudo o 2 tortillas"},
+      {ref:"aceite", g:5, unit:"ml"},
+      {ref:"limon", g:20, extra:"clave: triplica el hierro que absorbes"}],
+   C:[{ref:"sardina", g:1, unit:"lata", extra:"escurrida \u00b7 cero cocina"},
+      {ref:"verdura", g:250},
+      {ref:"frijoles", g:120},
+      {ref:"arroz", g:50, extra:"crudo o 2 tortillas"},
+      {ref:"limon", g:15},
+      {ref:"espinaca", g:80, extra:"cruda, de guarnici\u00f3n"}]
+  }},
  {name:"Pre-entreno", time:"5:30–6:30 pm", kcal:250, prot:18, color:"#b09bff", optLabel:["Leche + cacao","Yogurt + fruta"],
   options:{
    A:[{ref:"leche", g:300, unit:"ml", extra:"+ 10 g cacao"},{ref:"avena", g:30}],
@@ -414,11 +439,11 @@ const NUTRIENTES = [
 ];
 
 const PREP_STEPS = [
- "Saca del congelador 1 kg de pollo deshebrado y repártelo en 7 bolsas planas de ~170 g. Etiqueta con la fecha.",
+ "Reparte los 850 g de pollo deshebrado en 5 bolsas planas de ~170 g y congélalas. Etiqueta con la fecha.",
  "Pon a cocer 1 kg de arroz en la arrocera. Mientras se hace, no lo veas: haz lo demás.",
  "Cuece 12 huevos (12 min desde el hervor). Se guardan con cáscara toda la semana.",
  "Muele 200 g de linaza en la licuadora y guárdala en un frasco en el refri.",
- "Porciona el arroz ya frío en 7 topers con 120 g de frijol cada uno.",
+ "Porciona el arroz ya frío en 7 topers con 120 g de frijol cada uno: 5 llevarán pollo, 1 es del día de res y 1 del de sardina.",
  "No cocines las verduras: se quedan congeladas en su bolsa. Van al micro el mismo día que las comas.",
  "Refrigera los topers de los días 1–5 y congela los del 6 y 7. Listo: ~35 min en total."
 ];
@@ -950,8 +975,8 @@ function renderShop(){
             <span class="emoji">${it.e}</span>
             <span class="nm"><b>${esc(swapped?a.n:it.name)}</b>
               ${sub?`<small>${esc(sub)}</small>`:""}
-              <span class="badges">${hairBadge(h)}${prepBadge(p)}</span></span>
-            <span class="qty">${qty}</span>
+              <span class="badges">${it.rol==="rot"?'<span class="rot-b">\u21bb ROTACI\u00d3N</span>':it.rol==="extra"?'<span class="ext-b">EXTRA</span>':""}${hairBadge(h)}${prepBadge(p)}</span></span>
+            <span class="qty">${qty}${it.dur?`<small>${esc(it.dur)}</small>`:""}</span>
             ${hasAlts?`<button class="swap-btn" data-open="${it.id}" aria-label="Ver equivalencias">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M21 3 9 15"/><path d="M8 21H3v-5"/><path d="m3 21 6-6"/></svg></button>`:""}
           </div>
@@ -1208,31 +1233,30 @@ function renderRoutine(){
       <div class="ex-top">
         <span class="nm"><b>${esc(v.n)}</b>
           <small>${ex.s}×${ex.r} · descanso ${fmtRest(rest)}${v.u?" · "+esc(v.u):""}</small></span>
-        ${bodyweight?`<span class="ex-w"><span class="wv">Corporal<small>peso</small></span></span>`
-         :isDeload?`<span class="ex-w"><span class="wv">${fmtW(showW)}<small>descarga 62 %</small></span></span>`
-         :`<span class="ex-w">
-            <button data-w="-" aria-label="Bajar peso">−</button>
-            <span class="wv"><input class="wv-in" data-exw="${ex.id}" type="number" inputmode="decimal" min="0" max="600" step="any" value="${+toUnit(w).toFixed(1)}" aria-label="Peso"><small>${unitLabel()}</small></span>
-            <button data-w="+" aria-label="Subir peso">+</button>
-          </span>`}
+        <span class="ex-w">
+          <button data-w="-" aria-label="Bajar peso">−</button>
+          <span class="wv"><input class="wv-in" data-exw="${ex.id}" type="number" inputmode="decimal" min="0" max="600" step="any" value="${+toUnit(w).toFixed(1)}" aria-label="Peso"><small>${bodyweight?"+ lastre":unitLabel()}</small></span>
+          <button data-w="+" aria-label="Subir peso">+</button>
+        </span>
       </div>
       <div class="act">
         <span class="a-lbl">Activación</span>
         <span class="a-bar"><i style="width:${v.act}%"></i></span>
         <span class="a-num">${v.act}</span>
       </div>
+      ${isDeload?`<div class="deload-line">🧘 <b>Hoy levantas ${bodyweight?"solo tu peso corporal":fmtW(showW)}</b>${bodyweight?", sin lastre, con una serie menos y lejos del fallo":" · 62 % de tu peso de trabajo ("+fmtW(w)+"), sin llegar al fallo"}. El campo de arriba es tu <b>peso normal</b>: edítalo cuando quieras.</div>`:""}
       <div class="set-track">
         <div class="set-dots">${dots}</div>
         <button class="set-btn${done>=ex.s?' done':''}" data-set="${ex.id}" data-rest="${rest}" data-total="${ex.s}" data-name="${esc(v.n)}">
           ${done>=ex.s?'✓ Series completas':`Marcar serie ${done+1} de ${ex.s}`}
         </button>
       </div>
-      ${!isDeload&&!bodyweight?`
+      ${!isDeload?`
       <div class="ex-done${hiDone?' on':''}" data-hi="${ex.id}">
         <span class="box">${hiDone?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
         <span>Completé todas las series en el rango alto</span>
       </div>
-      <div class="next-up${hiDone?' show':''}">▲ Próxima sesión sube a ${fmtW(roundP(w+inc))}</div>`:""}
+      <div class="next-up${hiDone?' show':''}">▲ Próxima sesión ${bodyweight?"añade lastre hasta "+fmtW(roundP(w+inc)):"sube a "+fmtW(roundP(w+inc))}</div>`:""}
       <button class="var-btn" data-var="${ex.id}">
         <span>▸ ${ex.v.length} variantes con su activación</span>
         <svg class="vb-c" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
