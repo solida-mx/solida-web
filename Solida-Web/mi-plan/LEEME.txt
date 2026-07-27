@@ -75,3 +75,12 @@ solo se abre si escribes la dirección directa.
     (localStorage). Usa siempre el mismo navegador y no borres
     los datos del sitio. El resumen semanal en imagen sirve
     como respaldo.
+
+┌──────────────────────────────────────────────────────────┐
+│  FOTOS DE ALIMENTOS (opcional)                            │
+└──────────────────────────────────────────────────────────┘
+
+  La carpeta img/ acepta fotos PNG de los alimentos. Si existe
+  img/<id>.png se muestra la foto; si no, aparece el emoji.
+  La lista exacta de nombres esta en img/LEEME.txt.
+  Para desactivar las fotos: usarFotos: false en el CONFIG.

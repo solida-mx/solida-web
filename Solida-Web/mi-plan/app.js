@@ -9,6 +9,9 @@ const CONFIG = {
   antojosSemana: 1200,
   cardioMin: 20,
   unidad: "kg",
+  // Fotos de alimentos: si existe img/<id>.png se muestra la foto;
+  // si no existe (o falla), aparece el emoji. Pon false para usar solo emojis.
+  usarFotos: true,
   // Día 0 del ciclo 3-1-3-1 (lunes 27 jul 2026 = Empuje A)
   anclaCiclo: "2026-07-27",
   perfil: { altura: 183, edad: 29, metaGrasa: 15, metaMusculo: 47.5 }
@@ -875,6 +878,11 @@ function dispAmt(id, base, unitOv){
   const val = base*(a?a.f:1);
   return fmtQty(val, unit);
 }
+function foodIcon(it, forceEmoji){
+  if(!CONFIG.usarFotos || forceEmoji) return `<span class="emoji">${it.e}</span>`;
+  return `<span class="fico"><img src="img/${it.id}.png" alt="" loading="lazy" `+
+         `onerror="this.parentNode.classList.add('noimg')"><span class="fe">${it.e}</span></span>`;
+}
 const PREP_TXT = {listo:"LISTO", rapido:"RÁPIDO", cocina:"COCINA"};
 const PREP_CLS = {listo:"listo", rapido:"rapido", cocina:"cocina"};
 function hairBadge(h){ return h?`<span class="hair-b">💇 ${esc(h)}</span>`:""; }
@@ -910,7 +918,7 @@ function renderMeals(){
       <ul class="foods">${items.map(f=>{
         const swapped=!!selAlt(f.ref), h=dispHair(f.ref);
         return `<li class="food${swapped?' swapped':''}">
-          <span class="emoji">${shopById[f.ref].e}</span>
+          ${foodIcon(shopById[f.ref], swapped)}
           <span class="txt"><b>${esc(dispName(f.ref))}</b>${f.extra?` <small>${esc(f.extra)}</small>`:''}
             ${swapped?'<span class="sw-note">↻ sustituido en el mandado</span>':''}
             ${h?`<span class="badges">${hairBadge(h)}</span>`:''}</span>
@@ -972,7 +980,7 @@ function renderShop(){
         const sub = swapped ? ("en lugar de "+it.name+(a.note?" · "+a.note:"")) : "";
         return `<div class="shop-item${swapped?' swapped':''}" data-id="${it.id}">
           <div class="shop-row">
-            <span class="emoji">${it.e}</span>
+            ${foodIcon(it, swapped)}
             <span class="nm"><b>${esc(swapped?a.n:it.name)}</b>
               ${sub?`<small>${esc(sub)}</small>`:""}
               <span class="badges">${it.rol==="rot"?'<span class="rot-b">\u21bb ROTACI\u00d3N</span>':it.rol==="extra"?'<span class="ext-b">EXTRA</span>':""}${hairBadge(h)}${prepBadge(p)}</span></span>
