@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Servicio Automotriz El Norte · Agenda tu cita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--steel:#1e232b;--steel-2:#151920;--slate:#2b323d;--amber:#f5a623;--amber-2:#ffbb3d;--paper:#f3f5f7;--ink:#1a1f27;--muted:#6b7480;--line:#dfe4ea;--card:#ffffff;--ok:#1f9d55;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Inter",sans-serif;color:var(--ink);background:var(--paper);line-height:1.55;-webkit-text-size-adjust:100%}
+  h1,h2,h3{font-family:"Oswald",sans-serif;text-transform:uppercase}
+  .stripe{height:8px;background:repeating-linear-gradient(45deg,var(--amber) 0 18px,var(--steel) 18px 36px)}
+  .hero{background:linear-gradient(160deg,var(--slate),var(--steel-2));color:#fff;padding:30px 20px 34px;text-align:center}
+  .kick{font-family:"Oswald";letter-spacing:.24em;color:var(--amber-2);font-size:11px;text-transform:uppercase}
+  .hero h1{font-size:clamp(26px,8.5vw,40px);font-weight:700;line-height:1;margin:8px 0 6px}
+  .hero h1 span{color:var(--amber)}
+  .hero p{font-size:13.5px;color:#c4ccd6;max-width:40ch;margin:0 auto}
+  .wrap{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+  .steps{display:flex;gap:6px;margin-bottom:18px}
+  .stp{flex:1;height:5px;border-radius:3px;background:var(--line)}
+  .stp.on{background:var(--amber)}
+  .panel{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:18px}
+  .panel h2{font-size:19px;font-weight:700;margin-bottom:4px}
+  .panel .sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .opt{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;font-family:inherit;background:var(--paper);border:1.5px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:9px;cursor:pointer;font-size:14px}
+  .opt b{font-weight:600;display:block}
+  .opt small{color:var(--muted);font-size:11.5px}
+  .opt .p{font-family:"Oswald";font-weight:600;white-space:nowrap}
+  .opt.sel{border-color:var(--amber);background:#fff8ea;box-shadow:0 6px 16px rgba(245,166,35,.18)}
+  .grid-h{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .hr{font-family:"Oswald";font-weight:600;font-size:14px;text-align:center;background:var(--paper);border:1.5px solid var(--line);border-radius:11px;padding:11px 4px;cursor:pointer}
+  .hr.sel{border-color:var(--amber);background:#fff8ea}
+  .hr.off{opacity:.35;text-decoration:line-through;pointer-events:none}
+  .grid-d{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+  .dy{text-align:center;background:var(--paper);border:1.5px solid var(--line);border-radius:11px;padding:9px 2px;cursor:pointer}
+  .dy.sel{border-color:var(--amber);background:#fff8ea}
+  .dy b{font-family:"Oswald";font-size:16px;display:block}
+  .dy span{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  label{display:block;font-size:12.5px;font-weight:600;margin:12px 0 5px}
+  input{width:100%;font-family:inherit;font-size:14px;padding:11px 12px;border:1.5px solid var(--line);border-radius:11px;background:var(--paper)}
+  .navr{display:flex;gap:10px;margin-top:16px}
+  .nbtn{flex:1;font-family:"Oswald";font-weight:600;text-transform:uppercase;font-size:13.5px;padding:13px;border-radius:12px;border:none;cursor:pointer}
+  .nbtn.back{background:var(--card);border:1.5px solid var(--line);color:var(--muted)}
+  .nbtn.next{background:var(--steel);color:var(--amber-2)}
+  .nbtn.send{background:#25d366;color:#0a3d1e;display:flex;align-items:center;justify-content:center;gap:8px}
+  .nbtn:disabled{opacity:.45;cursor:not-allowed}
+  .resume{background:var(--steel);color:#e8ecf2;border-radius:16px;padding:16px;margin-bottom:14px}
+  .resume h3{color:var(--amber-2);font-size:15px;margin-bottom:8px}
+  .rrow{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.15)}
+  .rrow:last-child{border-bottom:none}
+  .rrow span{color:#aab4c0}
+  .made{background:var(--steel);color:#c4ccd6;text-align:center;padding:26px 20px 30px;margin-top:30px}
+  .made b{font-family:"Oswald";text-transform:uppercase;color:#fff;display:block;margin-bottom:6px;letter-spacing:.04em}
+  .made p{font-size:12.5px;max-width:34ch;margin:0 auto 12px}
+  .made a{display:inline-block;background:var(--amber);color:var(--steel);text-decoration:none;font-family:"Oswald";font-weight:600;text-transform:uppercase;font-size:13px;padding:11px 20px;border-radius:10px}
+  .made .hint{margin-top:14px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6b7480}
+</style>
+</head>
+<body>
+<div class="stripe"></div>
+<section class="hero">
+  <div class="kick">Taller mecánico · 2 sucursales</div>
+  <h1>Agenda tu cita <span>en 4 pasos</span></h1>
+  <p>Elige servicio, sucursal, día y hora. Tu cita llega al taller lista para confirmar.</p>
+</section>
+<div class="wrap">
+  <div class="steps"><div class="stp on" id="s1"></div><div class="stp" id="s2"></div><div class="stp" id="s3"></div><div class="stp" id="s4"></div></div>
+
+  <!-- PASO 1: servicio -->
+  <div class="panel" id="p1">
+    <h2>1 · ¿Qué necesita tu auto?</h2>
+    <div class="sub">Precios de referencia, confirmamos al revisar tu vehículo.</div>
+    <div id="svcOpts"></div>
+    <div class="navr"><button class="nbtn next" id="n1" disabled>Continuar ▸</button></div>
+  </div>
+
+  <!-- PASO 2: sucursal -->
+  <div class="panel" id="p2" style="display:none">
+    <h2>2 · ¿En qué sucursal?</h2>
+    <div class="sub">Elige la que te quede más cerca.</div>
+    <button class="opt" data-suc="Centro — Blvd. V. Carranza 2450"><div><b>Sucursal Centro</b><small>Blvd. V. Carranza 2450 · Lun-Sáb</small></div><span class="p">📍</span></button>
+    <button class="opt" data-suc="Norte — Periférico LEA 890"><div><b>Sucursal Norte</b><small>Periférico LEA 890 · Lun-Sáb</small></div><span class="p">📍</span></button>
+    <div class="navr"><button class="nbtn back" data-b="1">◂ Atrás</button><button class="nbtn next" id="n2" disabled>Continuar ▸</button></div>
+  </div>
+
+  <!-- PASO 3: día y hora -->
+  <div class="panel" id="p3" style="display:none">
+    <h2>3 · ¿Cuándo te acomoda?</h2>
+    <div class="sub">Próximos días disponibles.</div>
+    <div class="grid-d" id="days"></div>
+    <div class="grid-h" id="hours"></div>
+    <div class="navr"><button class="nbtn back" data-b="2">◂ Atrás</button><button class="nbtn next" id="n3" disabled>Continuar ▸</button></div>
+  </div>
+
+  <!-- PASO 4: datos y envío -->
+  <div class="panel" id="p4" style="display:none">
+    <h2>4 · Confirma tu cita</h2>
+    <div class="resume" id="resume"></div>
+    <label>Tu nombre</label>
+    <input id="fNombre" placeholder="Nombre y apellido">
+    <label>Marca, modelo y año de tu auto</label>
+    <input id="fAuto" placeholder="Ej. Nissan Versa 2019">
+    <label>¿Algo más que debamos saber? (opcional)</label>
+    <input id="fNota" placeholder="Ruido, falla, detalle…">
+    <div class="navr">
+      <button class="nbtn back" data-b="3">◂ Atrás</button>
+      <button class="nbtn send" id="btnSend">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5-1.3A10 10 0 1 0 12 2Z"/></svg>
+        Enviar cita
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="made">
+  <b>Agenda de citas por Solida Aplicaciones</b>
+  <p>Demostración. Tus clientes agendan solos y la cita llega a tu WhatsApp con todo el detalle.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20demo%20de%20Servicio%20Completo%20de%20taller%20y%20quiero%20una%20as%C3%AD.">Quiero una página así</a>
+  <div class="hint">▸ Paquete Premium · Servicio Completo ◂</div>
+</div>
+
+<script>
+const WA="528443604349";
+const SVC=[
+  {n:"Cambio de aceite y filtro",d:"45 min aprox.",p:"desde $450"},
+  {n:"Afinación mayor",d:"3 h aprox.",p:"desde $1,200"},
+  {n:"Frenos (por eje)",d:"1.5 h aprox.",p:"desde $850"},
+  {n:"Alineación y balanceo",d:"1 h aprox.",p:"$550"},
+  {n:"Diagnóstico por computadora",d:"30 min",p:"$350"},
+  {n:"Clima automotriz",d:"1.5 h aprox.",p:"desde $900"}
+];
+const state={svc:null,suc:null,dia:null,hora:null};
+const $=id=>document.getElementById(id);
+
+/* paso 1 */
+$('svcOpts').innerHTML=SVC.map((s,i)=>`<button class="opt" data-i="${i}"><div><b>${s.n}</b><small>${s.d}</small></div><span class="p">${s.p}</span></button>`).join('');
+$('svcOpts').addEventListener('click',e=>{
+  const b=e.target.closest('.opt'); if(!b) return;
+  $('svcOpts').querySelectorAll('.opt').forEach(x=>x.classList.toggle('sel',x===b));
+  state.svc=SVC[b.dataset.i]; $('n1').disabled=false;
+});
+
+/* paso 2 */
+document.querySelectorAll('#p2 .opt').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#p2 .opt').forEach(x=>x.classList.toggle('sel',x===b));
+  state.suc=b.dataset.suc; $('n2').disabled=false;
+}));
+
+/* paso 3: próximos 8 días hábiles */
+const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+let d=new Date(), days=[];
+while(days.length<8){ d.setDate(d.getDate()+1); if(d.getDay()!==0) days.push(new Date(d)); }
+$('days').innerHTML=days.map((x,i)=>`<div class="dy" data-i="${i}"><b>${x.getDate()}</b><span>${DIAS[x.getDay()]} ${MES[x.getMonth()]}</span></div>`).join('');
+const HORAS=["8:00","9:00","10:00","11:00","12:00","13:00","15:00","16:00","17:00"];
+function renderHours(){
+  $('hours').innerHTML=HORAS.map((h,i)=>`<div class="hr${(i===2||i===5)?' off':''}" data-h="${h}">${h}</div>`).join('');
+}
+renderHours();
+$('days').addEventListener('click',e=>{
+  const b=e.target.closest('.dy'); if(!b) return;
+  $('days').querySelectorAll('.dy').forEach(x=>x.classList.toggle('sel',x===b));
+  const x=days[b.dataset.i];
+  state.dia=`${DIAS[x.getDay()]} ${x.getDate()} de ${MES[x.getMonth()]}`;
+  check3();
+});
+$('hours').addEventListener('click',e=>{
+  const b=e.target.closest('.hr'); if(!b||b.classList.contains('off')) return;
+  $('hours').querySelectorAll('.hr').forEach(x=>x.classList.toggle('sel',x===b));
+  state.hora=b.dataset.h; check3();
+});
+function check3(){ $('n3').disabled=!(state.dia&&state.hora); }
+
+/* navegación */
+function go(n){
+  [1,2,3,4].forEach(i=>{ $('p'+i).style.display=(i===n)?'block':'none'; $('s'+i).classList.toggle('on',i<=n); });
+  if(n===4) $('resume').innerHTML=`<h3>Tu cita</h3>
+    <div class="rrow"><span>Servicio</span><b>${state.svc.n}</b></div>
+    <div class="rrow"><span>Precio ref.</span><b>${state.svc.p}</b></div>
+    <div class="rrow"><span>Sucursal</span><b>${state.suc.split('—')[0]}</b></div>
+    <div class="rrow"><span>Fecha</span><b>${state.dia} · ${state.hora}</b></div>`;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+$('n1').onclick=()=>go(2); $('n2').onclick=()=>go(3); $('n3').onclick=()=>go(4);
+document.querySelectorAll('.back').forEach(b=>b.onclick=()=>go(parseInt(b.dataset.b)));
+
+/* envío */
+$('btnSend').onclick=()=>{
+  const v=id=>$(id).value.trim();
+  const txt=["🔧 NUEVA CITA — Automotriz El Norte","",
+    "• Servicio: "+state.svc.n+" ("+state.svc.p+")",
+    "• Sucursal: "+state.suc,
+    "• Fecha: "+state.dia+" a las "+state.hora,
+    "• Cliente: "+(v('fNombre')||"—"),
+    "• Auto: "+(v('fAuto')||"—"),
+    v('fNota')?("• Nota: "+v('fNota')):"",
+    "","Enviado desde la página de citas ✅"].filter(Boolean).join("\n");
+  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(txt),"_blank");
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de pases con QR · Solida Aplicaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:wght@500;600&family=Jost:wght@300;400;500;600&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{--navy:#1B396B;--navy-2:#122647;--teal:#2A9D8E;--teal-deep:#1f7a6e;--mist:#E8F6F6;
+    --paper:#f5f9fb;--card:#fff;--line:#e2ebf0;--ink:#20303c;--ink-soft:#5b6b78;
+    --night:#141230;--lilac:#b3a6f0;--star:#f4d98c;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Nunito",sans-serif;background:var(--paper);color:var(--ink);line-height:1.5}
+
+  header{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;padding:26px 20px;text-align:center}
+  header .logo{display:inline-flex;gap:3px;align-items:flex-end;background:#fff;border-radius:9px;padding:8px;margin-bottom:10px}
+  header .logo i{width:5px;border-radius:3px;display:block}
+  header .logo i:nth-child(1){height:12px;background:var(--teal)}
+  header .logo i:nth-child(2){height:18px;background:#8ED8CF}
+  header .logo i:nth-child(3){height:24px;background:var(--teal)}
+  header h1{font-size:20px;font-weight:800}
+  header p{font-size:13px;color:#c9d6ea;margin-top:4px}
+  .internal{display:inline-block;margin-top:10px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 12px;font-weight:700}
+
+  .wrap{max-width:640px;margin:0 auto;padding:22px 16px 60px}
+  .panel{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+  .panel h2{font-size:15px;font-weight:800;margin-bottom:4px}
+  .panel .sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:12px}
+  label{display:block;font-size:12px;font-weight:700;margin:12px 0 5px}
+  input,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;background:#fbfdfe}
+  input:focus,textarea:focus{outline:none;border-color:var(--teal)}
+  textarea{min-height:150px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.7}
+  .help{font-size:11.5px;color:var(--ink-soft);margin-top:5px}
+  .help b{color:var(--teal-deep)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;font-weight:800;
+    font-size:14px;padding:13px 18px;border-radius:12px;border:none;cursor:pointer;transition:.15s}
+  .btn:active{transform:translateY(1px)}
+  .btn-main{background:var(--teal);color:#fff;width:100%}
+  .btn-navy{background:var(--navy);color:#fff}
+  .btn-ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+
+  .status{font-size:12.5px;font-weight:700;color:var(--teal-deep);margin-top:10px;min-height:18px}
+  .err{color:#c0392b}
+
+  /* vista previa */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}
+  .thumb{border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .thumb img{display:block;width:100%;height:auto}
+  .thumb .cap{font-size:11px;font-weight:700;padding:7px 8px;text-align:center;color:var(--ink-soft);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .note{background:#fff8e8;border:1.5px dashed #d9b64e;border-radius:12px;padding:13px;font-size:12.5px;margin-top:14px;line-height:1.6}
+  .note b{color:#8a6d1d}
+  .foot{text-align:center;font-size:12px;color:var(--ink-soft);margin-top:24px}
+  .foot a{color:var(--teal-deep)}
+
+  /* ====== HOJA DE IMPRESIÓN ======
+     Medidas fijas en milímetros para encuadre exacto:
+     tarjeta 88 x 122 mm · 4 por hoja carta (2 x 2) · márgenes 8 mm.
+     2*88 + 6 = 182 mm de ancho  (carta útil: 200 mm) ✓
+     2*122 + 6 = 250 mm de alto  (carta útil: 263 mm) ✓            */
+  #printArea{display:none}
+  @media print{
+    body *{visibility:hidden}
+    #printArea, #printArea *{visibility:visible}
+    #printArea{display:block;position:absolute;left:0;top:0;width:100%}
+    @page{size:letter portrait;margin:8mm}
+    .sheet{display:grid;grid-template-columns:88mm 88mm;grid-auto-rows:122mm;gap:6mm;
+      justify-content:center;align-content:start;page-break-after:always;break-after:page}
+    .sheet:last-child{page-break-after:auto;break-after:auto}
+    .pcard{width:88mm;height:122mm;break-inside:avoid;page-break-inside:avoid;overflow:hidden;
+      border-radius:4mm;position:relative;color:#f7f4ff;text-align:center;
+      background:#141230;
+      background-image:radial-gradient(circle at 50% 0%,#241f55,#141230 75%);
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;
+      display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+      padding:6mm 5mm;border:0.6mm solid #f4d98c}
+    .pcard .pc-ev{font-family:"Great Vibes",cursive;font-size:9.5mm;line-height:1;color:#fff}
+    .pcard .pc-sub{font-family:"Jost",sans-serif;font-size:2.6mm;letter-spacing:.9mm;text-transform:uppercase;color:#f4d98c;margin-top:1.4mm}
+    .pcard .pc-name{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:6mm;line-height:1.15;color:#fff;
+      max-height:14mm;overflow:hidden;padding:0 2mm}
+    .pcard .pc-chips{font-family:"Jost",sans-serif;font-size:3.1mm;color:#141230;font-weight:500;margin-top:1.6mm}
+    .pcard .pc-chips span{display:inline-block;background:#f4d98c;border-radius:9mm;padding:1.1mm 3.4mm;margin:0 1mm}
+    .pcard .pc-qr{background:#fff;border-radius:2.5mm;padding:2mm;display:inline-block;position:relative}
+    .pcard .pc-qr img{display:block;width:34mm;height:34mm;image-rendering:pixelated}
+    .pcard .pc-qr .plogo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      width:9mm;height:9mm;background:#fff;border-radius:1.8mm;display:grid;place-items:center}
+    .pcard .pc-qr .plogo .plg{width:6.6mm;height:6.6mm;background:#1B396B;border-radius:1.4mm;
+      display:flex;align-items:flex-end;justify-content:center;gap:0.5mm;padding-bottom:1mm}
+    .pcard .pc-qr .plogo .plg i{width:0.9mm;border-radius:0.5mm;display:block}
+    .pcard .pc-qr .plogo .plg i:nth-child(1){height:1.7mm;background:#2A9D8E}
+    .pcard .pc-qr .plogo .plg i:nth-child(2){height:2.7mm;background:#8ED8CF}
+    .pcard .pc-qr .plogo .plg i:nth-child(3){height:3.7mm;background:#2A9D8E}
+    .pcard .pc-cap{font-family:"Jost",sans-serif;font-size:2.6mm;letter-spacing:.5mm;text-transform:uppercase;color:#b3a6f0}
+    .pcard .pc-date{font-family:"Jost",sans-serif;font-size:2.8mm;letter-spacing:.7mm;color:#d9d3f4;margin-top:1mm}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><i></i><i></i><i></i></div>
+  <h1>Generador de pases con QR</h1>
+  <p>Invitaciones Deluxe · pases personalizados con control de acceso</p>
+  <span class="internal">Herramienta interna · Solida Aplicaciones</span>
+</header>
+
+<div class="wrap">
+
+  <div class="panel">
+    <h2>1 · Datos del evento</h2>
+    <div class="sub">Aparecen en cada pase impreso y en el PNG.</div>
+    <label>Nombre del evento (festejada/os)</label>
+    <input id="evName" value="Valentina">
+    <label>Subtítulo</label>
+    <input id="evSub" value="Mis XV Años">
+    <label>Fecha (como se verá en el pase)</label>
+    <input id="evDate" value="12 · DICIEMBRE · 2026">
+    <label>URL de la página de acceso del evento</label>
+    <input id="evUrl" value="https://solida-web.j23salva.workers.dev/invitacion/avanzado/acceso">
+    <div class="help">A esta página llega el staff al escanear. El generador le agrega a cada QR el nombre, pases y mesa del invitado.</div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Lista de invitados</h2>
+    <div class="sub">Un invitado por renglón. Cópiala directo del levantamiento del cliente.</div>
+    <label>Formato: Nombre — pases — mesa</label>
+    <textarea id="lista">Familia Herrera Luna — 4 — 7
+Carlos Medina — 2 — 3
+Familia González Ríos — 3 — 7
+Regina Salas — 1 — 5</textarea>
+    <div class="help">Acepta separadores <b>—</b>, <b>|</b> o <b> - </b> (guion con espacios). La mesa es opcional.</div>
+    <button class="btn btn-main" id="btnGen" style="margin-top:14px">✦ Generar pases</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="panel" id="outPanel" style="display:none">
+    <h2>3 · Descargar</h2>
+    <div class="sub" id="outSub"></div>
+    <div class="actions">
+      <button class="btn btn-navy" id="btnZip">⬇ ZIP de PNGs<br><small style="font-weight:600">para compartir por celular</small></button>
+      <button class="btn btn-ghost" id="btnPrint">🖨 Imprimir<br><small style="font-weight:600">4 pases por hoja carta</small></button>
+    </div>
+    <div class="note"><b>Encuadre de impresión:</b> cada pase mide 88 × 122 mm y van 4 por hoja carta con márgenes de 8 mm — ningún pase queda cortado entre hojas. En el diálogo de impresión desactiva "Ajustar a la página" (escala 100%) y activa "Gráficos de fondo".</div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <p class="foot">El pase muestra <b>nombre, pases y mesa</b> a la vista, para que la recepción pueda trabajar aunque no use celular.<br><a href="../">◂ Volver a soporte</a></p>
+</div>
+
+<!-- hoja de impresión (se llena al generar) -->
+<div id="printArea"></div>
+
+<script>
+/* ================= parseo de la lista ================= */
+function parseLista(txt){
+  const out=[], errs=[];
+  txt.split('\n').map(l=>l.trim()).filter(Boolean).forEach((line,idx)=>{
+    const parts=line.split(/\s*(?:—|–|\|)\s*|\s+-\s+/).map(p=>p.trim()).filter(Boolean);
+    if(!parts[0]){errs.push(idx+1);return;}
+    const name=parts[0];
+    const pases=parseInt((parts[1]||'').replace(/\D/g,''),10)||1;
+    const mesaRaw=(parts[2]||'').replace(/mesa/i,'').trim();
+    out.push({name, pases, mesa:mesaRaw||'—'});
+  });
+  return {guests:out, errs};
+}
+function slug(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
+
+/* ================= QR ================= */
+function qrDataURL(url){
+  const q=qrcode(0,'H'); // corrección alta: aguanta el logo encima
+  q.addData(url); q.make();
+  return {data:q.createDataURL(8,2), modules:q.getModuleCount()};
+}
+function accessUrl(base,g){
+  const u=new URL(base);
+  u.searchParams.set('i',slug(g.name));
+  u.searchParams.set('n',g.name);
+  u.searchParams.set('p',g.pases);
+  if(g.mesa!=='—') u.searchParams.set('m',g.mesa);
+  return u.toString();
+}
+
+/* ================= dibujo del PNG (canvas 1080x1620) ================= */
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+function fitName(c,name,maxW,base){ // hasta 2 líneas
+  let size=base;
+  c.font=`600 ${size}px "Cormorant Garamond"`;
+  if(c.measureText(name).width<=maxW) return [ [name], size ];
+  const words=name.split(' ');
+  for(;size>=44;size-=4){
+    c.font=`600 ${size}px "Cormorant Garamond"`;
+    let l1='',l2='',ok=true;
+    for(const w of words){
+      const t=l1?l1+' '+w:w;
+      if(c.measureText(t).width<=maxW) l1=t;
+      else{const t2=l2?l2+' '+w:w; if(c.measureText(t2).width<=maxW) l2=t2; else{ok=false;break;}}
+    }
+    if(ok) return [ l2?[l1,l2]:[l1], size ];
+  }
+  return [[name],44];
+}
+async function drawCard(g,ev,qrImg){
+  const W=1080,H=1620,cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  const c=cv.getContext('2d');
+  // fondo nocturno
+  const bg=c.createRadialGradient(W/2,-100,80,W/2,H*0.4,H);
+  bg.addColorStop(0,'#241f55');bg.addColorStop(1,'#141230');
+  c.fillStyle=bg;c.fillRect(0,0,W,H);
+  // estrellas
+  for(let i=0;i<80;i++){
+    c.globalAlpha=0.25+Math.random()*0.6;
+    c.fillStyle='#fff';
+    const r=Math.random()*2.2+0.8;
+    c.beginPath();c.arc(Math.random()*W,Math.random()*H,r,0,7);c.fill();
+  }
+  c.globalAlpha=1;
+  // marco dorado
+  c.strokeStyle='#f4d98c';c.lineWidth=6;
+  rr(c,26,26,W-52,H-52,38);c.stroke();
+  c.fillStyle='#f4d98c';c.font='34px "Jost"';c.textAlign='center';
+  [[70,86],[W-70,86],[70,H-58],[W-70,H-58]].forEach(([x,y])=>c.fillText('✦',x,y));
+  // luna
+  const mx=W/2,my=190,mr=64;
+  const mg=c.createRadialGradient(mx-mr*0.3,my-mr*0.34,mr*0.1,mx,my,mr);
+  mg.addColorStop(0,'#fff7de');mg.addColorStop(0.58,'#f4d98c');mg.addColorStop(1,'#c9a94f');
+  c.shadowColor='rgba(244,217,140,.55)';c.shadowBlur=46;
+  c.fillStyle=mg;c.beginPath();c.arc(mx,my,mr,0,7);c.fill();
+  c.shadowBlur=0;
+  // evento
+  c.fillStyle='#fff';c.font='150px "Great Vibes"';
+  c.fillText(ev.name,W/2,398);
+  c.fillStyle='#f4d98c';c.font='500 33px "Jost"';
+  c.fillText(ev.sub.toUpperCase().split('').join('\u2009'),W/2,452);
+  // divisor
+  c.fillStyle='#f4d98c';c.font='30px "Jost"';c.fillText('✦  ✧  ✦',W/2,520);
+  // "invitación para"
+  c.fillStyle='#b3a6f0';c.font='500 27px "Jost"';
+  c.fillText('I N V I T A C I Ó N   P A R A',W/2,594);
+  // nombre del invitado (hasta 2 líneas)
+  const [lines,size]=fitName(c,g.name,W-200,84);
+  c.fillStyle='#fff';c.font=`600 ${size}px "Cormorant Garamond"`;
+  let ny=676;
+  lines.forEach(l=>{c.fillText(l,W/2,ny);ny+=size*1.08;});
+  // chips pases / mesa
+  const chipY=ny+18, chipH=66;
+  c.font='600 33px "Jost"';
+  const t1=`${g.pases} ${g.pases===1?'PASE':'PASES'}`, t2=g.mesa!=='—'?`MESA ${g.mesa.toUpperCase()}`:null;
+  const w1=c.measureText(t1).width+64, w2=t2?c.measureText(t2).width+64:0, gap=t2?22:0;
+  let cx0=W/2-(w1+w2+gap)/2;
+  c.fillStyle='#f4d98c';rr(c,cx0,chipY,w1,chipH,chipH/2);c.fill();
+  c.fillStyle='#141230';c.fillText(t1,cx0+w1/2,chipY+45);
+  if(t2){c.fillStyle='#f4d98c';rr(c,cx0+w1+gap,chipY,w2,chipH,chipH/2);c.fill();
+    c.fillStyle='#141230';c.fillText(t2,cx0+w1+gap+w2/2,chipY+45);}
+  // QR con logo Solida
+  const qs=430, qx=(W-qs)/2, qy=chipY+chipH+52, pad=26;
+  c.fillStyle='#fff';rr(c,qx-pad,qy-pad,qs+pad*2,qs+pad*2,30);c.fill();
+  c.imageSmoothingEnabled=false;
+  c.drawImage(qrImg,qx,qy,qs,qs);
+  c.imageSmoothingEnabled=true;
+  const ls=112,lx=W/2-ls/2,ly=qy+qs/2-ls/2;
+  c.fillStyle='#fff';rr(c,lx,ly,ls,ls,22);c.fill();
+  const ns=84,nx=W/2-ns/2,nyy=qy+qs/2-ns/2;
+  c.fillStyle='#1B396B';rr(c,nx,nyy,ns,ns,18);c.fill();
+  const bw=11,bg2=8,by=nyy+ns-16,bxs=W/2-(bw*3+bg2*2)/2;
+  [[22,'#2A9D8E'],[34,'#8ED8CF'],[46,'#2A9D8E']].forEach(([h,col],i)=>{
+    c.fillStyle=col;rr(c,bxs+i*(bw+bg2),by-h,bw,h,5);c.fill();
+  });
+  // pie
+  c.fillStyle='#b3a6f0';c.font='500 26px "Jost"';
+  c.fillText('P R E S E N T A   E S T E   P A S E   E N   L A   E N T R A D A',W/2,qy+qs+92);
+  c.fillStyle='#d9d3f4';c.font='400 30px "Jost"';
+  c.fillText(ev.date,W/2,qy+qs+142);
+  return cv;
+}
+
+/* ================= flujo principal ================= */
+let RESULT=[]; // {g, png(dataURL), qr(dataURL), file}
+const $=id=>document.getElementById(id);
+
+$('btnGen').addEventListener('click',async()=>{
+  const {guests,errs}=parseLista($('lista').value);
+  const st=$('status');
+  if(!guests.length){st.innerHTML='<span class="err">No encontré invitados en la lista.</span>';return;}
+  const ev={name:$('evName').value.trim()||'Evento',sub:$('evSub').value.trim(),date:$('evDate').value.trim()};
+  let base;
+  try{base=new URL($('evUrl').value.trim()).toString();}
+  catch(e){st.innerHTML='<span class="err">La URL de acceso no es válida.</span>';return;}
+  st.textContent='Cargando tipografías…';
+  await Promise.all([
+    document.fonts.load('150px "Great Vibes"'),
+    document.fonts.load('600 84px "Cormorant Garamond"'),
+    document.fonts.load('500 33px "Jost"'),
+  ]);
+  RESULT=[];
+  $('grid').innerHTML='';
+  for(let i=0;i<guests.length;i++){
+    const g=guests[i];
+    st.textContent=`Generando pase ${i+1} de ${guests.length}…`;
+    const url=accessUrl(base,g);
+    const {data:qr}=qrDataURL(url);
+    const qimg=new Image();
+    await new Promise(res=>{qimg.onload=res;qimg.src=qr;});
+    const cv=await drawCard(g,ev,qimg);
+    const png=cv.toDataURL('image/png');
+    const file=`pase-${String(i+1).padStart(2,'0')}-${slug(g.name)}.png`;
+    RESULT.push({g,png,qr,file});
+    const th=document.createElement('div');th.className='thumb';
+    th.innerHTML=`<img src="${png}" alt=""><div class="cap">${g.name} · ${g.pases}p · M${g.mesa}</div>`;
+    $('grid').appendChild(th);
+  }
+  buildPrint(ev);
+  $('outPanel').style.display='block';
+  $('outSub').textContent=`${RESULT.length} pases listos · evento: ${ev.name}`;
+  st.textContent=errs.length?`Listo, con ${errs.length} renglón(es) ignorado(s).`:'✓ Pases generados.';
+  $('outPanel').scrollIntoView({behavior:'smooth'});
+});
+
+/* ZIP de PNGs */
+$('btnZip').addEventListener('click',async()=>{
+  if(!RESULT.length)return;
+  const btn=$('btnZip');btn.disabled=true;
+  const zip=new JSZip();
+  const folder=zip.folder('pases-'+slug($('evName').value||'evento'));
+  RESULT.forEach(r=>folder.file(r.file,r.png.split(',')[1],{base64:true}));
+  const blob=await zip.generateAsync({type:'blob'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='pases-'+slug($('evName').value||'evento')+'.zip';
+  a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  btn.disabled=false;
+});
+
+/* hoja de impresión: 4 por hoja, medidas fijas en mm */
+function buildPrint(ev){
+  const area=$('printArea');area.innerHTML='';
+  let sheet=null;
+  RESULT.forEach((r,i)=>{
+    if(i%4===0){sheet=document.createElement('div');sheet.className='sheet';area.appendChild(sheet);}
+    const d=document.createElement('div');d.className='pcard';
+    const chips=`<span>${r.g.pases} ${r.g.pases===1?'PASE':'PASES'}</span>`+(r.g.mesa!=='—'?`<span>MESA ${r.g.mesa}</span>`:'');
+    d.innerHTML=`
+      <div><div class="pc-ev">${ev.name}</div><div class="pc-sub">${ev.sub}</div></div>
+      <div><div class="pc-cap">Invitación para</div>
+        <div class="pc-name">${r.g.name}</div>
+        <div class="pc-chips">${chips}</div></div>
+      <div><span class="pc-qr"><img src="${r.qr}" alt=""><span class="plogo"><span class="plg"><i></i><i></i><i></i></span></span></span>
+        <div class="pc-cap" style="margin-top:1.6mm">Presenta este pase en la entrada</div>
+        <div class="pc-date">${ev.date}</div></div>`;
+    sheet.appendChild(d);
+  });
+}
+$('btnPrint').addEventListener('click',()=>{if(RESULT.length)window.print();});
+</script>
+</body>
+</html>

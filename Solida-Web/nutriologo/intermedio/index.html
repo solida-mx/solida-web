@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mi Plan Pro · Nutrición con Karla Méndez</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#2f7a4f;--green-2:#3d9862;--leaf:#e7f4ec;--leaf-2:#d5ecdf;--coral:#ef7a5a;
+    --cream:#fbf9f3;--ink:#1e2a22;--muted:#6a7d70;--line:#e4ece6;--card:#ffffff;--sky:#4a9fd4;--amber:#d99a2b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Manrope",sans-serif;color:var(--ink);background:var(--cream);line-height:1.5;-webkit-text-size-adjust:100%;padding-bottom:20px}
+  h1,h2,h3,.disp{font-family:"Fraunces",serif}
+  button{font-family:inherit}
+
+  header{background:linear-gradient(140deg,var(--green),#26623f);color:#fff;padding:20px 20px 18px;position:relative;overflow:hidden}
+  header::after{content:"🥗";position:absolute;right:-6px;top:-10px;font-size:110px;opacity:.1;transform:rotate(-15deg)}
+  .brandline{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.04em;color:#bfe6cd}
+  .brandline .dot{width:6px;height:6px;border-radius:50%;background:var(--coral)}
+  .brandline .pill{margin-left:auto;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+    font-size:10px;padding:4px 10px;border-radius:999px;letter-spacing:.12em;font-weight:800}
+  .hello{margin-top:12px;font-family:"Fraunces";font-weight:600;font-size:26px;line-height:1.1}
+  .hello span{color:#c8ecd5}
+  .weekmeta{margin-top:5px;font-size:13px;color:#cdeed9;font-weight:500}
+  .macros{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .mx{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:8px 4px;text-align:center}
+  .mx b{display:block;font-family:"Fraunces";font-size:16px}
+  .mx span{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#cdeed9;font-weight:700}
+
+  .tabs{position:sticky;top:0;z-index:40;background:rgba(251,249,243,.94);backdrop-filter:blur(10px);
+    display:flex;gap:8px;padding:11px 16px;border-bottom:1.5px solid var(--line)}
+  .tabbtn{flex:1;background:#fff;border:1.5px solid var(--line);color:var(--muted);border-radius:12px;
+    padding:10px 6px;font-weight:800;font-size:12.5px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+  .tabbtn.on{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 8px 18px rgba(47,122,79,.25)}
+
+  .wrap{max-width:600px;margin:0 auto;padding:18px 16px 0}
+  .tab{display:none;animation:fadeUp .3s ease}
+  .tab.active{display:block}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .day-title{display:flex;align-items:center;gap:10px;margin:2px 0 14px}
+  .day-title h2{font-size:21px;font-weight:600}
+  .day-title .ln{flex:1;height:1px;background:var(--line)}
+  .day-title .chip{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    padding:4px 10px;border-radius:999px;background:var(--leaf);color:var(--green)}
+
+  .meal{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:16px;margin-bottom:13px;transition:opacity .2s}
+  .meal.done{opacity:.6}
+  .meal-top{display:flex;align-items:center;gap:12px}
+  .check{width:28px;height:28px;border-radius:9px;border:2px solid var(--line);flex:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:#fff;transition:all .15s;background:#fff}
+  .check.on{background:var(--green);border-color:var(--green)}
+  .meal-time{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--coral);font-weight:700}
+  .meal-name{font-family:"Fraunces";font-weight:600;font-size:17px}
+  .kcal{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);background:var(--leaf);padding:5px 9px;border-radius:8px;flex:none;text-align:right;line-height:1.35}
+  .foods{list-style:none;margin:12px 0 0;display:flex;flex-direction:column}
+  .food{display:flex;align-items:center;gap:10px;font-size:14px;padding:8px 0;border-top:1px dashed var(--line)}
+  .food .emoji{font-size:19px;width:24px;text-align:center}
+  .food .txt{flex:1;min-width:0}.food .txt b{font-weight:700}
+  .food .txt small{color:var(--muted);font-weight:500;display:block;font-size:11.5px}
+  .food .amt{font-weight:800;color:var(--green);font-size:13px;white-space:nowrap}
+  .food.sw .txt b{color:var(--amber)}
+  .swap{background:var(--leaf);color:var(--green);border:none;font-weight:800;font-size:11px;
+    padding:7px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;flex:none}
+  .swap:active{transform:scale(.94)}
+  .food.sw .swap{background:#faf0dc;color:var(--amber)}
+
+  .tip{background:var(--leaf);border-radius:16px;padding:15px;margin:16px 0;display:flex;gap:12px}
+  .tip .i{font-size:21px}
+  .tip b{font-family:"Fraunces";font-weight:600;font-size:15px;color:var(--green);display:block;margin-bottom:2px}
+  .tip p{font-size:13px;color:#3a5245}
+  .tip.warn{background:#fdf3e4}.tip.warn b{color:var(--amber)}
+
+  /* mandado */
+  .shop-cat{margin-bottom:16px}
+  .shop-cat-h{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .shop-cat-h .sq{width:10px;height:10px;border-radius:3px;background:var(--cc)}
+  .shop-cat-h h3{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--cc);font-family:"Manrope"}
+  .shop-item{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:8px}
+  .shop-row{display:flex;align-items:center;gap:10px}
+  .shop-row .emoji{font-size:19px;width:24px;text-align:center}
+  .shop-row .nm{flex:1;min-width:0}
+  .shop-row .nm b{font-size:14px;font-weight:700;display:block}
+  .shop-row .nm small{font-size:11px;color:var(--muted);font-weight:600}
+  .shop-row .qty{font-weight:800;font-size:13px;color:var(--green);white-space:nowrap}
+  .eq-btn{flex:none;background:var(--leaf);border:none;color:var(--green);width:32px;height:32px;border-radius:9px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .eq-btn:active{transform:scale(.9)}
+  .alts{max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .alts.open{max-height:360px}
+  .alts-in{padding-top:11px;margin-top:11px;border-top:1px dashed var(--line)}
+  .alts-lbl{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .alt-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:6px 0;border-top:1px dashed var(--line)}
+  .alt-row:first-of-type{border-top:none}
+  .alt-row b{font-weight:700}
+  .alt-row small{display:block;color:var(--muted);font-weight:500;font-size:11px}
+  .alt-row .q{font-weight:800;color:var(--green);white-space:nowrap}
+
+  .prep-card{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+  .prep-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .prep-h .i{font-size:24px}
+  .prep-h b{font-family:"Fraunces";font-size:17px;font-weight:600}
+  .prep-h small{display:block;font-size:12px;color:var(--muted);font-weight:600}
+  .prep-step{display:flex;gap:11px;padding:9px 0;border-top:1px dashed var(--line);font-size:13.5px;align-items:flex-start}
+  .prep-step .n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--leaf);color:var(--green);
+    font-weight:800;font-size:11.5px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+
+  .contact{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px;text-align:center;margin-top:6px}
+  .contact p{font-size:13.5px;color:var(--muted);margin-bottom:10px}
+  .contact a{display:inline-flex;align-items:center;gap:8px;background:var(--green);color:#fff;text-decoration:none;
+    font-weight:700;font-size:13.5px;padding:11px 20px;border-radius:999px}
+
+  .made{background:#26623f;color:#fff;text-align:center;padding:26px 20px 30px;margin-top:26px}
+  .made .disp{font-size:15px;color:#fff;margin-bottom:6px}
+  .made p{font-size:13px;color:#bfe6cd;max-width:38ch;margin:0 auto 14px}
+  .made a{display:inline-flex;align-items:center;gap:8px;background:var(--coral);color:#fff;text-decoration:none;font-weight:700;font-size:13.5px;padding:11px 20px;border-radius:999px}
+  .made .demo-hint{margin-top:16px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#6d9a7e}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+    padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;opacity:0;transition:all .25s;z-index:99;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:88vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brandline"><span class="dot"></span> NUTRICIÓN · KARLA MÉNDEZ <span class="pill">PRO</span></div>
+  <div class="hello">Hola, <span>Salvador</span> 👋</div>
+  <div class="weekmeta" id="dateMeta">Tu plan de esta semana</div>
+  <div class="macros">
+    <div class="mx"><b>2,100</b><span>kcal</span></div>
+    <div class="mx"><b>185 g</b><span>prot</span></div>
+    <div class="mx"><b>210 g</b><span>carbos</span></div>
+    <div class="mx"><b>60 g</b><span>grasas</span></div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tabbtn on" data-tab="plan">🍽️ Mi plan</button>
+  <button class="tabbtn" data-tab="mandado">🛒 Mandado</button>
+  <button class="tabbtn" data-tab="prep">🍱 Prep</button>
+</div>
+
+<div class="wrap">
+  <!-- PLAN -->
+  <section class="tab active" id="tab-plan">
+    <div class="day-title"><h2 id="todayName">Hoy</h2><span class="ln"></span><span class="chip">Plan del día</span></div>
+    <div id="meals"></div>
+    <div class="tip warn">
+      <span class="i">⚖️</span>
+      <div><b>Si el peso no baja en 2 semanas</b><p>Quita la avena del desayuno ese día. Nunca recortes proteína.</p></div>
+    </div>
+  </section>
+
+  <!-- MANDADO -->
+  <section class="tab" id="tab-mandado">
+    <div class="day-title"><h2>Mandado semanal</h2><span class="ln"></span><span class="chip">7 días</span></div>
+    <div class="tip">
+      <span class="i">🔄</span>
+      <div><b>Equivalencias sugeridas</b><p>Toca el ícono en cada alimento para ver alternativas con la cantidad ajustada que cubre los mismos macros. Surte lo que encuentres esa semana.</p></div>
+    </div>
+    <div id="shopList"></div>
+    <div class="tip warn">
+      <span class="i">🚫</span>
+      <div><b>Antojos aparte</b><p>Barra Hershey's y frituras NO van en el mandado: son parte del presupuesto semanal de antojos que acordaste con Karla.</p></div>
+    </div>
+  </section>
+
+  <!-- PREP -->
+  <section class="tab" id="tab-prep">
+    <div class="day-title"><h2>Prep semanal</h2><span class="ln"></span><span class="chip">1 vez / semana</span></div>
+    <div class="prep-card">
+      <div class="prep-h"><span class="i">🍱</span>
+        <div><b>Pollo con verduras · 7 porciones</b>
+        <small>~510 kcal · 58 g prot · 38 g carbos · 14 g grasas por porción</small></div>
+      </div>
+      <div id="prepSteps"></div>
+    </div>
+    <div class="tip">
+      <span class="i">🧊</span>
+      <div><b>Conservación</b><p><b>Refri:</b> 4–5 días (congela porciones de días 6 y 7). <b>Recalienta:</b> 2–3 min en micro o sartén sin aceite. <b>Día ideal:</b> domingo o tu día de menos actividad.</p></div>
+    </div>
+  </section>
+
+  <div class="contact">
+    <p>¿Dudas con tu plan o quieres reagendar tu consulta?</p>
+    <a id="consulta" href="#">Escribir a Karla</a>
+  </div>
+</div>
+
+<div class="made">
+  <div class="disp">Herramienta por Solida Aplicaciones</div>
+  <p>Demostración del nivel Pro: plan diario, mandado semanal con equivalencias y prep — con tu marca, para cada paciente.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20demo%20Pro%20del%20plan%20de%20nutrici%C3%B3n.%20Quiero%20una%20herramienta%20as%C3%AD%20para%20mis%20pacientes.">Quiero una herramienta así</a>
+  <div class="demo-hint">▸ Demostración interactiva ◂</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WA="528443604349";
+const DAYS=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const MONTHS=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const now=new Date();
+document.getElementById('dateMeta').textContent="Tu plan de esta semana · "+DAYS[now.getDay()]+" "+now.getDate()+" "+MONTHS[now.getMonth()];
+document.getElementById('todayName').textContent=DAYS[now.getDay()];
+document.getElementById('consulta').href="https://wa.me/"+WA+"?text="+encodeURIComponent("Hola Karla 👋 Tengo una duda con mi plan.");
+
+const fmt=(v,u)=> (u==="pzas"||u==="claras")?Math.round(v)+" "+u : v>=1000?(Math.round(v/10)/100)+" "+(u==="ml"?"L":"kg") : Math.round(v)+" "+u;
+
+/* Alimentos con equivalencias (f = factor para igualar macros) */
+const FOODS={
+ pollo:{e:"🍗",n:"Pechuga de pollo",u:"g",total:1890,alts:[
+   {n:"Filete de tilapia",f:1.15,note:"misma proteína, menos grasa"},
+   {n:"Atún en agua",f:.9,note:"misma proteína"},
+   {n:"Falda de res magra",f:.95,note:"+1 g grasa por porción"}]},
+ huevos:{e:"🥚",n:"Huevos enteros",u:"pzas",total:14,alts:[
+   {n:"Claras de huevo",f:3,u:"claras",note:"misma proteína, sin grasa"}]},
+ claras:{e:"🥛",n:"Claras pasteurizadas",u:"g",total:1400,alts:[
+   {n:"Claras de huevo fresco",f:1,note:"~6 claras por porción"},
+   {n:"Pechuga de pavo molida",f:.55,note:"misma proteína"}]},
+ jamon:{e:"🥓",n:"Jamón pechuga de pavo",u:"g",total:560,alts:[
+   {n:"Pechuga de pavo natural",f:1,note:"menos sodio"},{n:"Atún en agua",f:.9,note:"misma proteína"}]},
+ yogurt:{e:"🥛",n:"Yogurt griego Oikos",u:"g",total:1750,alts:[
+   {n:"Queso cottage",f:.9,note:"misma proteína"},{n:"Skyr natural",f:1,note:"macros casi idénticos"},
+   {n:"Yogurt natural s/azúcar",f:1.25,note:"+25% para igualar proteína"}]},
+ queso:{e:"🧀",n:"Queso panela",u:"g",total:420,alts:[
+   {n:"Queso cottage",f:1.2,note:"misma proteína"},{n:"Panela light",f:1,note:"menos grasa"}]},
+ leche:{e:"🥛",n:"Leche Lala 100",u:"ml",total:2800,alts:[
+   {n:"Leche descremada",f:1,note:"+2 g carbos por vaso"},{n:"Bebida de soya s/azúcar",f:1,note:"un poco menos proteína"}]},
+ avena:{e:"🌾",n:"Avena Quaker",u:"g",total:490,alts:[
+   {n:"Amaranto inflado",f:1,note:"macros equivalentes"},{n:"Granola sin azúcar",f:.85,note:"más densa: menos gramos"}]},
+ tortillas:{e:"🫓",n:"Tortillas Sanísimas",u:"pzas",total:35,alts:[
+   {n:"Tortilla de maíz normal",f:.8,note:"4 en vez de 5"},{n:"Tostadas horneadas",f:1,note:"mismas piezas"}]},
+ frijoles:{e:"🫘",n:"Frijoles refritos Isadora",u:"g",total:420,alts:[
+   {n:"Frijoles de olla",f:1.5,note:"menos densos: sube porción"},{n:"Lentejas cocidas",f:1.4,note:"mismos carbos + fibra"}]},
+ cacao:{e:"🍫",n:"Cacao en polvo",u:"g",total:140,alts:[{n:"Cocoa sin azúcar",f:1,note:"equivalente directo"}]},
+ chispas:{e:"🍫",n:"Chispas choc. Hershey's",u:"g",total:105,note:"15 g/día · antojo controlado",alts:[]},
+ manzana:{e:"🍎",n:"Manzana Gala",u:"g",total:840,alts:[
+   {n:"Pera",f:1,note:"mismos carbos"},{n:"Guayaba",f:.9,note:"más fibra"},{n:"Plátano",f:.7,note:"más denso: menos gramos"}]},
+ melon:{e:"🍈",n:"Melón",u:"g",total:1050,alts:[
+   {n:"Papaya",f:1,note:"equivalente"},{n:"Fresas",f:1.2,note:"menos densas: más gramos"}]},
+ sandia:{e:"🍉",n:"Sandía",u:"g",total:2000,alts:[
+   {n:"Melón extra",f:.9,note:"equivalente"},{n:"Pepino con limón",f:1.3,note:"casi libre"}]},
+ brocoli:{e:"🥦",n:"Brócoli",u:"g",total:1400,alts:[{n:"Coliflor",f:1,note:"equivalente"},{n:"Ejotes",f:1,note:"equivalente"}]},
+ zanahoria:{e:"🥕",n:"Zanahoria",u:"g",total:700,alts:[{n:"Betabel",f:.9,note:"un poco más azúcar"},{n:"Chayote",f:1.3,note:"menos carbos: más gramos"}]},
+ calabacita:{e:"🥒",n:"Calabacita",u:"g",total:700,alts:[{n:"Chayote",f:1,note:"equivalente"},{n:"Nopales",f:1.2,note:"más fibra"}]},
+ espinaca:{e:"🥬",n:"Espinaca fresca",u:"g",total:700,alts:[{n:"Acelga",f:1,note:"equivalente"},{n:"Kale",f:1,note:"equivalente"}]},
+ aceite:{e:"🫒",n:"Aceite de aguacate",u:"ml",total:126,alts:[
+   {n:"Aceite de oliva",f:1,note:"misma grasa"},{n:"Aguacate (fruta)",f:2.5,u:"g",note:"20 g ≈ 8 ml de aceite"}]},
+ stevia:{e:"🍃",n:"Stevia líquida",u:"al gusto",total:0,alts:[]},
+ sazon:{e:"🧂",n:"Sal, pimienta, ajo en polvo",u:"al gusto",total:0,alts:[]}
+};
+const SHOPCATS=[
+ {t:"Proteínas",c:"#2f7a4f",ids:["pollo","huevos","claras","jamon","yogurt","queso"]},
+ {t:"Carbohidratos",c:"#d99a2b",ids:["leche","avena","tortillas","frijoles","cacao","chispas"]},
+ {t:"Frutas y verduras",c:"#4a9fd4",ids:["manzana","melon","sandia","brocoli","zanahoria","calabacita","espinaca"]},
+ {t:"Grasas y extras",c:"#8a6fc9",ids:["aceite","stevia","sazon"]}
+];
+
+const MEALS=[
+ {time:"Desayuno · 7:00–8:30 am",name:"Yogurt con fruta y avena",kcal:"~430 kcal · 28 g prot",items:[
+   {ref:"yogurt",g:250},{ref:"manzana",g:120},{ref:"melon",g:150},{ref:"avena",g:30},
+   {ref:"chispas",g:15,tag:"máx"},{ref:"sandia",g:200,tag:"hasta"}]},
+ {time:"Media tarde · 1:00–2:30 pm",name:"Licuado de cacao",kcal:"~380 kcal · 18 g prot",items:[
+   {ref:"leche",g:400,u:"ml",extra:"+ 20 g cacao"},{ref:"avena",g:40}]},
+ {time:"Comida · 3:30–5:00 pm",name:"Pollo con verduras (prep)",kcal:"~510 kcal · 58 g prot",items:[
+   {ref:"pollo",g:270},{ref:"brocoli",g:200},{ref:"zanahoria",g:100},{ref:"calabacita",g:100},
+   {ref:"frijoles",g:60},{ref:"aceite",g:8,u:"ml"}]},
+ {time:"Cena · 7:30–9:00 pm",name:"Tacos de claras y pavo",kcal:"~560 kcal · 52 g prot",items:[
+   {ref:"claras",g:200},{ref:"huevos",g:2,u:"pzas"},{ref:"jamon",g:80},
+   {ref:"tortillas",g:5,u:"pzas",tag:"MÁX"},{ref:"queso",g:60,extra:"+ 100 g espinaca"},{ref:"aceite",g:5,u:"ml"}]}
+];
+
+const toast=document.getElementById('toast');let toastT;
+function showToast(m){toast.textContent=m;toast.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>toast.classList.remove('show'),2000);}
+
+/* Plan del día — cada alimento puede rotar entre sus equivalencias */
+let done=new Array(MEALS.length).fill(false);
+let sw={}; // 'i-j' -> alt index
+const mealsEl=document.getElementById('meals');
+function renderMeals(){
+  mealsEl.innerHTML=MEALS.map((m,i)=>`
+    <div class="meal${done[i]?' done':''}">
+      <div class="meal-top">
+        <div class="check${done[i]?' on':''}" data-i="${i}">${done[i]?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</div>
+        <div><div class="meal-time">${m.time}</div><div class="meal-name">${m.name}</div></div>
+        <div class="kcal">${m.kcal.replace(' · ','<br>')}</div>
+      </div>
+      <ul class="foods">${m.items.map((f,j)=>{
+        const food=FOODS[f.ref];const key=i+'-'+j;
+        const ai=sw[key];const alt=(ai===undefined)?null:food.alts[ai];
+        const name=alt?alt.n:food.n;
+        const unit=(alt&&alt.u)||f.u||food.u;
+        const amt=fmt(f.g*(alt?alt.f:1),unit);
+        return `<li class="food${alt?' sw':''}">
+          <span class="emoji">${food.e}</span>
+          <span class="txt"><b>${name}</b>${f.extra?` <small style="display:inline">${f.extra}</small>`:''}${alt?`<small>equivale a ${food.n}</small>`:''}</span>
+          <span class="amt">${f.tag?f.tag+' ':''}${amt}</span>
+          ${food.alts.length?`<button class="swap" data-key="${key}" data-ref="${f.ref}">🔄</button>`:''}</li>`;
+      }).join('')}</ul>
+    </div>`).join('');
+}
+mealsEl.addEventListener('click',e=>{
+  const chk=e.target.closest('.check');
+  if(chk){const i=+chk.dataset.i;done[i]=!done[i];renderMeals();
+    if(done.every(Boolean))showToast('¡Completaste todas tus comidas! 🎉');
+    else if(done[i])showToast('Comida registrada ✓');return;}
+  const s=e.target.closest('.swap');
+  if(s){const key=s.dataset.key;const alts=FOODS[s.dataset.ref].alts;
+    const cur=sw[key]===undefined?-1:sw[key];const next=cur+1;
+    if(next>=alts.length)delete sw[key];else sw[key]=next;
+    renderMeals();showToast(sw[key]!==undefined?'Sustituido con cantidad equivalente 🔄':'De vuelta a la opción original');}
+});
+
+/* Mandado */
+document.getElementById('shopList').innerHTML=SHOPCATS.map(cat=>`
+  <div class="shop-cat" style="--cc:${cat.c}">
+    <div class="shop-cat-h"><span class="sq"></span><h3>${cat.t}</h3></div>
+    ${cat.ids.map(id=>{const f=FOODS[id];
+      return `<div class="shop-item">
+        <div class="shop-row">
+          <span class="emoji">${f.e}</span>
+          <span class="nm"><b>${f.n}</b><small>${f.note||''}</small></span>
+          <span class="qty">${f.total===0?f.u:fmt(f.total,f.u)}</span>
+          ${f.alts.length?`<button class="eq-btn" data-open="${id}" aria-label="Ver equivalencias">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M21 3 9 15"/><path d="M8 21H3v-5"/><path d="m3 21 6-6"/></svg></button>`:''}
+        </div>
+        ${f.alts.length?`<div class="alts" id="alts-${id}"><div class="alts-in">
+          <div class="alts-lbl">Si no lo encuentras, cómpralo así:</div>
+          ${f.alts.map(a=>`<div class="alt-row"><span><b>${a.n}</b><small>${a.note||''}</small></span>
+            <span class="q">${fmt(f.total*a.f,a.u||f.u)}</span></div>`).join('')}
+        </div></div>`:''}
+      </div>`;}).join('')}
+  </div>`).join('');
+document.getElementById('shopList').addEventListener('click',e=>{
+  const o=e.target.closest('[data-open]');if(!o)return;
+  document.getElementById('alts-'+o.dataset.open).classList.toggle('open');
+});
+
+/* Prep */
+const PREP=["Corta el pollo en cubos medianos uniformes.","Corta verduras: brócoli en floretes, zanahoria y calabacita en rodajas.","Calienta aceite en sartén grande a fuego medio-alto.","Sella el pollo hasta dorar (~5 min). Sazona con sal, pimienta y ajo.","Agrega verduras. Saltea 6–8 min al dente. No sobre-cocines.","Enfría completamente antes de porcionar.","Divide en 7 contenedores + 60 g de frijoles cada uno. Refrigera días 1–5, congela 6–7."];
+document.getElementById('prepSteps').innerHTML=PREP.map((s,i)=>`<div class="prep-step"><span class="n">${i+1}</span><span>${s}</span></div>`).join('');
+
+/* Tabs */
+document.querySelectorAll('.tabbtn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabbtn').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id==='tab-'+b.dataset.tab));
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+renderMeals();
+</script>
+</body>
+</html>

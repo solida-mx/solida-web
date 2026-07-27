@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mi Plan · Nivel Esencial · Nutrición con Karla Méndez</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#2f7a4f;--green-2:#3d9862;--leaf:#e7f4ec;--leaf-2:#d5ecdf;--coral:#ef7a5a;
+    --cream:#fbf9f3;--ink:#1e2a22;--muted:#6a7d70;--line:#e4ece6;--card:#ffffff;--sky:#4a9fd4;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Manrope",sans-serif;color:var(--ink);background:var(--cream);line-height:1.5;-webkit-text-size-adjust:100%}
+  h1,h2,h3,.disp{font-family:"Fraunces",serif}
+
+  header{background:linear-gradient(140deg,var(--green),#26623f);color:#fff;padding:20px 20px 26px;position:relative;overflow:hidden}
+  header::after{content:"🥗";position:absolute;right:-6px;top:-10px;font-size:110px;opacity:.1;transform:rotate(-15deg)}
+  .brandline{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.04em;color:#bfe6cd}
+  .brandline .dot{width:6px;height:6px;border-radius:50%;background:var(--coral)}
+  .hello{margin-top:14px;font-family:"Fraunces";font-weight:600;font-size:27px;line-height:1.1}
+  .hello span{color:#c8ecd5}
+  .weekmeta{margin-top:6px;font-size:13.5px;color:#cdeed9;font-weight:500}
+  .goal{margin-top:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:14px;
+    padding:13px 15px;display:flex;align-items:center;gap:12px}
+  .goal .ico{font-size:22px}
+  .goal b{font-weight:700}.goal small{display:block;font-size:12px;color:#cdeed9;font-weight:500}
+
+  .wrap{max-width:600px;margin:0 auto;padding:18px 16px 0}
+
+  /* progress ring + water */
+  .top-cards{display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-bottom:18px}
+  .pcard{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:16px;text-align:center}
+  .pcard .lbl{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .ring{position:relative;width:96px;height:96px;margin:10px auto 4px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .val b{font-family:"Fraunces";font-size:24px;font-weight:600;color:var(--green)}
+  .ring .val span{font-size:10px;color:var(--muted);font-weight:600}
+  .water-glasses{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0}
+  .glass{width:26px;height:32px;border:2px solid var(--sky);border-radius:4px 4px 8px 8px;cursor:pointer;position:relative;overflow:hidden;background:#fff;transition:transform .1s}
+  .glass:active{transform:scale(.9)}
+  .glass.full{background:var(--sky)}
+  .water-count{font-family:"Fraunces";font-size:20px;font-weight:600;color:var(--sky)}
+  .water-count small{font-family:"Manrope";font-size:12px;color:var(--muted);font-weight:600}
+
+  .day-title{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
+  .day-title h2{font-size:22px;font-weight:600}
+  .day-title .ln{flex:1;height:1px;background:var(--line)}
+
+  .meal{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:16px;margin-bottom:13px;transition:opacity .2s}
+  .meal.done{opacity:.62}
+  .meal-top{display:flex;align-items:center;gap:12px}
+  .check{width:28px;height:28px;border-radius:9px;border:2px solid var(--line);flex:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:#fff;transition:all .15s;background:#fff}
+  .check.on{background:var(--green);border-color:var(--green)}
+  .meal-time{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--coral);font-weight:700}
+  .meal-name{font-family:"Fraunces";font-weight:600;font-size:17px}
+  .kcal{margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);background:var(--leaf);padding:4px 9px;border-radius:8px;flex:none}
+  .foods{list-style:none;margin:12px 0 0;display:flex;flex-direction:column;gap:8px}
+  .food{display:flex;align-items:center;gap:10px;font-size:14px;padding:7px 0;border-top:1px dashed var(--line)}
+  .food .emoji{font-size:19px}
+  .food .txt{flex:1}.food .txt b{font-weight:700}.food .txt small{color:var(--muted);font-weight:500}
+  .swap{background:var(--leaf);color:var(--green);border:none;font-family:inherit;font-weight:700;font-size:11.5px;
+    padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .swap:active{transform:scale(.95)}
+
+  .tip{background:var(--leaf);border-radius:16px;padding:16px;margin:18px 0;display:flex;gap:12px}
+  .tip .i{font-size:22px}
+  .tip b{font-family:"Fraunces";font-weight:600;font-size:15px;color:var(--green);display:block;margin-bottom:2px}
+  .tip p{font-size:13px;color:#3a5245}
+
+  .contact{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px;text-align:center}
+  .contact p{font-size:13.5px;color:var(--muted);margin-bottom:10px}
+  .contact a{display:inline-flex;align-items:center;gap:8px;background:var(--green);color:#fff;text-decoration:none;
+    font-weight:700;font-size:13.5px;padding:11px 20px;border-radius:999px}
+
+  .made{background:#26623f;color:#fff;text-align:center;padding:26px 20px 30px;margin-top:26px}
+  .made .disp{font-size:15px;color:#fff;margin-bottom:6px}
+  .made p{font-size:13px;color:#bfe6cd;max-width:36ch;margin:0 auto 14px}
+  .made a{display:inline-flex;align-items:center;gap:8px;background:var(--coral);color:#fff;text-decoration:none;font-weight:700;font-size:13.5px;padding:11px 20px;border-radius:999px}
+  .made .demo-hint{margin-top:16px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#6d9a7e}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+    padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;opacity:0;transition:all .25s;z-index:99;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brandline"><span class="dot"></span> NUTRICIÓN · KARLA MÉNDEZ · PLAN ESENCIAL</div>
+  <div class="hello">Hola, <span>Mariana</span> 👋</div>
+  <div class="weekmeta">Tu plan de esta semana · Lun 30 jun – Dom 6 jul</div>
+  <div class="goal"><span class="ico">🎯</span><div><b>Meta: bajar 4 kg en 8 semanas</b><small>Semana 3 de 8 · vas muy bien</small></div></div>
+</header>
+
+<div class="wrap">
+  <div class="top-cards">
+    <div class="pcard">
+      <div class="lbl">Comidas de hoy</div>
+      <div class="ring">
+        <svg width="96" height="96"><circle cx="48" cy="48" r="40" stroke="#e4ece6" stroke-width="9" fill="none"/>
+        <circle id="ringProg" cx="48" cy="48" r="40" stroke="#2f7a4f" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"/></svg>
+        <div class="val"><b id="ringNum">0/5</b><span>completadas</span></div>
+      </div>
+    </div>
+    <div class="pcard">
+      <div class="lbl">Agua</div>
+      <div class="water-glasses" id="water"></div>
+      <div class="water-count"><span id="waterNum">0</span><small> / 8 vasos</small></div>
+    </div>
+  </div>
+
+  <div class="day-title"><h2>Martes</h2><span class="ln"></span></div>
+  <div id="meals"></div>
+
+  <div class="tip">
+    <span class="i">💡</span>
+    <div><b>Tip de Karla</b><p>Toma un vaso de agua 15 minutos antes de cada comida: ayuda a la digestión y a sentirte satisfecha.</p></div>
+  </div>
+
+  <div class="contact">
+    <p>¿Dudas con tu plan o quieres reagendar tu consulta?</p>
+    <a id="consulta" href="#">Escribir a Karla</a>
+  </div>
+</div>
+
+<div class="made">
+  <div class="disp">Herramienta por Solida Aplicaciones</div>
+  <p>Demostración del nivel <b>Esencial</b>. Plan diario interactivo con tu marca: comidas, sustituciones rápidas y registro de agua.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20demo%20del%20plan%20de%20nutrici%C3%B3n%20y%20me%20encant%C3%B3.%20Quiero%20una%20herramienta%20as%C3%AD%20para%20mis%20pacientes.">Quiero una herramienta así</a>
+  <div class="demo-hint">▸ Demo · Nivel Esencial ◂</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WA="528443604349";
+const leadMsg=encodeURIComponent("Hola Solida Aplicaciones 👋 Vi la demo del plan de nutrición y me encantó. Quiero una herramienta así para mis pacientes.");
+document.getElementById('consulta').href="https://wa.me/"+WA+"?text="+leadMsg;
+
+const MEALS=[
+  {time:"Desayuno · 8:00 am",name:"Avena con fruta",kcal:"320 kcal",foods:[
+    {e:"🥣",t:"½ taza de avena",s:"cocida en agua",alts:["⅓ taza de amaranto","2 rebanadas de pan integral"]},
+    {e:"🫐",t:"1 taza de frutos rojos",s:"fresa, mora o arándano",alts:["1 plátano","1 manzana"]},
+    {e:"🥜",t:"1 cda de crema de cacahuate",s:"natural, sin azúcar",alts:["10 almendras","1 cda de chía"]}
+  ]},
+  {time:"Colación · 11:00 am",name:"Snack ligero",kcal:"150 kcal",foods:[
+    {e:"🍎",t:"1 manzana",s:"con cáscara",alts:["1 pera","1 durazno"]},
+    {e:"🧀",t:"1 rebanada de queso panela",s:"asado o fresco",alts:["1 huevo cocido","½ taza de jícama"]}
+  ]},
+  {time:"Comida · 2:00 pm",name:"Pollo con verduras",kcal:"480 kcal",foods:[
+    {e:"🍗",t:"120 g de pechuga",s:"a la plancha",alts:["120 g de pescado","1 taza de lentejas"]},
+    {e:"🥦",t:"1½ taza de verduras",s:"al vapor o asadas",alts:["ensalada verde grande","calabacita salteada"]},
+    {e:"🍚",t:"½ taza de arroz integral",s:"",alts:["½ taza de quinoa","1 tortilla de maíz"]}
+  ]},
+  {time:"Colación · 6:00 pm",name:"Yogur con nuez",kcal:"140 kcal",foods:[
+    {e:"🥛",t:"1 vaso de yogur griego",s:"natural, sin azúcar",alts:["1 vaso de leche","½ taza de requesón"]},
+    {e:"🌰",t:"6 nueces",s:"",alts:["8 almendras","1 cda de semillas de girasol"]}
+  ]},
+  {time:"Cena · 8:30 pm",name:"Omelette de espinaca",kcal:"300 kcal",foods:[
+    {e:"🍳",t:"2 huevos",s:"con espinaca y jitomate",alts:["claras + 1 huevo","tofu revuelto"]},
+    {e:"🥑",t:"⅓ de aguacate",s:"",alts:["1 cda de aceite de oliva","5 aceitunas"]},
+    {e:"🫓",t:"1 tortilla integral",s:"opcional",alts:["2 tostadas horneadas","omitir"]}
+  ]}
+];
+
+let done=new Array(MEALS.length).fill(false);
+let swapped={};
+const mealsEl=document.getElementById('meals');
+const toast=document.getElementById('toast');
+let toastT;
+function showToast(m){toast.textContent=m;toast.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>toast.classList.remove('show'),1900);}
+
+function renderMeals(){
+  mealsEl.innerHTML=MEALS.map((m,i)=>`
+    <div class="meal${done[i]?' done':''}">
+      <div class="meal-top">
+        <div class="check${done[i]?' on':''}" data-i="${i}">${done[i]?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</div>
+        <div><div class="meal-time">${m.time}</div><div class="meal-name">${m.name}</div></div>
+        <div class="kcal">${m.kcal}</div>
+      </div>
+      <ul class="foods">${m.foods.map((f,j)=>{
+        const key=i+'-'+j;const cur=swapped[key]!==undefined?f.alts[swapped[key]]:null;
+        return `<li class="food"><span class="emoji">${f.e}</span>
+          <span class="txt"><b>${cur?cur:f.t}</b> ${!cur&&f.s?`<small>· ${f.s}</small>`:''}</span>
+          <button class="swap" data-key="${key}" data-i="${i}" data-j="${j}">🔄 Cambiar</button></li>`;
+      }).join('')}</ul>
+    </div>`).join('');
+  updateRing();
+}
+
+function updateRing(){
+  const c=done.filter(Boolean).length;
+  document.getElementById('ringNum').textContent=c+'/'+MEALS.length;
+  const off=251.3*(1-c/MEALS.length);
+  document.getElementById('ringProg').style.strokeDashoffset=off;
+}
+
+mealsEl.addEventListener('click',e=>{
+  const chk=e.target.closest('.check');
+  if(chk){const i=+chk.dataset.i;done[i]=!done[i];renderMeals();
+    if(done.every(Boolean))showToast('¡Completaste todas tus comidas! 🎉');
+    else if(done[i])showToast('¡Bien! Comida registrada ✓');return;}
+  const sw=e.target.closest('.swap');
+  if(sw){const key=sw.dataset.key,i=+sw.dataset.i,j=+sw.dataset.j;const alts=MEALS[i].foods[j].alts;
+    const cur=swapped[key]===undefined?-1:swapped[key];const next=(cur+1)%(alts.length+1);
+    if(next===alts.length)delete swapped[key];else swapped[key]=next;renderMeals();showToast('Alimento sustituido 🔄');}
+});
+
+// Water
+const waterEl=document.getElementById('water');let water=0;
+function renderWater(){
+  waterEl.innerHTML='';
+  for(let k=0;k<8;k++){const g=document.createElement('div');g.className='glass'+(k<water?' full':'');
+    g.onclick=()=>{water=(k<water)?k:k+1;document.getElementById('waterNum').textContent=water;renderWater();
+      if(water===8)showToast('¡Meta de agua cumplida! 💧');};waterEl.appendChild(g);}
+}
+renderMeals();renderWater();
+</script>
+</body>
+</html>

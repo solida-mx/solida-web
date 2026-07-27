@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bordados del Norte · Elige la versión</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--char:#262a2e;--char-2:#1b1e21;--copper:#c67b46;--copper-2:#dd9256;--copper-soft:#f5e7da;--cream:#f6f2ea;--muted:#807872;--line:#e6ddd0;--card:#fff}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Inter",sans-serif;color:#23262b;background:var(--cream);line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+  h1,h2,.disp{font-family:"Archivo",sans-serif}
+  .hero{background:linear-gradient(155deg,var(--char),var(--char-2));color:var(--cream);padding:38px 22px 32px;text-align:center;position:relative;overflow:hidden}
+  .hero::after{content:"🧵";position:absolute;right:-8px;bottom:-16px;font-size:120px;opacity:.08;transform:rotate(-12deg)}
+  .hero-in{position:relative}
+  .brand{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--copper-2);font-weight:700}
+  .hero h1{font-family:"Archivo";font-weight:800;font-size:clamp(30px,9vw,42px);margin:10px 0 4px;line-height:1.02}
+  .hero p{font-size:14px;color:#cfc7bd;max-width:34ch;margin:8px auto 0}
+  .wrap{max-width:560px;margin:0 auto;padding:24px 16px 40px}
+  .lead{text-align:center;font-family:"Archivo";font-weight:700;font-size:19px;margin-bottom:4px}
+  .sub{text-align:center;font-size:13.5px;color:var(--muted);margin-bottom:22px}
+  .tier{display:block;text-decoration:none;color:inherit;background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:20px;margin-bottom:14px;position:relative;transition:transform .12s}
+  .tier:active{transform:scale(.99)}
+  .tier.feat{border-color:var(--copper);box-shadow:0 14px 34px rgba(198,123,70,.16)}
+  .badge{position:absolute;top:-11px;right:18px;background:var(--copper);color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
+  .tier .lvl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--copper);font-weight:700}
+  .tier h2{font-family:"Archivo";font-size:21px;font-weight:700;margin:3px 0 6px}
+  .tier .desc{font-size:13.5px;color:var(--muted);line-height:1.5}
+  .feats{list-style:none;margin:12px 0 0;display:flex;flex-direction:column;gap:6px}
+  .feats li{display:flex;gap:8px;font-size:13px;color:#3c3128;align-items:flex-start}
+  .feats li svg{flex:none;margin-top:2px}
+  .go{margin-top:14px;display:inline-flex;align-items:center;gap:7px;color:var(--copper);font-weight:700;font-size:14px}
+  .made{text-align:center;margin-top:22px;font-size:12px;color:var(--muted)}
+  .made b{color:#23262b}
+</style>
+</head>
+<body>
+<section class="hero"><div class="hero-in">
+  <div class="brand">🪡 Bordados del Norte</div>
+  <h1>Uniformes en 3 niveles</h1>
+  <p>Desde un catálogo simple hasta un configurador que arma la orden solo. Toca uno y pruébalo.</p>
+</div></section>
+<div class="wrap">
+  <div class="lead">Elige la versión que quieres probar</div>
+  <div class="sub">Así ves y sientes la diferencia entre cada paquete.</div>
+
+  <a class="tier" href="/uniformes/basico">
+    <div class="lvl">Básico</div>
+    <h2>Catálogo</h2>
+    <div class="desc">Muestra tus prendas, colores y telas con contacto directo por WhatsApp.</div>
+    <ul class="feats" id="f1"></ul>
+    <span class="go">Ver ejemplo ▸</span>
+  </a>
+
+  <a class="tier" href="/uniformes/intermedio">
+    <div class="lvl">Intermedio</div>
+    <h2>Catálogo + estimado</h2>
+    <div class="desc">El cliente elige prenda, cantidades y ve un estimado; te lo envía por WhatsApp.</div>
+    <ul class="feats" id="f2"></ul>
+    <span class="go">Ver ejemplo ▸</span>
+  </a>
+
+  <a class="tier feat" href="/uniformes/avanzado">
+    <span class="badge">El estrella</span>
+    <div class="lvl">Avanzado</div>
+    <h2>Configurador con Orden de Trabajo</h2>
+    <div class="desc">Prenda, color, tela, bordado, logo y tallas. Genera una OT con imagen lista para cocina/taller.</div>
+    <ul class="feats" id="f3"></ul>
+    <span class="go">Ver ejemplo ▸</span>
+  </a>
+
+  <div class="made">Demostración diseñada por <b>Solida Aplicaciones</b></div>
+</div>
+<script>
+const CHK='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c67b46" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>';
+const F={f1:["Prendas, colores y telas","Precios de referencia","Botón de cotizar por WhatsApp"],
+  f2:["Elige prenda y cantidades","Estimado de precio al instante","Pedido enviado por WhatsApp"],
+  f3:["Configura todo: color, tela, bordado, logo","Vista previa de la prenda con el logo","Orden de Trabajo en imagen a tu WhatsApp"]};
+Object.entries(F).forEach(([id,arr])=>document.getElementById(id).innerHTML=arr.map(t=>`<li>${CHK}<span>${t}</span></li>`).join(''));
+</script>
+</body>
+</html>

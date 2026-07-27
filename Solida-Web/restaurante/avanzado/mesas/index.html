@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brasa & Maíz · Generador de QR por mesa</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--char:#1c1512;--char-2:#2a201b;--ember:#d5622d;--ember-2:#e8853f;--cream:#f6efe4;--cream-2:#efe4d2;--muted:#7c6c5f;--line:#e3d6c3;--card:#fffdf9;--ink:#2a201b}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Manrope",sans-serif;color:var(--ink);background:var(--cream);line-height:1.5}
+  h1,h2,.disp{font-family:"Fraunces",serif}
+  header{background:var(--char);color:var(--cream);padding:20px;text-align:center}
+  header .disp{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ember-2)}
+  header h1{font-size:24px;font-weight:600;margin-top:4px}
+  header p{font-size:13px;color:#cbb8a8;margin-top:4px}
+  .panel{max-width:680px;margin:0 auto;padding:22px 18px}
+  .controls{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+  .fld{flex:1;min-width:120px}
+  .fld label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
+  .fld input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px;font-family:inherit;font-size:16px;background:var(--cream)}
+  .fld input:focus{outline:none;border-color:var(--ember)}
+  .btn{background:var(--ember);color:#fff;border:none;font-family:"Manrope";font-weight:800;font-size:15px;padding:13px 20px;border-radius:11px;cursor:pointer}
+  .btn.alt{background:var(--char)}
+  .btn:active{transform:translateY(1px)}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:12px}
+  .sizerow{display:flex;align-items:center;gap:8px;margin:16px 0 4px;flex-wrap:wrap}
+  .sizerow span{font-size:12.5px;color:var(--muted);font-weight:600}
+  .szb{border:1.5px solid var(--line);background:var(--card);border-radius:9px;padding:8px 12px;font-family:inherit;font-weight:700;font-size:12.5px;color:var(--muted);cursor:pointer}
+  .szb.active{border-color:var(--ember);background:#fbe9df;color:#a5451f}
+  .toolbar{display:flex;gap:10px;margin:14px 0 18px;align-items:center;flex-wrap:wrap}
+  .toolbar .count{font-weight:700;color:var(--muted);font-size:13.5px;margin-left:auto}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px;grid-column:1/-1}
+
+  /* Etiqueta sobria (pantalla + impresión) */
+  .plabel{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--cream);
+    padding:26px 22px 22px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
+  .plabel::before{content:"";position:absolute;inset:7px;border:1px solid rgba(213,98,45,.45);border-radius:8px;pointer-events:none}
+  .plabel .pscan{position:relative;font-family:"Fraunces",serif;font-weight:600;font-size:21px;font-style:italic;color:var(--ember);line-height:1.1}
+  .plabel .psub{position:relative;font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:6px 0 14px}
+  .pqr{position:relative;padding:0 6px}
+  .pqr canvas,.pqr img{width:100%;height:auto;display:block}
+  .plabel .pmesa{position:relative;font-family:"Fraunces",serif;font-weight:600;font-size:17px;color:var(--char);margin-top:14px}
+  .plabel .prule{position:relative;width:34px;height:2px;background:var(--ember);border-radius:2px;margin:9px auto 8px}
+  .plabel .pname{position:relative;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .grid .plabel{box-shadow:0 6px 18px rgba(28,21,18,.1)}
+
+  #printArea{display:none}
+  @media print{
+    header,.controls,.hint,.sizerow,.toolbar,.noprint{display:none!important}
+    body{background:#fff!important}
+    .panel{max-width:none;padding:0}
+    @page{size:letter;margin:10mm}
+    #printArea{display:block!important}
+    .psheet{height:255mm;overflow:hidden;display:grid;gap:5mm;page-break-after:always;break-after:page}
+    .psheet:last-child{page-break-after:auto;break-after:auto}
+    .psheet.sz-peq{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
+    .psheet.sz-med{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)}
+    .psheet.sz-gra{grid-template-columns:1fr;grid-template-rows:repeat(2,1fr)}
+    .psheet .plabel{height:100%;margin:0;padding:12px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:none;overflow:hidden}
+    .psheet.sz-gra .plabel{max-width:118mm;margin:0 auto}
+    .psheet .plabel::before{inset:5px}
+    .psheet .pscan{flex:none;font-size:15pt}
+    .psheet .psub{flex:none}
+    .psheet .pqr{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;width:100%;padding:6px 0}
+    .psheet .pqr img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+    .psheet .pmesa{flex:none;font-size:13pt;margin-top:8px}
+    .psheet .prule,.psheet .pname{flex:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="disp">Administración · uso interno</div>
+  <h1>Generador de QR por mesa</h1>
+  <p>Brasa &amp; Maíz</p>
+</header>
+<div class="panel">
+  <div class="controls noprint">
+    <div class="fld"><label>Desde la mesa</label><input type="number" id="from" value="1" min="1" inputmode="numeric"></div>
+    <div class="fld"><label>Hasta la mesa</label><input type="number" id="to" value="12" min="1" inputmode="numeric"></div>
+    <button class="btn" id="gen">Generar QR</button>
+  </div>
+  <div class="hint noprint">Cada QR abre el menú con esa mesa ya seleccionada. Elige el tamaño, genera, imprime y coloca uno en cada mesa.</div>
+
+  <div class="sizerow noprint">
+    <span>Tamaño de etiqueta:</span>
+    <div id="sizesel" style="display:flex;gap:8px">
+      <button class="szb" data-s="peq">Chica · 3/fila</button>
+      <button class="szb active" data-s="med">Mediana · 2/fila</button>
+      <button class="szb" data-s="gra">Grande · 1/fila</button>
+    </div>
+  </div>
+  <div class="toolbar noprint">
+    <button class="btn alt" id="print">🖨️ Imprimir QR de mesas</button>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div class="grid" id="grid"><div class="empty">Elige un rango y toca «Generar QR».</div></div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const BASE = location.origin + location.pathname.replace(/\/mesas\/?$/,"/");
+let labelSize="med";
+
+function rrl(x,px,py,w,h,r){x.beginPath();x.moveTo(px+r,py);x.arcTo(px+w,py,px+w,py+h,r);x.arcTo(px+w,py+h,px,py+h,r);x.arcTo(px,py+h,px,py,r);x.arcTo(px,py,px+w,py,r);x.closePath();}
+function qrCanvas(text,px){
+  const cv=document.createElement("canvas");
+  if(typeof qrcode==="undefined"){cv.width=px;cv.height=px;return cv;}
+  const qr=qrcode(0,"H");qr.addData(text);qr.make();const n=qr.getModuleCount();
+  const margin=4,scale=Math.max(4,Math.floor(px/(n+margin*2)));
+  const size=(n+margin*2)*scale,off=margin*scale;
+  cv.width=size;cv.height=size;const ctx=cv.getContext("2d");
+  ctx.fillStyle="#fff";ctx.fillRect(0,0,size,size);ctx.fillStyle="#1B396B";
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(qr.isDark(r,c))ctx.fillRect(off+c*scale,off+r*scale,scale,scale);
+  const L=Math.round(size*0.20),lx=(size-L)/2,ly=(size-L)/2;
+  ctx.fillStyle="#ffffff";rrl(ctx,lx-7,ly-7,L+14,L+14,12);ctx.fill();
+  ctx.fillStyle="#1B396B";rrl(ctx,lx,ly,L,L,10);ctx.fill();
+  const bh=L*0.15,gap=L*0.12,bx=lx+L*0.5;
+  [[0.40,"#2A9D8E",ly+L*0.24],[0.56,"#E8F6F6",ly+L*0.24+bh+gap],[0.72,"#2A9D8E",ly+L*0.24+2*(bh+gap)]]
+    .forEach(([w,col,y])=>{const bw=L*w;ctx.fillStyle=col;rrl(ctx,bx-bw/2,y,bw,bh,bh/2);ctx.fill();});
+  return cv;
+}
+function labelHTML(m){
+  return '<div class="plabel">'+
+    '<div class="pscan">Escanea con tu teléfono</div>'+
+    '<div class="psub">para ver el menú y ordenar</div>'+
+    '<div class="pqr"></div>'+
+    '<div class="pmesa">Mesa '+m+'</div>'+
+    '<div class="prule"></div>'+
+    '<div class="pname">Brasa &amp; Maíz</div>'+
+  '</div>';
+}
+function rango(){
+  let from=parseInt(document.getElementById("from").value)||1;
+  let to=parseInt(document.getElementById("to").value)||from;
+  if(to<from){const t=from;from=to;to=t;} if(to-from>200)to=from+200;
+  return [from,to];
+}
+function generar(){
+  const [from,to]=rango();
+  const grid=document.getElementById("grid");grid.innerHTML="";
+  for(let m=from;m<=to;m++){
+    const div=document.createElement("div");div.innerHTML=labelHTML(m);
+    div.querySelector(".pqr").appendChild(qrCanvas(BASE+"?mesa="+m,300));
+    grid.appendChild(div.firstChild);
+  }
+  document.getElementById("count").textContent=(to-from+1)+" mesas";
+}
+function construyePrint(){
+  const [from,to]=rango();
+  const perPage = labelSize==="gra"?2:(labelSize==="med"?4:9);
+  const px = labelSize==="gra"?600:(labelSize==="med"?480:360);
+  const pa=document.getElementById("printArea");pa.innerHTML="";
+  let sheet=null,i=0;
+  for(let m=from;m<=to;m++,i++){
+    if(i%perPage===0){sheet=document.createElement("div");sheet.className="psheet sz-"+labelSize;pa.appendChild(sheet);}
+    const wrap=document.createElement("div");wrap.innerHTML=labelHTML(m);
+    const label=wrap.firstElementChild;
+    const img=document.createElement("img");img.src=qrCanvas(BASE+"?mesa="+m,px).toDataURL("image/png");
+    label.querySelector(".pqr").appendChild(img);
+    sheet.appendChild(label);
+  }
+}
+document.getElementById("gen").onclick=generar;
+document.getElementById("sizesel").addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(!b)return;
+  labelSize=b.dataset.s;document.querySelectorAll("#sizesel .szb").forEach(x=>x.classList.toggle("active",x===b));});
+document.getElementById("print").onclick=()=>{construyePrint();setTimeout(()=>window.print(),80);};
+generar();
+</script>
+</body>
+</html>

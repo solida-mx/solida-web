@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Ana & Diego · Nuestra Boda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Cinzel:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root{--emerald:#1f4b3f;--emerald-2:#153a30;--gold:#c6a15b;--gold-2:#dcbd7f;--ivory:#f7f3ea;--ivory-2:#efe8d8;--ink:#2a2a26;--muted:#7a746a;--line:#e2dac9;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Jost",sans-serif;color:var(--ink);background:var(--ivory);line-height:1.7;font-weight:300;-webkit-text-size-adjust:100%}
+  .hero{min-height:88svh;background:linear-gradient(180deg,var(--emerald),var(--emerald-2));color:var(--ivory);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:44px 24px;position:relative;overflow:hidden}
+  .leaf{position:absolute;font-size:120px;opacity:.07;color:var(--gold)}
+  .leaf.a{top:-20px;left:-30px;transform:rotate(-20deg)}.leaf.b{bottom:-30px;right:-30px;transform:rotate(150deg)}
+  .hero-in{position:relative;z-index:1;opacity:0;animation:fade 1.4s ease .2s forwards}
+  @keyframes fade{to{opacity:1}}
+  .pre{font-family:"Cinzel",serif;font-size:11px;letter-spacing:.4em;color:var(--gold-2);margin-bottom:22px}
+  .names{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:clamp(50px,16vw,78px);line-height:.9}
+  .amp{font-style:italic;color:var(--gold);font-size:.7em;display:block;margin:6px 0}
+  .divider{display:flex;align-items:center;gap:14px;justify-content:center;margin:24px 0}
+  .divider .l{width:44px;height:1px;background:var(--gold)}
+  .divider .d{color:var(--gold);font-size:11px}
+  .date{font-family:"Cinzel",serif;font-size:14px;letter-spacing:.24em}
+  .place{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:18px;color:var(--ivory-2);margin-top:6px}
+  .wrap{max-width:520px;margin:0 auto;padding:0 20px}
+  .count-sec{padding:40px 0 8px;text-align:center}
+  .eyebrow{font-family:"Cinzel",serif;font-size:11px;letter-spacing:.3em;color:var(--gold);margin-bottom:6px}
+  h2{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:500;color:var(--emerald);margin-bottom:20px}
+  .countdown{display:flex;gap:10px;justify-content:center}
+  .cd{flex:1;background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 4px}
+  .cd b{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:32px;color:var(--emerald);display:block;line-height:1}
+  .cd span{font-family:"Cinzel",serif;font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .msg{text-align:center;padding:34px 0 6px}
+  .msg p{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:20px;color:#4b463c;max-width:34ch;margin:0 auto}
+  .fotos{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:26px 0 4px}
+  .foto{aspect-ratio:3/4;border-radius:12px;background:linear-gradient(150deg,var(--emerald),#2c6353);display:flex;align-items:center;justify-content:center;color:var(--gold-2);font-size:26px;border:1px solid var(--line)}
+  .foto:nth-child(2){transform:translateY(12px)}
+  .venue{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;margin:30px 0 0;text-align:center}
+  .venue h3{font-family:"Cormorant Garamond",serif;font-size:22px;color:var(--emerald)}
+  .venue p{font-size:13.5px;color:var(--muted);margin:6px 0 14px}
+  .venue a{display:inline-block;font-family:"Cinzel",serif;font-size:11px;letter-spacing:.2em;color:var(--ivory);background:var(--emerald);text-decoration:none;padding:12px 22px;border-radius:999px}
+  .share{text-align:center;padding:34px 0 10px}
+  #qr{display:inline-block;background:#fff;padding:10px;border-radius:12px;border:1px solid var(--line)}
+  #qr img{display:block;width:112px;height:112px}
+  .share p{font-size:12px;color:var(--muted);margin-top:10px}
+  .made{background:var(--emerald);color:var(--ivory-2);text-align:center;padding:28px 20px 32px;margin-top:36px}
+  .made .t{font-family:"Cormorant Garamond",serif;font-size:17px;color:#fff;margin-bottom:6px}
+  .made p{font-size:12.5px;max-width:34ch;margin:0 auto 14px}
+  .made a{display:inline-block;background:var(--gold);color:var(--emerald-2);text-decoration:none;font-weight:500;font-size:13px;padding:11px 20px;border-radius:999px}
+  .made .hint{margin-top:14px;font-family:"Cinzel",serif;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#7fa294}
+  @media (prefers-reduced-motion:reduce){.hero-in{animation:none;opacity:1}}
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="leaf a">❦</div><div class="leaf b">❦</div>
+  <div class="hero-in">
+    <div class="pre">Nuestra boda</div>
+    <div class="names">Ana<span class="amp">&</span>Diego</div>
+    <div class="divider"><span class="l"></span><span class="d">◆</span><span class="l"></span></div>
+    <div class="date">14 · NOVIEMBRE · 2026</div>
+    <div class="place">Hacienda San Gabriel · Saltillo</div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="count-sec">
+    <div class="eyebrow">Faltan</div>
+    <h2>Para el gran día</h2>
+    <div class="countdown">
+      <div class="cd"><b id="cdD">–</b><span>Días</span></div>
+      <div class="cd"><b id="cdH">–</b><span>Horas</span></div>
+      <div class="cd"><b id="cdM">–</b><span>Min</span></div>
+      <div class="cd"><b id="cdS">–</b><span>Seg</span></div>
+    </div>
+  </div>
+
+  <div class="msg"><p>“Después de tantos caminos, elegimos caminar juntos para siempre. Nos encantaría celebrarlo contigo.”</p></div>
+
+  <div class="fotos"><div class="foto">🤍</div><div class="foto">💍</div><div class="foto">🕊️</div></div>
+
+  <div class="venue">
+    <div class="eyebrow">Ceremonia y recepción</div>
+    <h3>Hacienda San Gabriel</h3>
+    <p>Carretera a Arteaga km 8.5, Saltillo, Coahuila<br>Sábado 14 de noviembre · 7:00 pm</p>
+    <a href="https://maps.google.com/?q=Hacienda+San+Gabriel+Saltillo" target="_blank" rel="noopener">CÓMO LLEGAR</a>
+  </div>
+
+  <div class="share">
+    <div class="eyebrow">Comparte la invitación</div>
+    <div id="qr"></div>
+    <p>Escanéalo o comparte el enlace con tus invitados.</p>
+  </div>
+</div>
+
+<div class="made">
+  <div class="t">Invitación digital por Solida Aplicaciones</div>
+  <p>Demostración. Elegante, con cuenta regresiva y lista para compartir el mismo día.</p>
+  <a href="https://wa.me/528443604349?text=Hola%20Solida%20Aplicaciones%20%F0%9F%91%8B%20Vi%20la%20invitaci%C3%B3n%20Esencial%20y%20quiero%20una%20para%20mi%20evento.">Quiero una invitación así</a>
+  <div class="hint">▸ Paquete Básico · Esencial ◂</div>
+</div>
+
+<script>
+/* cuenta regresiva: siempre a ~60 días de hoy para que la demo se vea viva */
+const target=new Date(); target.setDate(target.getDate()+60); target.setHours(19,0,0,0);
+function tick(){
+  const t=target-new Date(); if(t<0) return;
+  const d=Math.floor(t/864e5),h=Math.floor(t%864e5/36e5),m=Math.floor(t%36e5/6e4),s=Math.floor(t%6e4/1e3);
+  cdD.textContent=d; cdH.textContent=h; cdM.textContent=m; cdS.textContent=s;
+}
+tick(); setInterval(tick,1000);
+try{
+  const q=qrcode(0,'M'); q.addData('https://solida-web.j23salva.workers.dev/invitacion/basico'); q.make();
+  document.getElementById('qr').innerHTML=q.createImgTag(4,0);
+}catch(e){document.querySelector('.share').style.display='none'}
+</script>
+</body>
+</html>

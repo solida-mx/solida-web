@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mtra. Ana Sofía Rivera · Elige la versión</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--deep:#22423d;--sage:#5c8073;--sage-soft:#a9c4b8;--mint:#eef4f0;--cream:#f7f5ef;--ink:#243330;--muted:#697a75;--line:#e0e8e2;--card:#ffffff;--warm:#c98a5e;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Inter",sans-serif;color:var(--ink);background:var(--cream);line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+  h1,h2{font-family:"Newsreader",serif;font-weight:500}
+  .hero{background:linear-gradient(180deg,var(--deep),#1a332f);color:var(--mint);padding:40px 22px 34px;text-align:center;position:relative;overflow:hidden}
+  .breathe{position:absolute;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(169,196,184,.16),transparent 70%);top:-90px;left:50%;transform:translateX(-50%)}
+  .hero-in{position:relative}
+  .brand{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--sage-soft);font-weight:600}
+  .hero h1{font-size:clamp(30px,9vw,42px);margin:8px 0 4px}
+  .hero p{font-size:14px;color:#cfe0d8;max-width:36ch;margin:10px auto 0}
+  .wrap{max-width:560px;margin:0 auto;padding:24px 16px 40px}
+  .lead{text-align:center;font-family:"Newsreader",serif;font-size:20px;margin-bottom:6px}
+  .sub{text-align:center;font-size:13.5px;color:var(--muted);margin-bottom:22px}
+  .tier{display:block;text-decoration:none;color:inherit;background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:20px;margin-bottom:14px;position:relative;transition:transform .12s,box-shadow .18s,border-color .18s}
+  .tier:active{transform:scale(.99)}
+  .tier.feat{border-color:var(--sage);box-shadow:0 14px 34px rgba(92,128,115,.18)}
+  .badge{position:absolute;top:-11px;right:18px;background:var(--warm);color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
+  .tier .lvl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--sage);font-weight:700}
+  .tier h2{font-size:22px;margin:3px 0 6px}
+  .tier .desc{font-size:13.5px;color:var(--muted);line-height:1.5}
+  .feats{list-style:none;margin:12px 0 0;display:flex;flex-direction:column;gap:6px}
+  .feats li{display:flex;gap:8px;font-size:13px;color:#3c4d49;align-items:flex-start}
+  .feats li svg{flex:none;margin-top:2px}
+  .go{margin-top:14px;display:inline-flex;align-items:center;gap:7px;color:var(--sage);font-weight:700;font-size:14px}
+  .made{text-align:center;margin-top:22px;font-size:12px;color:var(--muted)}
+  .made b{color:var(--ink)}
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="breathe"></div>
+  <div class="hero-in">
+    <div class="brand">Psicóloga clínica · Saltillo</div>
+    <h1>Mtra. Ana Sofía Rivera</h1>
+    <p>El mismo perfil profesional, en tres niveles de servicio. Toca uno y pruébalo.</p>
+  </div>
+</section>
+<div class="wrap">
+  <div class="lead">Elige la versión que quieres probar</div>
+  <div class="sub">Así ves y sientes la diferencia entre cada paquete.</div>
+
+  <a class="tier" href="/profesional/basico">
+    <div class="lvl">Básico</div>
+    <h2>Tarjeta Digital</h2>
+    <div class="desc">Una pantalla con todo tu contacto. Tu tarjeta de presentación, pero viva y siempre a la mano.</div>
+    <ul class="feats" id="f1"></ul>
+    <span class="go">Ver ejemplo ▸</span>
+  </a>
+
+  <a class="tier feat" href="/profesional/intermedio">
+    <span class="badge">Más elegido</span>
+    <div class="lvl">Intermedio</div>
+    <h2>Perfil Profesional</h2>
+    <div class="desc">Tu historia, servicios, testimonios y agenda de citas por WhatsApp en un solo enlace que inspira confianza.</div>
+    <ul class="feats" id="f2"></ul>
+    <span class="go">Ver ejemplo ▸</span>
+  </a>
+
+  <a class="tier" href="/profesional/avanzado">
+    <div class="lvl">Avanzado</div>
+    <h2>Sitio Profesional</h2>
+    <div class="desc">Mini-sitio de varias secciones con preguntas frecuentes, artículos y dominio propio incluido.</div>
+    <ul class="feats" id="f3"></ul>
+    <span class="go">Ver ejemplo ▸</span>
+  </a>
+
+  <div class="made">Demostración diseñada por <b>Solida Aplicaciones</b></div>
+</div>
+<script>
+const CHK='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5c8073" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>';
+const F={f1:["Foto, especialidad y servicios","Botones: WhatsApp, llamar, mapa y redes","Código QR para tu tarjeta física"],
+  f2:["Sobre ti, servicios y testimonios","Agendar cita por WhatsApp","Horarios y diseño a tu marca"],
+  f3:["Varias páginas: inicio, servicios, FAQ, artículos","Agenda con motivo de consulta","Dominio propio incluido (1 año)"]};
+Object.entries(F).forEach(([id,arr])=>document.getElementById(id).innerHTML=arr.map(t=>`<li>${CHK}<span>${t}</span></li>`).join(''));
+</script>
+</body>
+</html>
