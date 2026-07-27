@@ -1,0 +1,77 @@
+╔══════════════════════════════════════════════════════════════╗
+║   MI PLAN — página personal (Salvador)                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+Carpeta independiente dentro del mismo repositorio.
+No está enlazada desde el tabulador ni desde ninguna demo:
+solo se abre si escribes la dirección directa.
+
+  URL:  https://solida-web.j23salva.workers.dev/mi-plan
+
+
+┌──────────────────────────────────────────────────────────┐
+│  QUÉ HAY ADENTRO                                          │
+└──────────────────────────────────────────────────────────┘
+  index.html ....... toda la página y sus estilos (tema azul/negro)
+  app.js ........... datos del plan y la lógica
+
+┌──────────────────────────────────────────────────────────┐
+│  DÓNDE SE EDITA CADA COSA (todo en app.js)               │
+└──────────────────────────────────────────────────────────┘
+
+  CONFIG (hasta arriba)
+    kcal / prot / carb / fat ....... macros diarios
+    antojosSemana .................. presupuesto semanal de antojos
+    cardioMin ...................... minutos de cardio al terminar
+    anclaCiclo ..................... fecha en la que el ciclo 3-1-3-1
+                                     empieza en "Empuje A"
+    perfil.metaGrasa / metaMusculo . metas del panel de progreso
+
+  MEDICION_BASE y SEMILLAS
+    Puntos de partida de las gráficas. Cuando llegue un InBody
+    nuevo, regístralo desde la pestaña Progreso (no hace falta
+    tocar código).
+
+  SHOP ........... el mandado. Cada alimento tiene:
+                   hair = nutriente capilar que aporta
+                   prep = listo | rapido | cocina
+                   tip  = cómo conviene comprarlo
+                   alts = equivalencias con su factor de cantidad
+
+  COMPRA ......... las cuatro secciones de "Compra inteligente"
+                   (granel, volumen, congelado, pagar por tiempo).
+                   Los precios son aproximados de Monterrey:
+                   ajústalos a lo que veas en tu súper.
+
+  MEALS .......... las 5 comidas del día
+  SNACKS ......... los snacks incluidos en el plan
+  ANTOJOS ........ el catálogo de antojos con su costo en kcal
+
+  CICLO .......... el orden 3-1-3-1 (3 entrenos, 1 descanso,
+                   3 entrenos, 1 descanso)
+  RUTINA ......... los ejercicios. Cada uno tiene varias variantes
+                   con su índice de activación (act), su peso
+                   inicial (base) y la nota de por qué.
+
+┌──────────────────────────────────────────────────────────┐
+│  DETALLES QUE CONVIENE SABER                              │
+└──────────────────────────────────────────────────────────┘
+
+  · El ciclo 3-1-3-1 dura 8 días, así que NO cae siempre en los
+    mismos días de la semana: se recorre. Por eso hay una tira
+    de lunes a domingo arriba: tocas cualquier día y ves qué
+    toca ese día (rutina o descanso), incluso de otras semanas.
+
+  · Si un día faltas o entrenas fuera de orden, usa los botones
+    "−1 día / +1 día" para recorrer el ciclo y que vuelva a cuadrar.
+
+  · El peso se guarda por VARIANTE: si cambias de mancuernas a
+    barra, cada una conserva su propio peso.
+
+  · El cardio que no marques en un día de entrenamiento aparece
+    como pendiente en tu siguiente día de descanso.
+
+  · Todo se guarda en el navegador de este dispositivo
+    (localStorage). Usa siempre el mismo navegador y no borres
+    los datos del sitio. El resumen semanal en imagen sirve
+    como respaldo.
