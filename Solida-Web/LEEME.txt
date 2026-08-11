@@ -1,253 +1,82 @@
-╔══════════════════════════════════════════════════════════════════╗
-║   SOLIDA APLICACIONES — Carpeta única del sitio (todo incluido)    ║
-╚══════════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════╗
+║   MI PLAN v2 — aplicación completa (Salvador)                 ║
+║   Sólida Aplicaciones · azul marino + verde azulado           ║
+╚══════════════════════════════════════════════════════════════╝
 
-Esta es la ÚNICA carpeta que necesitas. Su contenido es lo que va
-en tu repositorio de GitHub; Cloudflare publica desde ahí.
+Carpeta independiente dentro del mismo repositorio.
+Solo se abre con la dirección directa:
+  https://solida-web.j23salva.workers.dev/mi-plan
 
+┌──────────────────────────────────────────────────────────┐
+│  LO NUEVO DE LA v2                                        │
+└──────────────────────────────────────────────────────────┘
+  · MOTOR NUTRICIONAL: cada alimento (y cada equivalencia)
+    tiene su tabla por 100 g o por pieza. Los kcal de cada
+    comida, de cada opción y del día completo se CALCULAN
+    en vivo — ya no son números fijos.
+  · TUERCA → 🍽 NUTRICIÓN: edita la etiqueta de cualquier
+    alimento (ideal congelados y marcas) y todo se recalcula.
+    También AGREGAS alimentos nuevos: capturas su etiqueta,
+    eliges de qué alimento es equivalente y la app calcula
+    sola la cantidad que iguala tus macros.
+  · PRECIOS: cada alimento tiene precio editable. El mandado
+    muestra costo por alimento, total semanal y el costo de
+    cada nivel (Económico / Medio / Premium) con tus precios.
+  · TUERCA → 🎯 AJUSTES: objetivos de kcal y macros, agua,
+    cardio, antojos, metas de grasa y músculo, y apagado de
+    fotos — sin tocar el código.
+  · RESPALDO: exporta TODO (progreso, ajustes, alimentos,
+    imágenes) a un archivo e impórtalo en otro dispositivo.
+  · APP INSTALABLE (PWA): icono de Sólida en la pantalla de
+    inicio, pantalla completa y funciona SIN INTERNET.
+      Android/Chrome: menú ⋮ → Instalar app
+      iPhone/Safari: Compartir → Agregar a inicio
 
-┌───────────────────────────────────────────────────────────┐
-│  ACTUALIZAR EL SITIO (GitHub → Cloudflare, automático)      │
-└───────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│  QUÉ HAY ADENTRO                                          │
+└──────────────────────────────────────────────────────────┘
+  index.html ...... página y estilos
+  app.js .......... datos del plan, motor nutricional y lógica
+  manifest.json ... identidad de la app instalable
+  sw.js ........... caché para funcionar sin conexión
+  img/ ............ imágenes (alimentos, ej-* ejercicios, iconos)
 
-  Tu sitio vive en:  https://solida-web.j23salva.workers.dev
-  Cloudflare está conectado a tu repositorio de GitHub:
-  cada vez que subes cambios a GitHub, Cloudflare publica
-  la nueva versión SOLO, en 1-2 minutos. Ya no arrastras
-  carpetas a ningún lado.
+  IMPORTANTE PARA EL WORKER DE CLOUDFLARE:
+  la instalación como app necesita que el worker sirva
+  manifest.json y sw.js. Si al abrir en Chrome de Android no
+  aparece la opción «Instalar app», el worker no está sirviendo
+  la extensión .json: agrega "json": "application/json" a su
+  mapa de tipos (igual que hace con .html y .js).
 
-  OPCIÓN A — Desde la página de GitHub (sin instalar nada):
-  1. Entra a github.com y abre tu repositorio.
-  2. Ve a la carpeta donde está el index.html del sitio.
-  3. Botón "Add file" → "Upload files".
-  4. Arrastra TODO el contenido de esta carpeta (los archivos
-     y subcarpetas, no la carpeta contenedora).
-  5. Abajo escribe un mensaje, ej. "Actualización barbería y
-     Cloudflare", y presiona "Commit changes".
-  6. Espera 1-2 minutos y revisa tu sitio.
+┌──────────────────────────────────────────────────────────┐
+│  DÓNDE SE EDITA CADA COSA                                 │
+└──────────────────────────────────────────────────────────┘
+  Desde la TUERCA (sin código):
+    🖼 Imágenes ..... foto de cualquier alimento o ejercicio
+    🍽 Nutrición .... etiquetas, precios y alimentos nuevos
+    🎯 Ajustes ...... objetivos, metas, respaldo, instalación
 
-  NOTA: GitHub web reemplaza archivos con el mismo nombre,
-  pero NO borra archivos viejos que ya no existan aquí. Si
-  eliminaste algo, bórralo también en GitHub (abre el archivo
-  → ícono de bote de basura → Commit).
+  En app.js (estructura del plan):
+    CONFIG ......... valores por defecto de los objetivos
+    SHOP ........... el mandado, equivalencias y consejos
+    NUTBASE ........ tabla nutricional y precios por defecto
+                     ("id" = alimento, "id~N" = equivalencia N)
+    TIER_DEF ....... qué equivalencia usa cada nivel de precio
+    MEALS .......... ingredientes exactos de las 5 comidas
+    PLAN_SEMANAL ... bloque de entrenamiento por día (3-1-2-1)
+    RUTINA ......... ejercicios, variantes y activación
+    sw.js → VERSION  súbela al cambiar index/app.js para que
+                     los teléfonos instalados se actualicen
 
-  OPCIÓN B — Con Git instalado en tu computadora:
-  1. Copia el contenido de esta carpeta sobre tu repo local
-     (reemplaza todo).
-  2. En la terminal, dentro del repo:
-       git add -A
-       git commit -m "Actualización barbería y Cloudflare"
-       git push
-  3. Cloudflare publica solo al recibir el push.
-
-
-┌───────────────────────────────────────────────────────────┐
-│  MUY IMPORTANTE: si ves la versión vieja                    │
-└───────────────────────────────────────────────────────────┘
-
-  Después de subir, tu navegador puede seguir mostrando la
-  versión anterior (guardada en memoria). Para ver la nueva:
-
-  • Abre solida-web.j23salva.workers.dev en una VENTANA DE
-    INCÓGNITO, o
-  • Haz "recarga forzada": Ctrl+Shift+R (Windows) / Cmd+Shift+R (Mac).
-
-  También puedes revisar en el panel de Cloudflare que el
-  último "deployment" diga "Success".
-
-  Prueba rápida para confirmar que sí se actualizó:
-  abre directo  ->  solida-web.j23salva.workers.dev/barberia
-  Debe aparecer el SELECTOR con Básico / Intermedio / Premium.
-
-
-┌───────────────────────────────────────────────────────────┐
-│  QUÉ HAY ADENTRO                                            │
-└───────────────────────────────────────────────────────────┘
-
-  index.html .................. Tabulador de precios (página principal)
-
-  restaurante/ ................ Selector + 3 niveles
-     restaurante/basico
-     restaurante/intermedio
-     restaurante/avanzado ...... Pedidos desde la mesa + comanda
-
-  uniformes/ .................. Selector + 3 niveles
-     uniformes/basico
-     uniformes/intermedio
-     uniformes/avanzado ........ Configurador con Orden de Trabajo
-
-  profesional/ ................ Selector + 3 niveles
-     profesional/basico ........ Tarjeta Digital (una pantalla + QR)
-     profesional/intermedio .... Perfil Profesional (demo psicóloga)
-     profesional/avanzado ...... Sitio Profesional (varias secciones,
-                                 FAQ, artículos y agendar cita)
-
-  taller/ ..................... Selector + 3 niveles
-     taller/basico ............. Catálogo Express (servicios + precios)
-     taller/intermedio ......... Catálogo Pro (demo taller automotriz)
-     taller/avanzado ........... Servicio Completo (agenda de citas
-                                 con sucursales, día y hora)
-
-  nutriologo/ ................. Selector + 3 niveles
-     nutriologo/basico ......... Plan Esencial (plan del día + agua)
-     nutriologo/intermedio ..... Plan Pro (macros + mandado con
-                                 equivalencias + meal prep)
-     nutriologo/avanzado ....... Coach Total (mandado inteligente,
-                                 rutina con progresión y descarga,
-                                 antojos y progreso guardado).
-                                 Comidas/agua/series se REINICIAN
-                                 solas al cambiar el día (hora
-                                 local); peso de ejercicios editable
-                                 escribiendo o con ±; progreso con
-                                 metas, racha, ritmo semanal y fecha
-                                 proyectada de llegada al objetivo.
-                                 Timer de descanso: reloj circular
-                                 arriba a la derecha (solo en
-                                 Rutina), anclado a la hora real —
-                                 sigue contando aunque salgas del
-                                 navegador.
-
-  invitacion/ ................. Selector + 3 niveles
-     invitacion/basico ......... Esencial (boda, cuenta regresiva)
-     invitacion/intermedio ..... Pro (demo boda Ana & Diego)
-     invitacion/avanzado ....... Deluxe (XV años temática celestial,
-                                 FORMATO LIBRO: cambia de página al
-                                 tocar los lados y eso activa la
-                                 música; efectos de estrellas al
-                                 tocar; QR con logo que abre el
-                                 control de acceso en /acceso)
-
-  barberia/ ................... Selector + 3 niveles  ★ NUEVO
-     barberia/basico ........... Carta de Servicios (precios + QR)
-     barberia/intermedio ....... Estudio Pro (abierto/cerrado en vivo,
-                                 promos, equipo y testimonios)
-     barberia/avanzado ......... Reserva Total (agenda en línea:
-                                 servicio → barbero → día/hora →
-                                 reserva directo a WhatsApp)
-
-  soporte/ .................... Centro de soporte para tus clientes
-     soporte/levantamiento .... Formulario: el cliente elige giro y
-                                paquete y llena la info de su negocio.
-                                Al terminar te la manda por WhatsApp
-                                ya ordenada (o descarga un archivo).
-     soporte/cambios .......... Formulario para clientes con página
-                                publicada: piden cambios y llegan a
-                                tu WhatsApp con todo el detalle.
-     soporte/pases ............ ★ NUEVO · Generador de pases con QR
-                                para eventos Deluxe: pegas la lista
-                                de invitados (nombre — pases — mesa)
-                                y genera los pases personalizados.
-                                Descarga ZIP de PNGs (para mandar
-                                por WhatsApp) o imprime 4 por hoja
-                                carta sin que se corten. Cada QR
-                                abre el control de acceso con los
-                                datos de ESE invitado, y el pase
-                                muestra nombre/pases/mesa a la
-                                vista por si la recepción no usa
-                                celular.
-
-     Accesos desde el tabulador:
-     • Botón "Soy cliente" arriba a la derecha.
-     • Botón "Quiero mi página · empezar aquí" en cada paquete
-       (abre el formulario con giro y paquete YA seleccionados).
-     • Franja "¿Ya tienes tu página con nosotros?" al final.
-     • Enlaces en el pie de página.
-
-  qr-imprimir/ ................ Todos los códigos QR con tu logo
-                               (listos para imprimir)
-
-
-┌───────────────────────────────────────────────────────────┐
-│  CÓMO SE ABREN LAS DEMOS                                    │
-└───────────────────────────────────────────────────────────┘
-
-  En el tabulador, al elegir un giro verás:
-   • Un botón "▸ Ver ejemplo" en cada paquete (abre esa demo), y
-   • Un código QR para escanear con otro celular.
-
-  Ambos ya están conectados a las páginas reales.
-
-
-┌───────────────────────────────────────────────────────────┐
-│  NUTRIÓLOGO PREMIUM: cosas que debes saber                  │
-└───────────────────────────────────────────────────────────┘
-
-  1. GUARDADO DE DATOS (peso, antojos, comidas marcadas)
-     Se guarda en el propio celular/navegador del paciente
-     (localStorage). NO hay base de datos en la nube:
-     • Cada dispositivo guarda lo suyo.
-     • Si el paciente borra datos del navegador, se reinicia.
-     El REPORTE SEMANAL (ver punto 4) es el puente: convierte
-     esos datos en una imagen que el paciente te manda por
-     WhatsApp, así el seguimiento sí llega hasta ti.
-
-  2. CONFIGURAR EL PLAN DE UN PACIENTE
-     Abre  nutriologo/avanzado/app.js  con cualquier editor
-     de texto. Hasta arriba está el bloque CONFIG:
-     nombre del cliente, coach, WhatsApp del coach (coachWa),
-     macros, presupuesto de antojos, minutos de cardio,
-     unidad de peso por defecto (kg o lb) y el "perfil" del
-     cliente (altura, edad y metas de % grasa y músculo).
-     Cambias esos valores, guardas y vuelves a subir la carpeta.
-
-     IMPORTANTE: coachWa es el número a donde el paciente
-     envía su reporte. Ponlo en formato país+número sin signos
-     (ej. 528441234567).
-
-     MEDICIÓN BASE (InBody): justo debajo del CONFIG está
-     MEDICION_BASE, con el peso, % de grasa, músculo (MME) e
-     IMC del último estudio. Ese es el punto de partida de las
-     gráficas de composición. Cuando llegue un estudio nuevo,
-     actualiza esos números (o el paciente los registra él mismo
-     desde la pestaña Progreso con su fecha).
-
-  3. EL CICLO SE ACOMODA SOLO A LA SEMANA DEL MES
-     La app ya no cuenta desde una fecha fija: mira en qué
-     semana del mes estás y asigna el tipo de semana:
-       • Mes de 4 semanas:
-         Sem 1 Arranque · 2 Carga · 3 Alta intensidad · 4 Descarga
-       • Mes de 5 semanas:
-         Sem 1 Arranque · 2 y 3 Carga · 4 Alta intensidad · 5 Descarga
-     La semana 1 siempre es la primera del mes, y la descarga
-     siempre cae en la última. En la semana de descarga los
-     pesos bajan solos al 60-65%. (Para otros clientes con otra
-     periodización, esto se podrá personalizar más adelante.)
-
-  4. REPORTE SEMANAL (el "seguimiento" sin base de datos)
-     En la pestaña PROGRESO, el paciente:
-       • marca sus entrenamientos con "entrené hoy" (en Rutina),
-       • escribe una nota para el coach,
-       • toca "Generar reporte de la semana".
-     La app crea una IMAGEN con: peso y cambio, entrenamientos
-     de la semana, cumplimiento de dieta, antojos usados, en qué
-     ejercicios subió de peso, y su nota. El paciente la comparte
-     por WhatsApp contigo (con la imagen adjunta).
-     Cada semana la app le recuerda que "toca reportarse".
-
-     NOTA: por seguridad, WhatsApp no deja adjuntar la imagen
-     de forma 100% automática desde un enlace. En celular, el
-     botón "Compartir imagen" abre WhatsApp con la foto lista
-     para elegir el chat; si no, se descarga y se adjunta a mano.
-     El texto resumen sí va prellenado. El reporte ahora también
-     incluye % de grasa y músculo (MME) y sesiones acumuladas.
-
-  5. RUTINA COMO CONTROL DE ENTRENAMIENTO
-     • Botón kg / lb arriba de la rutina: cambia la unidad de
-       todos los pesos al instante (se guarda internamente en kg).
-     • Cada ejercicio tiene botón para "marcar serie": al marcar
-       una, arranca un TIMER de descanso sugerido (más pesado =
-       más descanso: 3 min compuestos fuertes, 2 min medios,
-       1.5 min aislamientos, 1 min ligeros).
-     • Botón "entrené hoy" con animación y felicitación; abajo
-       lleva un contador de SESIONES totales acumuladas.
-
-  6. PROGRESO DE COMPOSICIÓN CORPORAL
-     En la pestaña PROGRESO el paciente registra mediciones CON
-     FECHA (peso, % de grasa y músculo MME — los que tenga), sin
-     tocar código. Arriba se ven tres indicadores con flecha de
-     tendencia (verde si va hacia la meta: bajar grasa / subir
-     músculo; rojo si se aleja). Debajo hay una gráfica con
-     selector para ver la tendencia de peso, grasa o músculo, y
-     el historial de todas las mediciones.
-
-  ── Hecho con Solida Aplicaciones ──
+┌──────────────────────────────────────────────────────────┐
+│  DETALLES QUE CONVIENE SABER                              │
+└──────────────────────────────────────────────────────────┘
+  · El resumen «Tu día, calculado de tus platillos» usa
+    etiquetas reales: puede diferir del objetivo. Es normal
+    ±90 kcal; si difiere más, ajusta porciones o el objetivo.
+  · Los precios son estimados de Monterrey: afínalos una vez
+    con tu ticket y los totales del mandado serán TUS números.
+  · Todo vive en el navegador del dispositivo. El respaldo
+    exportado es tu seguro y tu forma de sincronizar.
+  · La semana de entrenamiento es fija: jueves y domingo
+    siempre descanso. El peso se guarda por variante.
