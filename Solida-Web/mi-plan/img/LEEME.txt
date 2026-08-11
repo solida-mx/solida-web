@@ -1,0 +1,79 @@
+CARPETA DE FOTOS DE ALIMENTOS
+==============================
+
+YA VIENEN INCLUIDOS los 24 iconos ilustrados, tomados de
+OpenMoji (openmoji.org, licencia CC BY-SA 4.0 — libre de usar
+dando credito, que ya esta en el pie de la pagina).
+Dos son composiciones hechas para tu plan: fruta.png
+(manzana + platano) y sazon.png (sal + chile).
+
+Si prefieres FOTOS REALES de los productos que tu compras
+(tu marca de yogurt, tu paquete de tortillas), solo reemplaza
+el archivo con el mismo nombre: le tomas foto al producto,
+la recortas cuadrada y listo. Puedes mezclar: unas ilustradas
+y otras reales.
+
+REGLAS:
+  1. El nombre del archivo debe ser EXACTO (minusculas, sin acentos).
+  2. Formato PNG. Idealmente cuadradas, de 200x200 a 400x400 px.
+  3. Comprimelas antes de subirlas (squoosh.app es gratis) para que
+     la pagina cargue rapido: cada foto deberia pesar menos de 60 KB.
+  4. Si una foto falta o falla, aparece el emoji en su lugar.
+     No pasa nada por subir solo algunas.
+  5. Para volver a solo-emojis: en app.js pon  usarFotos: false
+
+NOMBRES DE ARCHIVO (uno por alimento):
+
+  pollo.png        -> Pechuga de pollo deshebrada (ya cocida)
+  res.png          -> Res magra (molida 90/10 o bistec)
+  huevos.png       -> Huevo entero
+  claras.png       -> Claras pasteurizadas
+  yogurt.png       -> Yogurt griego natural
+  queso.png        -> Queso panela
+  sardina.png      -> Sardina en tomate (lata 425 g)
+  avena.png        -> Avena en hojuela
+  arroz.png        -> Arroz (crudo)
+  tortillas.png    -> Tortillas de maíz
+  frijoles.png     -> Frijoles cocidos
+  leche.png        -> Leche alta en proteína
+  chispas.png      -> Chispas de chocolate
+  cacao.png        -> Cacao en polvo sin azúcar
+  verdura.png      -> Mezcla de verduras congeladas
+  espinaca.png     -> Espinaca (fresca en bolsa o congelada)
+  fruta.png        -> Manzana + plátano (foto de ambas)
+  zanahoria.png    -> Zanahoria
+  limon.png        -> Limón
+  linaza.png       -> Linaza molida
+  pepitas.png      -> Pepitas (semilla de calabaza)
+  aceite.png       -> Aceite de oliva
+  sazon.png        -> Sal, pimienta, ajo, comino, chile
+  galletas.png     -> Galletas de avena (tipo Quaker)
+
+CONSEJO: las mejores fotos son las de TUS productos reales,
+tomadas con el celular sobre fondo liso. Asi reconoces de un
+vistazo exactamente que comprar. Si prefieres fotos de stock,
+usa bancos gratuitos (Pexels, Pixabay) y recortalas cuadradas.
+
+
+FOTOS DE EJERCICIOS
+====================
+Las fotos de los ejercicios viven en ESTA MISMA carpeta con el
+prefijo  ej-  (por ejemplo  ej-press-arnold.png ). Ya vienen
+incluidas las 89 fotos, tomadas de free-exercise-db
+(github.com/yuhonas/free-exercise-db, dominio publico).
+Formato: PNG cuadrado de 360x360.
+
+El nombre es el del ejercicio en minusculas, sin acentos y con
+guiones:  "Press Arnold" -> ej-press-arnold.png
+
+LA FORMA FACIL DE CAMBIAR CUALQUIER IMAGEN
+===========================================
+No necesitas tocar esta carpeta: en la pagina, toca la TUERCA
+de la esquina superior derecha. Ahi puedes reemplazar la imagen
+de cualquier alimento o ejercicio con una foto de tu telefono.
+Esas imagenes se guardan en el navegador de ese dispositivo
+(no en el repositorio): son instantaneas y puedes quitarlas
+con el boton X para volver a la original.
+
+Esta carpeta es para las imagenes "oficiales": las que subas
+aqui se ven en cualquier dispositivo.
