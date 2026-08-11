@@ -29,7 +29,10 @@ completa → Implementar. Listo en 1 minuto.
     cardio, antojos, metas de grasa y músculo, y apagado de
     fotos — sin tocar el código.
   · RESPALDO: exporta TODO (progreso, ajustes, alimentos,
-    imágenes) a un archivo e impórtalo en otro dispositivo.
+    imágenes) a un archivo .html con el diseño de la app:
+    al abrirlo se ve como una tarjeta de Sólida con la fecha
+    y el resumen de lo que contiene. Se importa igual (y los
+    respaldos .json viejos también se aceptan).
   · APP INSTALABLE (PWA): icono de Sólida en la pantalla de
     inicio, pantalla completa y funciona SIN INTERNET.
       Android/Chrome: menú ⋮ → Instalar app

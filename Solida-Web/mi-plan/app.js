@@ -62,6 +62,7 @@ if(S.cfg && !S.persona){
    resultados van BLOQUEADOS en la interfaz a propósito: así
    nadie descompone su dieta moviendo un número sin querer.
    ============================================================ */
+const MONTHS_FULL = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const PERSONA_DEF = { estatura:183, edad:29, sexo:"m", act:1.55,
                       objetivo:"perder", metaGrasa:15, metaMusculo:47.5, cardioMin:15 };
 function personaGet(){ return Object.assign({}, PERSONA_DEF, S.persona||{}); }
@@ -1215,28 +1216,80 @@ document.getElementById("cfgPanel").addEventListener("change", e=>{
   });
 });
 
-/* ---------- Respaldo ---------- */
+/* ---------- Respaldo (archivo HTML con el diseño de la app) ---------- */
+function buildBackupHtml(data){
+  const d = new Date();
+  const fecha = DAYS[d.getDay()]+" "+d.getDate()+" de "+MONTHS_FULL[d.getMonth()]+" "+d.getFullYear()+
+                ", "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  const st = [
+    [ (S.body||[]).length, "mediciones corporales" ],
+    [ Object.keys(S.lifts||{}).length, "pesos de ejercicios" ],
+    [ Object.keys(S.trained||{}).length, "días entrenados" ],
+    [ (S.customFoods||[]).length, "alimentos agregados" ],
+    [ Object.keys(S.nutEdits||{}).length, "etiquetas y precios editados" ],
+    [ Object.keys(CIMG).length, "imágenes personalizadas" ]
+  ];
+  const json = JSON.stringify(data).replace(/<\//g, "<\\/");
+  const logo = `<svg width="52" height="52" viewBox="0 0 48 48"><rect width="48" height="48" rx="11" fill="#1b396b"/><rect x="13" y="9" width="22" height="8" rx="4" fill="#2a9d8e"/><rect x="10" y="20.5" width="28" height="8" rx="4" fill="#e8f6f6"/><rect x="6" y="32" width="36" height="8" rx="4" fill="#2a9d8e"/></svg>`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Respaldo · Mi Plan</title></head>
+<body style="margin:0;min-height:100vh;background:#081427;color:#eef7f6;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px 16px;box-sizing:border-box">
+<div style="max-width:420px;width:100%;background:#12274a;border:1px solid #24416f;border-radius:22px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5)">
+  <div style="padding:26px 22px 20px;text-align:center;background:linear-gradient(160deg,#1b396b,#0c1f40)">
+    ${logo}
+    <div style="font-size:11px;font-weight:800;letter-spacing:.18em;color:#59cfe0;margin-top:12px">RESPALDO COMPLETO</div>
+    <div style="font-size:24px;font-weight:800;margin-top:4px">Mi Plan</div>
+    <div style="font-size:12.5px;color:#9db3d2;margin-top:5px">${fecha}</div>
+  </div>
+  <div style="padding:18px 22px 6px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    ${st.map(x=>`<div style="background:rgba(232,246,246,.04);border:1px solid #24416f;border-radius:14px;padding:12px 10px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:#2fb5a3">${x[0]}</div>
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#9db3d2;margin-top:2px">${x[1]}</div>
+    </div>`).join("")}
+  </div>
+  <div style="margin:14px 22px;padding:13px 15px;background:rgba(47,181,163,.08);border:1px solid rgba(47,181,163,.3);border-radius:14px;font-size:12.5px;line-height:1.6;color:#c9dcda">
+    <b style="color:#2fb5a3">Para restaurar:</b> abre la app Mi Plan → pestaña <b>Ajustes</b> → 🎯 → <b>Importar respaldo</b> → elige este archivo. Todo regresa tal cual: progreso, ajustes, alimentos e imágenes.
+  </div>
+  <div style="padding:0 22px 22px;text-align:center;font-size:10px;color:#6d83a6;font-weight:700">
+    Guarda este archivo en tu nube (Drive, iCloud) · No lo edites: tus datos viajan dentro de él<br>
+    <span style="letter-spacing:.14em">SÓLIDA APLICACIONES</span>
+  </div>
+</div>
+<script type="application/json" id="mi-plan-datos">${json}</script>
+</body></html>`;
+}
+function parseBackup(text){
+  let raw = text.trim();
+  if(raw[0] !== "{"){
+    const m = raw.match(/<script[^>]*id="mi-plan-datos"[^>]*>([\s\S]*?)<\/script>/);
+    if(!m) return null;
+    raw = m[1].replace(/<\\\//g, "</");
+  }
+  try{
+    const d = JSON.parse(raw);
+    return (d && d.app==="mi-plan" && d.S) ? d : null;
+  }catch(e){ return null; }
+}
 function exportBackup(){
   const data = { app:"mi-plan", v:2, fecha:new Date().toISOString(), S, CIMG };
-  const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
+  const blob = new Blob([buildBackupHtml(data)], {type:"text/html"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "mi-plan-respaldo-"+dayKey+".json";
+  a.download = "mi-plan-respaldo-"+dayKey+".html";
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
-  showToast("⬇️ Respaldo descargado · guárdalo en tu nube");
+  showToast("⬇️ Respaldo descargado · ábrelo para verlo bonito");
 }
 function importBackup(file){
   const rd = new FileReader();
   rd.onload = ()=>{
-    try{
-      const d = JSON.parse(rd.result);
-      if(!d || d.app!=="mi-plan" || !d.S) throw 0;
-      localStorage.setItem(LS_KEY, JSON.stringify(d.S));
-      if(d.CIMG) localStorage.setItem(IMG_KEY, JSON.stringify(d.CIMG));
-      showToast("⬆️ Respaldo restaurado · recargando…");
-      setTimeout(()=>location.reload(), 900);
-    }catch(e){ showToast("Ese archivo no parece un respaldo de Mi Plan 😕"); }
+    const d = parseBackup(rd.result);
+    if(!d){ showToast("Ese archivo no parece un respaldo de Mi Plan 😕"); return; }
+    localStorage.setItem(LS_KEY, JSON.stringify(d.S));
+    if(d.CIMG) localStorage.setItem(IMG_KEY, JSON.stringify(d.CIMG));
+    showToast("⬆️ Respaldo restaurado · recargando…");
+    setTimeout(()=>location.reload(), 900);
   };
   rd.readAsText(file);
 }
@@ -1375,7 +1428,7 @@ function personaHtml(){
     <div class="img-note" style="margin-top:0">Todo tu progreso vive en este dispositivo. Exporta un respaldo de vez en cuando: es tu seguro y tu forma de pasar todo a otro teléfono.</div>
     <div class="nut-btns">
       <button class="nb-save" data-bkexport="1">⬇️ Exportar respaldo</button>
-      <label class="nb-reset bk-imp">⬆️ Importar respaldo<input type="file" accept=".json,application/json" data-bkimport="1" style="display:none"></label>
+      <label class="nb-reset bk-imp">⬆️ Importar respaldo<input type="file" accept=".html,.json,text/html,application/json" data-bkimport="1" style="display:none"></label>
     </div>
     <div class="set-h">Instalar como aplicación</div>
     <div class="img-note" style="margin-top:0">
