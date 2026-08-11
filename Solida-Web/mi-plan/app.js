@@ -1134,8 +1134,7 @@ function closeSheet(){
 }
 document.getElementById("sheetClose").onclick = closeSheet;
 sheetOv.addEventListener("click", e=>{ if(e.target===sheetOv) closeSheet(); });
-document.getElementById("gearBtn").onclick = openImgSheet;
-document.getElementById("sheetBody").addEventListener("change", e=>{
+document.getElementById("cfgPanel").addEventListener("change", e=>{
   const bk = e.target.closest("[data-bkimport]");
   if(bk && bk.files && bk.files[0]){ importBackup(bk.files[0]); return; }
   const inp = e.target.closest("[data-imgkey]");
@@ -1274,7 +1273,7 @@ function nutAddFormHtml(){
   </div>`;
 }
 function renderGearSheet(){
-  const body = document.getElementById("sheetBody");
+  const body = document.getElementById("cfgPanel");
   let inner = "";
   if(gearTab==="img"){
     inner = `
@@ -1307,11 +1306,6 @@ function renderGearSheet(){
   const nflt = document.getElementById("nutFlt");
   if(nflt) nflt.addEventListener("input", ()=>{ nutFilter = nflt.value;
     document.getElementById("nutRows").innerHTML = nutRowsHtml(); });
-}
-function openImgSheet(){
-  imgFilter=""; nutFilter=""; nutOpen=null; nutAdd=false;
-  openSheet("Configuración", "Imágenes · valores nutricionales · objetivos", "");
-  renderGearSheet();
 }
 /* ---- Ajustes ---- */
 function ajustesHtml(){
@@ -1449,7 +1443,7 @@ function renderDaySummary(){
     <div class="ds-note">${Math.abs(diff)<=90
       ? "✓ Con las opciones y sustituciones de hoy quedas a "+Math.abs(diff)+" kcal del objetivo: dentro del margen."
       : (diff>0?"▲ Hoy vas "+diff+" kcal arriba del objetivo — revisa porciones o elige la opción más ligera de alguna comida.":"▼ Hoy vas "+(-diff)+" kcal abajo del objetivo — súbele a la porción de arroz o fruta.")}
-      Se recalcula solo al cambiar opciones, equivalencias o etiquetas (🍽 en la tuerca).</div>`;
+      Se recalcula solo al cambiar opciones, equivalencias o etiquetas (pestaña Ajustes → 🍽).</div>`;
 }
 function updateRing(){
   const done=S.meals[dayKey], c=done.filter(Boolean).length;
@@ -1502,7 +1496,7 @@ function renderShop(){
   SHOP.forEach(it=>groups[it.cat].push(it));
   const tot = weekCost();
   $("shopTotal").innerHTML = `<span class="st-l">🧾 Mandado de la semana, como lo tienes ahora</span>
-    <b>≈ ${fmt$(tot)}</b><small>precios editables en la tuerca → 🍽 Nutrición</small>`;
+    <b>≈ ${fmt$(tot)}</b><small>precios editables en Ajustes → 🍽 Nutrición</small>`;
   $("shopList").innerHTML = Object.entries(groups).map(([cat,items])=>`
     <div class="shop-cat" style="--cc:${CATS[cat].c}">
       <div class="shop-cat-h"><span class="sq"></span><h3>${CATS[cat].t}</h3></div>
@@ -1558,7 +1552,7 @@ $("tierBar").addEventListener("click",e=>{
   applyTier(b.dataset.tier);
 });
 /* acciones dentro del submenú (equivalencias y variantes de ejercicio) */
-document.getElementById("sheetBody").addEventListener("click",e=>{
+document.getElementById("cfgPanel").addEventListener("click",e=>{
   const gt=e.target.closest("[data-geartab]");
   if(gt){ gearTab=gt.dataset.geartab; renderGearSheet(); return; }
   const it=e.target.closest("[data-imgtab]");
@@ -1606,7 +1600,7 @@ document.getElementById("sheetBody").addEventListener("click",e=>{
 
   /* --- Ajustes --- */
   const cs=e.target.closest("[data-cfgsave]");
-  if(cs){ const body=document.getElementById("sheetBody"); if(!S.cfg) S.cfg={};
+  if(cs){ const body=document.getElementById("cfgPanel"); if(!S.cfg) S.cfg={};
     body.querySelectorAll("[data-cfg]").forEach(inp=>{
       const k=inp.dataset.cfg;
       const v = inp.type==="checkbox" ? inp.checked : parseFloat(inp.value);
@@ -1623,6 +1617,8 @@ document.getElementById("sheetBody").addEventListener("click",e=>{
   const be=e.target.closest("[data-bkexport]");
   if(be){ exportBackup(); return; }
 
+});
+document.getElementById("sheetBody").addEventListener("click",e=>{
   const pick=e.target.closest("[data-pick]");
   if(pick){ const id=pick.dataset.pick, j=+pick.dataset.alt;
     if(j<0) delete S.swaps[id]; else S.swaps[id]=j;
@@ -2367,7 +2363,7 @@ document.querySelectorAll(".nb").forEach(b=>b.onclick=()=>{
 });
 $("bDate").value = dayKey;
 
-renderMeals(); renderShop(); renderTierBar(); renderUnitToggle();
+renderMeals(); renderShop(); renderTierBar(); renderUnitToggle(); renderGearSheet();
 renderWeekStrip(); renderRoutine(); renderTrained();
 renderBudget(); renderAntojos(); renderBody(); renderReportDue();
 

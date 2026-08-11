@@ -42,7 +42,7 @@
   a{color:var(--em)}
 
   /* ---------- HEADER ---------- */
-  header{position:relative;overflow:hidden;padding:20px 18px 22px;
+  header{position:relative;overflow:hidden;padding:calc(20px + env(safe-area-inset-top)) 18px 22px;
     background:linear-gradient(160deg,var(--navy) 0%,#0c1f40 55%,var(--bg) 100%)}
   header::before{content:"";position:absolute;width:360px;height:360px;border-radius:50%;
     background:radial-gradient(circle,rgba(42,157,142,.28),transparent 65%);top:-180px;right:-120px;pointer-events:none}
@@ -367,11 +367,6 @@
   .ex-top .nm b{font-size:14.5px;font-weight:700;display:block;line-height:1.3}
   .ex-top .nm small{font-size:11.5px;color:var(--muted);font-weight:700;display:block;margin-top:3px}
   /* fila de peso: controles grandes */
-  header .gear{position:absolute;top:14px;right:16px;width:40px;height:40px;border-radius:12px;
-    border:1px solid var(--line);background:rgba(232,246,246,.05);color:var(--muted);
-    display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5}
-  header .gear:active{transform:scale(.92);background:var(--em-soft);color:var(--em);border-color:var(--em)}
-  header{position:relative}
 
   /* fila de peso: el stepper llena todo el ancho, sin huecos */
   .ex-wrow{display:grid;grid-template-columns:52px 1fr 52px;gap:8px;margin-top:12px}
@@ -667,8 +662,8 @@
   @keyframes tabIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   nav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(10,24,48,.95);backdrop-filter:blur(14px);
     border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
-  .nb{flex:1;max-width:96px;background:none;border:none;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:3px;
-    font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:5px 2px;border-radius:12px;transition:color .2s}
+  .nb{flex:1;max-width:86px;background:none;border:none;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-size:8.8px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;padding:5px 1px;border-radius:12px;transition:color .2s}
   .nb svg{transition:transform .2s}
   .nb.active{color:var(--em)}
   .nb.active svg{transform:translateY(-2px) scale(1.08)}
@@ -692,9 +687,6 @@
 <body>
 
 <header>
-  <button class="gear" id="gearBtn" aria-label="Cambiar imágenes">
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-  </button>
   <div class="brandline">
     <svg class="brandmark" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#1b396b"/><rect x="13" y="9" width="22" height="8" rx="4" fill="#2a9d8e"/><rect x="10" y="20.5" width="28" height="8" rx="4" fill="#e8f6f6"/><rect x="6" y="32" width="36" height="8" rx="4" fill="#2a9d8e"/></svg>
     MI PLAN PERSONAL <span class="pill" id="fasePill">—</span>
@@ -934,6 +926,11 @@
     </div>
   </section>
 
+<section class="tab" id="tab-config">
+    <div class="sec-title"><h2>Ajustes</h2><span class="ln"></span><span class="chip">Tu app, a tu modo</span></div>
+    <div id="cfgPanel"></div>
+</section>
+
 </div>
 
 <footer class="mine">
@@ -949,6 +946,7 @@
   <button class="nb" data-tab="rutina"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m21 21-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/></svg>Rutina</button>
   <button class="nb" data-tab="antojos"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 8.5c-1 1-1.5 2.3-1.5 3.5a5 5 0 0 0 10 0c0-1.2-.5-2.5-1.5-3.5L12 5 8.5 8.5Z"/><path d="M12 5V2"/></svg>Snacks</button>
   <button class="nb" data-tab="progreso"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Progreso</button>
+  <button class="nb" data-tab="config"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Ajustes</button>
 </nav>
 
 <div class="toast" id="toast"></div>

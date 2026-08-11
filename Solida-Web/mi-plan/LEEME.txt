@@ -3,9 +3,12 @@
 ║   Sólida Aplicaciones · azul marino + verde azulado           ║
 ╚══════════════════════════════════════════════════════════════╝
 
-Carpeta independiente dentro del mismo repositorio.
-Solo se abre con la dirección directa:
-  https://solida-web.j23salva.workers.dev/mi-plan
+Publicada como proyecto propio en Cloudflare Pages
+(carga directa, sin GitHub ni compilaciones).
+
+PARA ACTUALIZARLA: Cloudflare → Workers y Pages → tu proyecto
+mi-plan → "Crear nueva implementación" → arrastra esta carpeta
+completa → Implementar. Listo en 1 minuto.
 
 ┌──────────────────────────────────────────────────────────┐
 │  LO NUEVO DE LA v2                                        │
@@ -14,7 +17,7 @@ Solo se abre con la dirección directa:
     tiene su tabla por 100 g o por pieza. Los kcal de cada
     comida, de cada opción y del día completo se CALCULAN
     en vivo — ya no son números fijos.
-  · TUERCA → 🍽 NUTRICIÓN: edita la etiqueta de cualquier
+  · AJUSTES → 🍽 NUTRICIÓN: edita la etiqueta de cualquier
     alimento (ideal congelados y marcas) y todo se recalcula.
     También AGREGAS alimentos nuevos: capturas su etiqueta,
     eliges de qué alimento es equivalente y la app calcula
@@ -22,7 +25,7 @@ Solo se abre con la dirección directa:
   · PRECIOS: cada alimento tiene precio editable. El mandado
     muestra costo por alimento, total semanal y el costo de
     cada nivel (Económico / Medio / Premium) con tus precios.
-  · TUERCA → 🎯 AJUSTES: objetivos de kcal y macros, agua,
+  · AJUSTES → 🎯 OBJETIVOS: objetivos de kcal y macros, agua,
     cardio, antojos, metas de grasa y músculo, y apagado de
     fotos — sin tocar el código.
   · RESPALDO: exporta TODO (progreso, ajustes, alimentos,
@@ -41,17 +44,13 @@ Solo se abre con la dirección directa:
   sw.js ........... caché para funcionar sin conexión
   img/ ............ imágenes (alimentos, ej-* ejercicios, iconos)
 
-  IMPORTANTE PARA EL WORKER DE CLOUDFLARE:
-  la instalación como app necesita que el worker sirva
-  manifest.json y sw.js. Si al abrir en Chrome de Android no
-  aparece la opción «Instalar app», el worker no está sirviendo
-  la extensión .json: agrega "json": "application/json" a su
-  mapa de tipos (igual que hace con .html y .js).
+  NOTA: en Cloudflare Pages todos los tipos de archivo se
+  sirven solos (jpg, json, todo) — no hay nada que configurar.
 
 ┌──────────────────────────────────────────────────────────┐
 │  DÓNDE SE EDITA CADA COSA                                 │
 └──────────────────────────────────────────────────────────┘
-  Desde la TUERCA (sin código):
+  Desde la pestaña AJUSTES (abajo, sin código):
     🖼 Imágenes ..... foto de cualquier alimento o ejercicio
     🍽 Nutrición .... etiquetas, precios y alimentos nuevos
     🎯 Ajustes ...... objetivos, metas, respaldo, instalación

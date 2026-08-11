@@ -68,8 +68,8 @@ guiones:  "Press Arnold" -> ej-press-arnold.png
 
 LA FORMA FACIL DE CAMBIAR CUALQUIER IMAGEN
 ===========================================
-No necesitas tocar esta carpeta: en la pagina, toca la TUERCA
-de la esquina superior derecha. Ahi puedes reemplazar la imagen
+No necesitas tocar esta carpeta: en la app, entra a la pestana
+AJUSTES (abajo a la derecha) -> Imagenes. Ahi puedes reemplazar la imagen
 de cualquier alimento o ejercicio con una foto de tu telefono.
 Esas imagenes se guardan en el navegador de ese dispositivo
 (no en el repositorio): son instantaneas y puedes quitarlas
