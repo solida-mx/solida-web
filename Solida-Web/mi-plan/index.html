@@ -102,8 +102,29 @@
   .ex-photo.sm{width:44px;height:44px;border-radius:11px}
 
   /* ---------- tuerca: nutrición y ajustes ---------- */
-  .itabs.main{grid-template-columns:1fr 1fr 1fr;margin-bottom:14px}
-  .itabs.sub button{font-size:11px;padding:9px 6px}
+  .ctabs{display:flex;border-bottom:1.5px solid var(--line);margin-bottom:16px}
+  .ctabs button{flex:1;background:none;border:none;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:"Manrope";font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;
+    padding:9px 2px 11px;position:relative}
+  .ctabs button i{font-style:normal;font-size:19px}
+  .ctabs button.on{color:var(--em)}
+  .ctabs button.on::after{content:"";position:absolute;left:18%;right:18%;bottom:-1.5px;height:3px;border-radius:3px;background:var(--em)}
+  .img-th.sm{width:36px;height:36px;font-size:17px}
+  .nut-photo{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:8px 0 2px;border-top:1px dashed rgba(36,65,111,.6);margin-top:4px}
+  .lk-card{border:1px solid var(--line);border-radius:14px;padding:6px 14px 12px;background:rgba(232,246,246,.02)}
+  .lk-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(36,65,111,.45);flex-wrap:wrap}
+  .lk-row:last-of-type{border-bottom:none}
+  .lk-l{flex:1;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .lk-v{font-family:"Space Grotesk";font-weight:700;font-size:15px;color:var(--ink)}
+  .lk-i{font-size:12px;opacity:.65}
+  .lk-row.peso{grid-column:1/-1;background:rgba(89,207,224,.06);border:1px solid rgba(89,207,224,.2);border-radius:12px;padding:10px 12px;margin-bottom:2px}
+  .lk-src{flex-basis:100%;font-size:9.5px;color:var(--faint);font-weight:700}
+  .ui-seg{display:flex;gap:6px}
+  .ui-seg button{flex:1;padding:11px 8px;border-radius:11px;border:1px solid var(--line);background:rgba(232,246,246,.04);
+    color:var(--muted);font-family:"Manrope";font-weight:800;font-size:12px;cursor:pointer}
+  .ui-seg button.on{background:var(--em-soft);border-color:var(--em);color:var(--em)}
+  .ui-d{display:block;font-size:10px;color:var(--faint);font-weight:700;margin-top:1px}
+  html.noanim *{animation:none!important;transition:none!important}
   .nut-addbtn{width:100%;padding:12px;border-radius:13px;border:1px dashed rgba(47,181,163,.5);
     background:var(--em-soft);color:var(--em);font-family:"Manrope";font-weight:800;font-size:12.5px;
     cursor:pointer;margin-bottom:10px}
@@ -147,7 +168,21 @@
   .shop-total .st-l{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.03em;flex:1 1 100%}
   .shop-total b{font-family:"Space Grotesk";font-size:24px;color:var(--em)}
   .shop-total small{font-size:10px;color:var(--faint);font-weight:700}
-  .qty .pr{display:block;font-size:10.5px;font-weight:800;color:var(--sky);margin-top:2px}
+  .qty .pr{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--sky);
+    margin-top:3px;background:rgba(89,207,224,.09);border:1px solid rgba(89,207,224,.25);border-radius:8px;
+    padding:3px 7px;cursor:pointer;font-family:"Manrope"}
+  .qty .pr i{font-style:normal;font-size:9px;opacity:.8}
+  .qty .pr:active{background:rgba(89,207,224,.2)}
+  .price-form{display:flex;flex-direction:column;gap:12px}
+  .price-form select,.price-form input{width:100%;box-sizing:border-box;padding:12px;border-radius:12px;
+    border:1px solid var(--line);background:rgba(232,246,246,.05);color:var(--ink);
+    font-family:"Space Grotesk";font-weight:700;font-size:16px}
+  .price-total{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--em-soft);
+    border:1px solid rgba(47,181,163,.3);border-radius:14px;padding:13px 15px}
+  .price-total>span{font-size:12px;color:var(--muted);font-weight:700;line-height:1.4}
+  .pt-fig{text-align:right}
+  .pt-fig b{font-family:"Space Grotesk";font-size:24px;color:var(--em)}
+  .pt-fig small{display:block;font-size:9px;color:var(--faint);font-weight:800;letter-spacing:.06em;text-transform:uppercase}
   .tier-bar button .tc{display:block;font-family:"Space Grotesk";font-size:13px;font-weight:700;color:var(--em);margin:2px 0 1px}
   .tier-bar button .tc i{font-style:normal;font-family:"Manrope";font-size:8.5px;color:var(--faint);font-weight:800}
   .a-q .a-pr{display:block;font-style:normal;font-size:10px;font-weight:800;color:var(--sky);margin-top:2px}

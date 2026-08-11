@@ -44,13 +44,54 @@ const LS_KEY = "mi_plan_salvador_v1";
 let canStore = true;
 try { const raw = localStorage.getItem(LS_KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); }
 catch(e){ canStore = false; }
-/* Ajustes editables desde la tuerca: pisan a CONFIG sin tocar el código */
-if(S.cfg){
-  ["kcal","prot","carb","fat","aguaLitros","antojosSemana","cardioMin","usarFotos","fotosEjercicios"]
-    .forEach(k=>{ if(S.cfg[k]!==undefined) CONFIG[k]=S.cfg[k]; });
-  if(S.cfg.metaGrasa!==undefined) CONFIG.perfil.metaGrasa=S.cfg.metaGrasa;
-  if(S.cfg.metaMusculo!==undefined) CONFIG.perfil.metaMusculo=S.cfg.metaMusculo;
+/* migración de ajustes viejos → nuevo modelo (persona + diseño) */
+if(S.cfg && !S.persona){
+  S.persona = {};
+  if(S.cfg.metaGrasa!==undefined)   S.persona.metaGrasa  = S.cfg.metaGrasa;
+  if(S.cfg.metaMusculo!==undefined) S.persona.metaMusculo= S.cfg.metaMusculo;
+  if(S.cfg.cardioMin!==undefined)   S.persona.cardioMin  = S.cfg.cardioMin;
+  if(!S.ui) S.ui = {};
+  if(S.cfg.usarFotos!==undefined)       S.ui.fotosAlimentos = S.cfg.usarFotos;
+  if(S.cfg.fotosEjercicios!==undefined) S.ui.fotosEjercicios= S.cfg.fotosEjercicios;
+  delete S.cfg;
 }
+
+/* ============================================================
+   MOTOR DE OBJETIVOS — tú capturas tus datos; la app calcula
+   la dieta (Mifflin-St Jeor + actividad + objetivo). Los
+   resultados van BLOQUEADOS en la interfaz a propósito: así
+   nadie descompone su dieta moviendo un número sin querer.
+   ============================================================ */
+const PERSONA_DEF = { estatura:183, edad:29, sexo:"m", act:1.55,
+                      objetivo:"perder", metaGrasa:15, metaMusculo:47.5, cardioMin:15 };
+function personaGet(){ return Object.assign({}, PERSONA_DEF, S.persona||{}); }
+function pesoActual(){
+  const withKg = (S.body||[]).filter(b=>b.kg);
+  return withKg.length ? withKg[withKg.length-1].kg : 94.7; /* medición base */
+}
+function applyPersona(){
+  const P = personaGet(), kg = pesoActual();
+  const bmr = P.sexo==="m" ? 10*kg + 6.25*P.estatura - 5*P.edad + 5
+                           : 10*kg + 6.25*P.estatura - 5*P.edad - 161;
+  const factor = {perder:.80, recomp:.90, mantener:1, subir:1.08}[P.objetivo] || .80;
+  CONFIG.kcal = Math.round(bmr * P.act * factor / 10) * 10;
+  CONFIG.prot = Math.round(2.1 * kg);
+  CONFIG.fat  = Math.round(.85 * kg);
+  CONFIG.carb = Math.max(0, Math.round((CONFIG.kcal - CONFIG.prot*4 - CONFIG.fat*9) / 4));
+  CONFIG.aguaLitros    = Math.round(kg * .035 / .25) * .25;
+  CONFIG.antojosSemana = Math.round(CONFIG.kcal * 7 * .06 / 50) * 50;
+  CONFIG.cardioMin = P.cardioMin;
+  CONFIG.perfil.metaGrasa = P.metaGrasa; CONFIG.perfil.metaMusculo = P.metaMusculo;
+  CONFIG.perfil.altura = P.estatura;     CONFIG.perfil.edad = P.edad;
+}
+function applyUI(){
+  const u = S.ui || {};
+  CONFIG.usarFotos       = u.fotosAlimentos !== false;
+  CONFIG.fotosEjercicios = u.fotosEjercicios !== false;
+  document.body.style.zoom = u.texto==="grande" ? "1.08" : u.texto==="chico" ? "0.94" : "";
+  document.documentElement.classList.toggle("noanim", u.anim===false);
+}
+applyPersona();
 function save(){ if(!canStore) return; try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ canStore=false; } }
 
 /* ============================================================
@@ -219,19 +260,30 @@ const SHOP = [
    {n:"Kale", f:1, prep:"rapido", hair:"vitamina C + vitamina A"},
    {n:"Nopal en frasco", f:1.2, prep:"listo", hair:"calcio + fibra", note:"Cero preparación, muy barato."}
   ]},
- {id:"fruta", cat:"veg", e:"🍎", name:"Manzana (7 pzas) + plátano (6 pzas)", total:1700, unit:"g",
-  totalTxt:"7 manzanas + 6 plátanos", dur:"desayunos + snacks + pre", rol:"base",
-  hair:"vitamina C + antioxidantes", prep:"listo",
-  tip:"<b>Compra exacta de la semana: 7 manzanas (~1 kg) y 6 plátanos (~700 g).</b> La manzana va en el desayuno; el plátano en el snack o el pre-entreno. Cómpralas por kilo en el mercado, no por pieza en el súper: la diferencia llega al 50 %. La manzana aguanta 3 semanas en refri; compra los plátanos algo verdes para que duren.",
+ {id:"manzana", cat:"veg", e:"🍎", name:"Manzana", total:910, unit:"g",
+  totalTxt:"7 pzas (≈130 g c/u)", dur:"desayunos", rol:"base",
+  hair:"fibra + antioxidantes", prep:"listo",
+  tip:"<b>7 piezas para la semana: una por desayuno.</b> Cómprala por kilo en el mercado, no por pieza en el súper: la diferencia llega al 50 %. Aguanta 3 semanas en refri sin problema.",
   alts:[
    {n:"Guayaba", f:0.9, prep:"listo", hair:"vitamina C (4 veces más que la naranja)",
     note:"La fruta con más vitamina C por peso. Cómela junto con frijoles para absorber su hierro."},
    {n:"Papaya", f:1.2, prep:"listo", hair:"vitamina C + vitamina A", note:"Barata en temporada, buena para digestión."},
    {n:"Naranja o mandarina", f:1.1, prep:"listo", hair:"vitamina C"},
    {n:"Fresa congelada", f:1.1, prep:"listo", hair:"vitamina C", note:"No se echa a perder, ideal para el yogurt."},
+   {n:"Pera", f:1.1, prep:"listo", note:"Misma practicidad que la manzana, cambia el sabor."},
+   {n:"Berries (fresa + arándano)", f:0.9, prep:"listo", hair:"antioxidantes premium",
+    note:"Las frutas con más antioxidantes por caloría. Congeladas rinden igual."}
+  ]},
+ {id:"platano", cat:"veg", e:"🍌", name:"Plátano", total:720, unit:"g",
+  totalTxt:"6 pzas (≈120 g c/u)", dur:"snacks + pre-entreno", rol:"base",
+  hair:"potasio + vitamina B6", prep:"listo",
+  tip:"<b>6 piezas para la semana: snack o pre-entreno.</b> Cómpralos algo verdes para que te duren; si maduran de más, al congelador pelados y quedan perfectos para licuado.",
+  alts:[
+   {n:"Guayaba", f:0.9, prep:"listo", hair:"vitamina C"},
+   {n:"Naranja o mandarina", f:1.1, prep:"listo", hair:"vitamina C"},
+   {n:"Papaya", f:1.2, prep:"listo", hair:"vitamina C + vitamina A"},
    {n:"Sandía o melón", f:1.6, prep:"rapido", note:"Mucho volumen y pocas calorías: la mejor arma contra el antojo."},
-   {n:"Berries (fresa + arándano)", f:1.1, prep:"listo", hair:"vitamina C + antioxidantes",
-    note:"Opción premium. Congeladas duran meses y quedan perfectas con el yogurt."}
+   {n:"Dátiles", f:0.35, prep:"listo", note:"Energía rápida pre-entreno. Ojo: 3 piezas equivalen a un plátano."}
   ]},
  {id:"zanahoria", cat:"veg", e:"🥕", name:"Zanahoria", total:700, unit:"g", dur:"para picar", rol:"extra",
   hair:"vitamina A (betacaroteno) + vitamina C", prep:"rapido",
@@ -383,13 +435,19 @@ const NUTBASE = {
  "espinaca~1":{kcal:19,p:1.8,c:3.7, f:0.2, precio:3},
  "espinaca~2":{kcal:35,p:2.9,c:4.4, f:0.7, precio:8},
  "espinaca~3":{kcal:16,p:1.4,c:3.3, f:0.2, precio:5},
- fruta:     {kcal:71, p:0.7, c:18,  f:0.2, precio:4.5},
- "fruta~0": {kcal:68, p:2.6, c:14,  f:1,   precio:4},
- "fruta~1": {kcal:43, p:0.5, c:11,  f:0.3, precio:3},
- "fruta~2": {kcal:47, p:0.9, c:12,  f:0.1, precio:2.2},
- "fruta~3": {kcal:33, p:0.7, c:8,   f:0.3, precio:8.5},
- "fruta~4": {kcal:30, p:0.6, c:8,   f:0.2, precio:1.8},
- "fruta~5": {kcal:45, p:0.8, c:10,  f:0.4, precio:14},
+ manzana:     {kcal:52, p:0.3, c:14,  f:0.2, precio:4.5},
+ "manzana~0": {kcal:68, p:2.6, c:14,  f:1,   precio:4},
+ "manzana~1": {kcal:43, p:0.5, c:11,  f:0.3, precio:3},
+ "manzana~2": {kcal:47, p:0.9, c:12,  f:0.1, precio:2.2},
+ "manzana~3": {kcal:33, p:0.7, c:8,   f:0.3, precio:8.5},
+ "manzana~4": {kcal:57, p:0.4, c:15,  f:0.1, precio:5},
+ "manzana~5": {kcal:45, p:0.8, c:10,  f:0.4, precio:14},
+ platano:     {kcal:89, p:1.1, c:23,  f:0.3, precio:2.4},
+ "platano~0": {kcal:68, p:2.6, c:14,  f:1,   precio:4},
+ "platano~1": {kcal:47, p:0.9, c:12,  f:0.1, precio:2.2},
+ "platano~2": {kcal:43, p:0.5, c:11,  f:0.3, precio:3},
+ "platano~3": {kcal:30, p:0.6, c:8,   f:0.2, precio:1.8},
+ "platano~4": {kcal:280, p:2.5, c:75, f:0.4, precio:16},
  zanahoria: {kcal:41, p:0.9, c:10,  f:0.2, precio:1.8},
  "zanahoria~0":{kcal:86,p:1.6,c:20, f:0.1, precio:3},
  "zanahoria~1":{kcal:17,p:1.2,c:3.1,f:0.3, precio:2.8},
@@ -434,6 +492,10 @@ function attachCustomFoods(){
   });
 }
 attachCustomFoods();
+/* migración: el alimento combinado "fruta" ahora son manzana y plátano */
+if(S.swaps && S.swaps.fruta!==undefined){ delete S.swaps.fruta; }
+if(S.nutEdits){ Object.keys(S.nutEdits).forEach(k=>{ if(k==="fruta"||k.startsWith("fruta~")) delete S.nutEdits[k]; }); }
+S.customFoods.forEach(cf=>{ if(cf.base==="fruta") cf.base="manzana"; });
 
 /* clave nutricional de un alimento efectivo */
 function nutKey(id, altIdx){
@@ -504,7 +566,8 @@ const TIER_DEF = {
   leche:    { eco: 1 },            // eco: leche en polvo
   verdura:  { eco: 3 },            // eco: mercado a granel
   espinaca: { eco: 0 },            // eco: congelada en bloque
-  fruta:    { eco: 2, alto: 5 },   // eco: naranja/mandarina · alto: berries
+  manzana:  { eco: 2, alto: 5 },   // eco: naranja/mandarina · alto: berries
+  platano:  { eco: 1 },            // eco: naranja/mandarina (el plátano ya es económico)
   pepitas:  { eco: 0, alto: 1 },   // eco: cacahuate · alto: almendra
   aceite:   { eco: 1, alto: 0 },   // eco: canola · alto: aguacate en fruta
   galletas: { eco: 1 }             // eco: galleta integral
@@ -615,7 +678,7 @@ const MEALS = [
   items:[
    {ref:"yogurt", g:300},
    {ref:"avena", g:30},
-   {ref:"fruta", g:130, extra:"1 manzana en cubos"},
+   {ref:"manzana", g:130, extra:"1 pieza en cubos"},
    {ref:"chispas", g:20, tag:"máx"},
    {ref:"linaza", g:12},
    {ref:"pepitas", g:10},
@@ -624,7 +687,7 @@ const MEALS = [
  {name:"Snack del trabajo", time:"10:30–11:30 am", kcal:240, prot:14, color:"#38d6e8", optLabel:["Galleta + café","Pepitas + fruta","Atún"],
   options:{
    A:[{ref:"galletas", g:1, unit:"paquete"},{ref:"leche", g:150, unit:"ml", extra:"+ café"}],
-   B:[{ref:"pepitas", g:30},{ref:"fruta", g:130, extra:"1 plátano"}],
+   B:[{ref:"pepitas", g:30},{ref:"platano", g:130, extra:"1 pieza"}],
    C:[{ref:"sardina", g:0.35, unit:"lata", extra:"o 1 lata de atún"},{ref:"galletas", g:1, unit:"paquete"}]
   }},
  {name:"Comida", time:"2:00\u20133:30 pm", kcal:720, prot:62, color:"#f2b544",
@@ -652,7 +715,7 @@ const MEALS = [
  {name:"Pre-entreno", time:"5:30–6:30 pm", kcal:250, prot:18, color:"#b09bff", optLabel:["Leche + cacao","Yogurt + fruta"],
   options:{
    A:[{ref:"leche", g:300, unit:"ml", extra:"+ 10 g cacao"},{ref:"avena", g:30}],
-   B:[{ref:"yogurt", g:200},{ref:"fruta", g:120, extra:"1 plátano mediano"}]
+   B:[{ref:"yogurt", g:200},{ref:"platano", g:120, extra:"1 pieza mediana"}]
   }},
  {name:"Cena", time:"8:30–9:30 pm", kcal:660, prot:62, color:"#ff6b6b",
   items:[
@@ -1135,6 +1198,11 @@ function closeSheet(){
 document.getElementById("sheetClose").onclick = closeSheet;
 sheetOv.addEventListener("click", e=>{ if(e.target===sheetOv) closeSheet(); });
 document.getElementById("cfgPanel").addEventListener("change", e=>{
+  const ui = e.target.closest("input[type=checkbox][data-ui]");
+  if(ui){ if(!S.ui) S.ui={};
+    S.ui[{fotosAlimentos:"fotosAlimentos",fotosEjercicios:"fotosEjercicios",anim:"anim"}[ui.dataset.ui]] = ui.checked;
+    save(); applyUI(); renderMeals(); renderShop(); renderRoutine();
+    showToast(ui.checked?"Activado ✓":"Desactivado ✓"); return; }
   const bk = e.target.closest("[data-bkimport]");
   if(bk && bk.files && bk.files[0]){ importBackup(bk.files[0]); return; }
   const inp = e.target.closest("[data-imgkey]");
@@ -1174,7 +1242,7 @@ function importBackup(file){
 }
 
 /* ---------- Tuerca: Imágenes · Nutrición · Ajustes ---------- */
-let gearTab = "img", imgTab = "food", imgFilter = "", nutFilter = "", nutOpen = null, nutAdd = false;
+let gearTab = "ali", imgFilter = "", nutFilter = "", nutOpen = null, nutAdd = false;
 function exVariantList(){
   const seen = {}, out = [];
   Object.values(RUTINA).forEach(list => list.forEach(ex => ex.v.forEach(v => {
@@ -1184,34 +1252,6 @@ function exVariantList(){
   })));
   return out.sort((a,b)=>a.n.localeCompare(b.n,"es"));
 }
-function imgRowsHtml(){
-  const f = imgFilter.trim().toLowerCase();
-  if(imgTab === "food"){
-    return SHOP.filter(it => !f || it.name.toLowerCase().includes(f)).map(it => {
-      const k = "food:"+it.id, custom = !!CIMG[k];
-      const src = custom ? CIMG[k] : "img/"+it.id+".png";
-      return `<div class="img-row">
-        <span class="img-th"><img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${it.e}'))"></span>
-        <span class="img-nm">${esc(it.name)}${custom?`<small>★ TU IMAGEN</small>`:""}</span>
-        <span class="img-act">
-          <label class="chg">📷 Cambiar<input type="file" accept="image/*" data-imgkey="${k}"></label>
-          ${custom?`<button class="del" data-imgdel="${k}" aria-label="Quitar">✕</button>`:""}
-        </span></div>`;
-    }).join("") || `<div class="sheet-note">Ningún alimento coincide con tu búsqueda.</div>`;
-  }
-  return exVariantList().filter(x => !f || x.n.toLowerCase().includes(f)).map(x => {
-    const k = "ex:"+x.sl, custom = !!CIMG[k];
-    const src = custom ? CIMG[k] : "img/ej-"+x.sl+".png";
-    return `<div class="img-row">
-      <span class="img-th"><img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('🏋️'))"></span>
-      <span class="img-nm">${esc(x.n)}${custom?`<small>★ TU IMAGEN</small>`:""}</span>
-      <span class="img-act">
-        <label class="chg">📷 Cambiar<input type="file" accept="image/*" data-imgkey="${k}"></label>
-        ${custom?`<button class="del" data-imgdel="${k}" aria-label="Quitar">✕</button>`:""}
-      </span></div>`;
-  }).join("") || `<div class="sheet-note">Ningún ejercicio coincide con tu búsqueda.</div>`;
-}
-/* ---- lista de todos los alimentos con su clave nutricional ---- */
 function allFoodKeys(){
   const out = [];
   SHOP.forEach(it=>{
@@ -1222,6 +1262,10 @@ function allFoodKeys(){
   });
   return out;
 }
+function fmtN(v){ return (Math.round(v*10)/10).toString(); }
+function nutField(k,l,v){
+  return `<label class="nf"><span>${l}</span><input type="number" inputmode="decimal" step="any" min="0" data-nf="${k}" value="${v===""?"":+(+v).toFixed(1)}"></label>`;
+}
 function nutRowsHtml(){
   const f = nutFilter.trim().toLowerCase();
   const list = allFoodKeys().filter(x=>!f || x.name.toLowerCase().includes(f));
@@ -1230,8 +1274,11 @@ function nutRowsHtml(){
     const n = nutOf(x.key), edited = !!S.nutEdits[x.key];
     const per = n.pz ? "por "+(n.pzTxt||"pieza") : "por 100 "+(shopById[x.base].unit==="ml"?"ml":"g");
     const open = nutOpen===x.key;
+    const imgK = "food:"+x.base, hasCustomImg = !!CIMG[imgK];
+    const imgSrc = hasCustomImg ? CIMG[imgK] : "img/"+x.base+".png";
     return `<div class="nut-row${open?' open':''}${x.isBase?'':' isalt'}" data-nutrow="${x.key}">
       <div class="nut-head" data-nutopen="${x.key}">
+        ${x.isBase?`<span class="img-th sm"><img src="${imgSrc}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${shopById[x.base].e}'))"></span>`:""}
         <span class="nut-nm">${esc(x.name)}
           ${x.sub?`<small>${esc(x.sub)}</small>`:""}
           ${edited?`<small class="ed">★ editado por ti</small>`:""}${x.custom?`<small class="ed">★ agregado por ti</small>`:""}</span>
@@ -1243,19 +1290,20 @@ function nutRowsHtml(){
         ${nutField("kcal","Kcal",n.kcal)}${nutField("p","Proteína g",n.p)}
         ${nutField("c","Carbos g",n.c)}${nutField("f","Grasa g",n.f)}
         ${nutField("precio","Precio $ "+(n.pz?"por "+(n.pzTxt||"pieza"):"por 100"),n.precio||0)}
+        ${x.isBase?`<div class="nut-photo">
+          <span class="img-th"><img src="${imgSrc}" alt="" onerror="this.replaceWith(document.createTextNode('${shopById[x.base].e}'))"></span>
+          <label class="chg">📷 Cambiar imagen<input type="file" accept="image/*" data-imgkey="${imgK}"></label>
+          ${hasCustomImg?`<button class="del" data-imgdel="${imgK}" aria-label="Quitar imagen">✕</button>`:""}
+        </div>`:""}
         <div class="nut-btns">
           <button class="nb-save" data-nutsave="${x.key}">Guardar</button>
           ${edited?`<button class="nb-reset" data-nutreset="${x.key}">Restaurar original</button>`:""}
           ${x.custom?`<button class="nb-del" data-nutdel="${x.key}">Eliminar alimento</button>`:""}
         </div>
-        <div class="nut-hint">${per}. Ideal para copiar la etiqueta real del producto que compras (congelados, marcas, etc.). Al guardar, la dieta y el mandado se recalculan solos.</div>
+        <div class="nut-hint">Valores ${per}. Ideal para copiar la etiqueta real del producto que compras. Al guardar, la dieta y el mandado se recalculan solos.</div>
       </div>`:""}
     </div>`;
   }).join("");
-}
-function fmtN(v){ return (Math.round(v*10)/10).toString(); }
-function nutField(k,l,v){
-  return `<label class="nf"><span>${l}</span><input type="number" inputmode="decimal" step="any" min="0" data-nf="${k}" value="${+(+v).toFixed(1)}"></label>`;
 }
 function nutAddFormHtml(){
   return `<div class="nut-form add">
@@ -1272,68 +1320,59 @@ function nutAddFormHtml(){
     <div class="nut-hint">Copia los valores de la etiqueta del producto. La app calcula sola la cantidad equivalente para conservar tus macros, y aparecerá en el submenú de equivalencias y en el mandado.</div>
   </div>`;
 }
-function renderGearSheet(){
-  const body = document.getElementById("cfgPanel");
-  let inner = "";
-  if(gearTab==="img"){
-    inner = `
-      <div class="itabs sub">
-        <button data-imgtab="food" class="${imgTab==='food'?'on':''}">🛒 Alimentos</button>
-        <button data-imgtab="ex" class="${imgTab==='ex'?'on':''}">🏋️ Ejercicios</button>
-      </div>
-      <input class="img-flt" id="imgFlt" type="search" placeholder="Buscar ${imgTab==='food'?'alimento':'ejercicio'}…" value="${esc(imgFilter)}">
-      <div id="imgRows">${imgRowsHtml()}</div>
-      <div class="img-note">💡 Las imágenes que subas aquí se recortan, se comprimen y se guardan <b>en este navegador</b> (igual que tus pesos y series). Con ✕ regresas a la original. Para que se vea en todos tus dispositivos, súbela al repositorio con el nombre del LEEME de img/.</div>`;
-  } else if(gearTab==="nut"){
-    inner = `
-      <button class="nut-addbtn" data-nutaddopen="1">➕ Agregar alimento nuevo</button>
-      ${nutAdd?nutAddFormHtml():""}
-      <input class="img-flt" id="nutFlt" type="search" placeholder="Buscar alimento o equivalencia…" value="${esc(nutFilter)}">
-      <div id="nutRows">${nutRowsHtml()}</div>
-      <div class="img-note">🍽 Estos valores alimentan TODA la app: los kcal de cada comida, el resumen del día, las cantidades equivalentes y los precios del mandado. Edita los de los productos con variación real (congelados, marcas) copiando su etiqueta.</div>`;
-  } else {
-    inner = ajustesHtml();
-  }
-  body.innerHTML = `
-    <div class="itabs main">
-      <button data-geartab="img" class="${gearTab==='img'?'on':''}">🖼 Imágenes</button>
-      <button data-geartab="nut" class="${gearTab==='nut'?'on':''}">🍽 Nutrición</button>
-      <button data-geartab="set" class="${gearTab==='set'?'on':''}">🎯 Ajustes</button>
-    </div>${inner}`;
-  const flt = document.getElementById("imgFlt");
-  if(flt) flt.addEventListener("input", ()=>{ imgFilter = flt.value;
-    document.getElementById("imgRows").innerHTML = imgRowsHtml(); });
-  const nflt = document.getElementById("nutFlt");
-  if(nflt) nflt.addEventListener("input", ()=>{ nutFilter = nflt.value;
-    document.getElementById("nutRows").innerHTML = nutRowsHtml(); });
+/* ---- filas de fotos de ejercicios ---- */
+function exRowsHtml(){
+  const f = imgFilter.trim().toLowerCase();
+  return exVariantList().filter(x => !f || x.n.toLowerCase().includes(f)).map(x => {
+    const k = "ex:"+x.sl, custom = !!CIMG[k];
+    const src = custom ? CIMG[k] : "img/ej-"+x.sl+".png";
+    return `<div class="img-row">
+      <span class="img-th"><img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('🏋️'))"></span>
+      <span class="img-nm">${esc(x.n)}${custom?`<small>★ TU IMAGEN</small>`:""}</span>
+      <span class="img-act">
+        <label class="chg">📷 Cambiar<input type="file" accept="image/*" data-imgkey="${k}"></label>
+        ${custom?`<button class="del" data-imgdel="${k}" aria-label="Quitar">✕</button>`:""}
+      </span></div>`;
+  }).join("") || `<div class="sheet-note">Ningún ejercicio coincide con tu búsqueda.</div>`;
 }
-/* ---- Ajustes ---- */
-function ajustesHtml(){
-  const c=CONFIG, num=(k,l,v,step)=>`<label class="nf"><span>${l}</span><input type="number" inputmode="decimal" step="${step||1}" min="0" data-cfg="${k}" value="${v}"></label>`;
+/* ---- pestaña Ajustes: datos de la persona + resultados bloqueados ---- */
+function lockedRow(l,v){
+  return `<div class="lk-row"><span class="lk-l">${l}</span><span class="lk-v">${v}</span><span class="lk-i">🔒</span></div>`;
+}
+function personaHtml(){
+  const P = personaGet(), kg = pesoActual();
+  const sel = (k,l,opts,cur)=>`<label class="nf"><span>${l}</span><select data-per="${k}">
+    ${opts.map(o=>`<option value="${o[0]}" ${String(cur)===String(o[0])?"selected":""}>${o[1]}</option>`).join("")}</select></label>`;
+  const num = (k,l,v,step)=>`<label class="nf"><span>${l}</span><input type="number" inputmode="decimal" step="${step||1}" min="0" data-per="${k}" value="${v}"></label>`;
   return `
-    <div class="set-h">Objetivos diarios</div>
+    <div class="set-h">Tus datos (esto es lo único que editas)</div>
     <div class="nut-form open2">
-      ${num("kcal","Calorías (kcal)",c.kcal)}${num("prot","Proteína (g)",c.prot)}
-      ${num("carb","Carbohidratos (g)",c.carb)}${num("fat","Grasa (g)",c.fat)}
-      ${num("aguaLitros","Agua (litros)",c.aguaLitros,0.25)}${num("cardioMin","Cardio (min)",c.cardioMin,5)}
-      ${num("antojosSemana","Antojos (kcal/sem)",c.antojosSemana,50)}
+      <div class="lk-row peso"><span class="lk-l">Peso actual</span>
+        <span class="lk-v">${kg} kg</span>
+        <span class="lk-i" title="Se toma de tu último registro">📈</span>
+        <small class="lk-src">se toma solo de tu último registro en Progreso → Registrar medición</small></div>
+      ${num("estatura","Estatura (cm)",P.estatura)}${num("edad","Edad (años)",P.edad)}
+      ${sel("sexo","Sexo",[["m","Hombre"],["f","Mujer"]],P.sexo)}
+      ${sel("act","Actividad fuera del gym",[["1.4","Ligera (oficina)"],["1.55","Media (te mueves algo)"],["1.7","Alta (trabajo físico)"]],P.act)}
+      ${sel("objetivo","Objetivo",[["perder","Perder grasa"],["recomp","Recomposición"],["mantener","Mantener"],["subir","Subir masa"]],P.objetivo)}
+      ${num("metaGrasa","% de grasa meta",P.metaGrasa,0.5)}
+      ${num("metaMusculo","Músculo meta (kg)",P.metaMusculo,0.5)}
+      ${num("cardioMin","Cardio al terminar (min)",P.cardioMin,5)}
     </div>
-    <div class="set-h">Metas de progreso</div>
-    <div class="nut-form open2">
-      ${num("metaGrasa","% de grasa meta",c.perfil.metaGrasa,0.5)}
-      ${num("metaMusculo","Músculo meta (kg)",c.perfil.metaMusculo,0.5)}
-    </div>
-    <div class="set-h">Apariencia</div>
-    <div class="nut-form open2">
-      <label class="nf wide chk"><input type="checkbox" data-cfg="usarFotos" ${c.usarFotos?"checked":""}><span>Imágenes de alimentos</span></label>
-      <label class="nf wide chk"><input type="checkbox" data-cfg="fotosEjercicios" ${c.fotosEjercicios?"checked":""}><span>Fotos de ejercicios</span></label>
-    </div>
-    <div class="nut-btns" style="margin-top:4px">
-      <button class="nb-save" data-cfgsave="1">Guardar ajustes</button>
-      <button class="nb-reset" data-cfgreset="1">Volver a los originales</button>
+    <div class="nut-btns"><button class="nb-save" data-psave="1">Guardar y recalcular</button>
+      <button class="nb-reset" data-preset="1">Volver a valores originales</button></div>
+    <div class="set-h">Tu dieta, calculada de tus datos</div>
+    <div class="lk-card">
+      ${lockedRow("Calorías diarias", CONFIG.kcal.toLocaleString("es-MX")+" kcal")}
+      ${lockedRow("Proteína", CONFIG.prot+" g · 2.1 g por kg")}
+      ${lockedRow("Grasa", CONFIG.fat+" g")}
+      ${lockedRow("Carbohidratos", CONFIG.carb+" g · lo que resta")}
+      ${lockedRow("Agua", CONFIG.aguaLitros+" L")}
+      ${lockedRow("Presupuesto de antojos", CONFIG.antojosSemana.toLocaleString("es-MX")+" kcal/sem")}
+      <div class="nut-hint" style="padding:10px 2px 2px">🔒 Estos valores se calculan solos con la fórmula Mifflin-St Jeor y van bloqueados a propósito: así un dedazo no te descompone la dieta. Cambia tus datos de arriba (o registra un peso nuevo en Progreso) y se actualizan al momento.</div>
     </div>
     <div class="set-h">Respaldo</div>
-    <div class="img-note" style="margin-top:0">Todo tu progreso (pesos, series, medidas, ajustes, alimentos e imágenes) vive en este navegador. Exporta un respaldo de vez en cuando: es tu seguro contra borrar datos o cambiar de teléfono, y sirve para pasar todo a otro dispositivo.</div>
+    <div class="img-note" style="margin-top:0">Todo tu progreso vive en este dispositivo. Exporta un respaldo de vez en cuando: es tu seguro y tu forma de pasar todo a otro teléfono.</div>
     <div class="nut-btns">
       <button class="nb-save" data-bkexport="1">⬇️ Exportar respaldo</button>
       <label class="nb-reset bk-imp">⬆️ Importar respaldo<input type="file" accept=".json,application/json" data-bkimport="1" style="display:none"></label>
@@ -1342,11 +1381,68 @@ function ajustesHtml(){
     <div class="img-note" style="margin-top:0">
       <b>Android (Chrome):</b> menú ⋮ → «Agregar a pantalla de inicio» o «Instalar app».<br>
       <b>iPhone (Safari):</b> botón Compartir <span style="font-size:13px">⬆️</span> → «Agregar a inicio».<br>
-      Queda con el icono de Sólida, abre a pantalla completa y funciona aunque no tengas señal en el gimnasio.</div>`;
+      Queda con el icono de Sólida, abre a pantalla completa y funciona sin señal en el gimnasio.</div>`;
+}
+/* ---- pestaña Diseño ---- */
+function disenoHtml(){
+  const u = S.ui || {};
+  const chk = (k,l,d,on)=>`<label class="nf wide chk"><input type="checkbox" data-ui="${k}" ${on?"checked":""}><span>${l}<small class="ui-d">${d}</small></span></label>`;
+  const seg = (k,l,opts,cur)=>`<div class="nf wide"><span>${l}</span><div class="ui-seg">${opts.map(o=>
+    `<button data-ui="${k}" data-v="${o[0]}" class="${cur===o[0]?'on':''}">${o[1]}</button>`).join("")}</div></div>`;
+  return `
+    <div class="set-h">Apariencia</div>
+    <div class="nut-form open2">
+      ${seg("texto","Tamaño del texto",[["chico","Chico"],["normal","Normal"],["grande","Grande"]], u.texto||"normal")}
+      ${chk("fotosAlimentos","Imágenes de alimentos","En comidas y mandado", CONFIG.usarFotos)}
+      ${chk("fotosEjercicios","Fotos de ejercicios","En la rutina y sus variantes", CONFIG.fotosEjercicios)}
+      ${chk("anim","Animaciones","Timer, confeti y transiciones. Apágalas si tu teléfono va lento", u.anim!==false)}
+    </div>
+    <div class="img-note">Los cambios se aplican al instante y se recuerdan en este dispositivo. Nada de aquí afecta tu dieta ni tu rutina: solo cómo se ve la app.</div>`;
+}
+function renderGearSheet(){
+  const body = document.getElementById("cfgPanel");
+  let inner = "";
+  if(gearTab==="ali"){
+    inner = `
+      <button class="nut-addbtn" data-nutaddopen="1">➕ Agregar alimento nuevo</button>
+      ${nutAdd?nutAddFormHtml():""}
+      <input class="img-flt" id="nutFlt" type="search" placeholder="Buscar alimento o equivalencia…" value="${esc(nutFilter)}">
+      <div id="nutRows">${nutRowsHtml()}</div>
+      <div class="img-note">🍎 Cada alimento junta aquí su etiqueta, su precio y su imagen. Estos valores alimentan TODA la app: los kcal de cada comida, el resumen del día, las equivalencias y los totales del mandado.</div>`;
+  } else if(gearTab==="ejer"){
+    inner = `
+      <div class="set-h" style="margin-top:0">Unidad de peso</div>
+      <div class="ui-seg" style="margin-bottom:14px">
+        <button data-unit="kg" class="${(S.unit||"kg")==="kg"?"on":""}">Kilogramos</button>
+        <button data-unit="lb" class="${S.unit==="lb"?"on":""}">Libras</button>
+      </div>
+      <div class="set-h">Fotos de los ejercicios</div>
+      <input class="img-flt" id="imgFlt" type="search" placeholder="Buscar ejercicio…" value="${esc(imgFilter)}">
+      <div id="imgRows">${exRowsHtml()}</div>
+      <div class="img-note">💡 Puedes reemplazar cualquier foto con una tuya (una captura de tu técnica funciona perfecto). Con ✕ regresas a la original. Series, repeticiones y variantes se manejan directo en la pestaña Rutina.</div>`;
+  } else if(gearTab==="set"){
+    inner = personaHtml();
+  } else {
+    inner = disenoHtml();
+  }
+  body.innerHTML = `
+    <div class="ctabs">
+      <button data-geartab="ali" class="${gearTab==='ali'?'on':''}"><i>🍎</i>Alimentos</button>
+      <button data-geartab="ejer" class="${gearTab==='ejer'?'on':''}"><i>🏋️</i>Ejercicios</button>
+      <button data-geartab="set" class="${gearTab==='set'?'on':''}"><i>🎯</i>Ajustes</button>
+      <button data-geartab="dis" class="${gearTab==='dis'?'on':''}"><i>🎨</i>Diseño</button>
+    </div>${inner}`;
+  const flt = document.getElementById("imgFlt");
+  if(flt) flt.addEventListener("input", ()=>{ imgFilter = flt.value;
+    document.getElementById("imgRows").innerHTML = exRowsHtml(); });
+  const nflt = document.getElementById("nutFlt");
+  if(nflt) nflt.addEventListener("input", ()=>{ nutFilter = nflt.value;
+    document.getElementById("nutRows").innerHTML = nutRowsHtml(); });
 }
 function refreshAfterImg(){
   renderMeals(); renderShop(); renderRoutine();
-  const r=document.getElementById("imgRows"); if(r) r.innerHTML = imgRowsHtml();
+  const r=document.getElementById("imgRows"); if(r) r.innerHTML = exRowsHtml();
+  const n=document.getElementById("nutRows"); if(n) n.innerHTML = nutRowsHtml();
 }
 function refreshAfterNut(){
   attachCustomFoods();
@@ -1391,7 +1487,7 @@ function renderTargets(){
   if($("aguaFig")){ $("aguaFig").textContent = CONFIG.aguaLitros+" L";
     $("aguaSub").innerHTML = "≈ "+Math.round(CONFIG.aguaLitros*4)+" vasos de 250 ml<br>repartidos en el día"; }
 }
-renderTargets();
+applyUI(); renderTargets();
 
 function mealOpt(i){ return S.mealOpt[i] || "A"; }
 function renderMeals(){
@@ -1443,7 +1539,7 @@ function renderDaySummary(){
     <div class="ds-note">${Math.abs(diff)<=90
       ? "✓ Con las opciones y sustituciones de hoy quedas a "+Math.abs(diff)+" kcal del objetivo: dentro del margen."
       : (diff>0?"▲ Hoy vas "+diff+" kcal arriba del objetivo — revisa porciones o elige la opción más ligera de alguna comida.":"▼ Hoy vas "+(-diff)+" kcal abajo del objetivo — súbele a la porción de arroz o fruta.")}
-      Se recalcula solo al cambiar opciones, equivalencias o etiquetas (pestaña Ajustes → 🍽).</div>`;
+      Se recalcula solo al cambiar opciones, equivalencias o etiquetas (Ajustes → 🍎 Alimentos).</div>`;
 }
 function updateRing(){
   const done=S.meals[dayKey], c=done.filter(Boolean).length;
@@ -1496,7 +1592,7 @@ function renderShop(){
   SHOP.forEach(it=>groups[it.cat].push(it));
   const tot = weekCost();
   $("shopTotal").innerHTML = `<span class="st-l">🧾 Mandado de la semana, como lo tienes ahora</span>
-    <b>≈ ${fmt$(tot)}</b><small>precios editables en Ajustes → 🍽 Nutrición</small>`;
+    <b>≈ ${fmt$(tot)}</b><small>toca cualquier precio para ponerle el de tu tienda</small>`;
   $("shopList").innerHTML = Object.entries(groups).map(([cat,items])=>`
     <div class="shop-cat" style="--cc:${CATS[cat].c}">
       <div class="shop-cat-h"><span class="sq"></span><h3>${CATS[cat].t}</h3></div>
@@ -1515,7 +1611,7 @@ function renderShop(){
             <span class="nm"><b>${esc(swapped?a.n:it.name)}</b>
               ${sub?`<small>${esc(sub)}</small>`:""}
               <span class="badges">${it.rol==="rot"?'<span class="rot-b">\u21bb ROTACI\u00d3N</span>':it.rol==="extra"?'<span class="ext-b">EXTRA</span>':""}${hairBadge(h)}${prepBadge(p)}</span></span>
-            <span class="qty">${qty}${it.dur?`<small>${esc(it.dur)}</small>`:""}${it.total?`<span class="pr">≈ ${fmt$(shopItemCost(it))}</span>`:""}</span>
+            <span class="qty">${qty}${it.dur?`<small>${esc(it.dur)}</small>`:""}${it.total?`<button class="pr" data-price="${it.id}">≈ ${fmt$(shopItemCost(it))} <i>✎</i></button>`:""}</span>
           </div>
           ${it.tip?`<div class="buy-tip"><span class="bt-i">🛒</span><span>${it.tip}</span></div>`:""}
           ${hasAlts?`<button class="swap-open" data-open="${it.id}">
@@ -1525,6 +1621,61 @@ function renderShop(){
       }).join("")}
     </div>`).join("");
 }
+/* ---------- Submenú de precio (desde el mandado) ---------- */
+/* unidades disponibles según cómo se mide el alimento; k = cuántas
+   "bases internas" (100 g / 100 ml / pieza) caben en esa unidad */
+function priceUnits(it, n){
+  if(n.pz){
+    const u=[[ (n.pzTxt||"pieza"), 1 ]];
+    if(it.id==="huevos") u.push(["cartón (30 pzas)", 30]);
+    if(it.id==="tortillas") u.push(["kilo (≈30 pzas)", 30]);
+    if(it.id==="galletas") u.push(["caja (6 paquetes)", 6]);
+    return u;
+  }
+  if(it.unit==="ml") return [["litro",10],["100 ml",1]];
+  return [["kilo",10],["100 g",1],["250 g",2.5],["bolsa de 500 g",5]];
+}
+let priceCtx = null; /* {id, key, qty, units} */
+function openPriceSheet(id){
+  const it = shopById[id]; if(!it || !it.total) return;
+  const ai = S.swaps[id]!==undefined ? S.swaps[id] : -1;
+  const key = nutKey(id, ai<0?undefined:ai);
+  const n = nutOf(key);
+  const f = factorOf(id, ai<0?undefined:ai);
+  const qty = it.total * f;                      /* cantidad semanal en su unidad propia */
+  const units = priceUnits(it, n);
+  const name = ai<0 ? it.name : it.alts[ai].n;
+  priceCtx = { id, key, qty, units, pz:!!n.pz };
+  const curUnit = 0;
+  const curPrice = (n.precio||0) * units[curUnit][1];
+  const qtyTxt = n.pz ? Math.round(qty)+" "+(n.pzTxt||"pieza")+(Math.round(qty)===1?"":"s")
+                      : fmtQty(qty, it.unit);
+  openSheet("Precio de "+name, "Lo que pagas en TU tienda", `
+    <div class="price-form">
+      <label class="nf"><span>Unidad en que lo compras</span>
+        <select id="prUnit">${units.map((u,i)=>`<option value="${i}">${u[0]}</option>`).join("")}</select></label>
+      <label class="nf"><span>Precio por esa unidad ($)</span>
+        <input id="prVal" type="number" inputmode="decimal" step="any" min="0" value="${+curPrice.toFixed(2)}"></label>
+      <div class="price-total">
+        <span>Esta semana necesitas <b>${qtyTxt}</b></span>
+        <div class="pt-fig">≈ <b id="prTotal">${fmt$(shopItemCost(it))}</b><small>total del producto</small></div>
+      </div>
+      <div class="nut-btns">
+        <button class="nb-save" data-prsave="1">Guardar precio</button>
+        ${S.nutEdits[key] && S.nutEdits[key].precio!==undefined?`<button class="nb-reset" data-prreset="1">Restaurar estimado</button>`:""}
+      </div>
+      <div class="nut-hint">El total se calcula solo: precio ÷ unidad × lo que pide tu plan. Si este alimento está sustituido, editas el precio del producto que realmente compras. También puedes editarlo en Ajustes → 🍎 Alimentos.</div>
+    </div>`);
+  const upd = ()=>{
+    const ui=+document.getElementById("prUnit").value, v=+document.getElementById("prVal").value||0;
+    const per = v / priceCtx.units[ui][1];       /* a base interna */
+    const tot = (priceCtx.pz ? priceCtx.qty : priceCtx.qty/100) * per;
+    document.getElementById("prTotal").textContent = fmt$(tot);
+  };
+  document.getElementById("prUnit").addEventListener("change", upd);
+  document.getElementById("prVal").addEventListener("input", upd);
+}
+
 /* submenú de equivalencias de un alimento */
 function openAltsSheet(id){
   const it=shopById[id]; if(!it || !it.alts.length) return;
@@ -1544,6 +1695,8 @@ function openAltsSheet(id){
   openSheet("Cambiar alimento", it.alts.length+" equivalencias · mismos macros", html);
 }
 $("shopList").addEventListener("click",e=>{
+  const pb=e.target.closest("[data-price]");
+  if(pb){ openPriceSheet(pb.dataset.price); return; }
   const open=e.target.closest("[data-open]");
   if(open){ openAltsSheet(open.dataset.open); return; }
 });
@@ -1555,8 +1708,11 @@ $("tierBar").addEventListener("click",e=>{
 document.getElementById("cfgPanel").addEventListener("click",e=>{
   const gt=e.target.closest("[data-geartab]");
   if(gt){ gearTab=gt.dataset.geartab; renderGearSheet(); return; }
-  const it=e.target.closest("[data-imgtab]");
-  if(it){ imgTab=it.dataset.imgtab; imgFilter=""; renderGearSheet(); return; }
+  const un=e.target.closest("[data-unit]");
+  if(un){ S.unit=un.dataset.unit; save(); renderUnitToggle(); renderRoutine(); renderGearSheet();
+    showToast("Pesos en "+(S.unit==="lb"?"libras":"kilogramos")+" ✓"); return; }
+  const seg=e.target.closest(".ui-seg [data-ui]");
+  if(seg){ if(!S.ui) S.ui={}; S.ui[seg.dataset.ui]=seg.dataset.v; save(); applyUI(); renderGearSheet(); return; }
   const idel=e.target.closest("[data-imgdel]");
   if(idel){ delete CIMG[idel.dataset.imgdel]; saveImgs(); refreshAfterImg();
     showToast("Imagen original restaurada ✓"); return; }
@@ -1598,27 +1754,40 @@ document.getElementById("cfgPanel").addEventListener("click",e=>{
     S.customFoods.push(cf); save(); nutAdd=false; refreshAfterNut(); renderGearSheet();
     showToast("➕ "+name+" agregado como equivalencia"); return; }
 
-  /* --- Ajustes --- */
-  const cs=e.target.closest("[data-cfgsave]");
-  if(cs){ const body=document.getElementById("cfgPanel"); if(!S.cfg) S.cfg={};
-    body.querySelectorAll("[data-cfg]").forEach(inp=>{
-      const k=inp.dataset.cfg;
-      const v = inp.type==="checkbox" ? inp.checked : parseFloat(inp.value);
-      if(inp.type!=="checkbox" && isNaN(v)) return;
-      S.cfg[k]=v;
-      if(k==="metaGrasa") CONFIG.perfil.metaGrasa=v;
-      else if(k==="metaMusculo") CONFIG.perfil.metaMusculo=v;
-      else CONFIG[k]=v;
+  /* --- Ajustes: datos de la persona --- */
+  const cs=e.target.closest("[data-psave]");
+  if(cs){ const body=document.getElementById("cfgPanel"); if(!S.persona) S.persona={};
+    body.querySelectorAll("[data-per]").forEach(inp=>{
+      const k=inp.dataset.per;
+      let v = inp.tagName==="SELECT" ? inp.value : parseFloat(inp.value);
+      if(k==="act") v=parseFloat(v);
+      if(inp.tagName!=="SELECT" && isNaN(v)) return;
+      S.persona[k]=v;
     });
-    save(); renderTargets(); renderMeals(); renderShop(); renderRoutine(); renderBody();
-    showToast("🎯 Ajustes guardados"); return; }
-  const cr=e.target.closest("[data-cfgreset]");
-  if(cr){ delete S.cfg; save(); location.reload(); return; }
+    save(); applyPersona(); renderTargets(); renderMeals(); renderShop(); renderRoutine(); renderBody(); renderGearSheet();
+    showToast("🎯 Datos guardados · dieta recalculada"); return; }
+  const cr=e.target.closest("[data-preset]");
+  if(cr){ delete S.persona; save(); applyPersona();
+    renderTargets(); renderMeals(); renderShop(); renderRoutine(); renderBody(); renderGearSheet();
+    showToast("Valores originales restaurados ✓"); return; }
   const be=e.target.closest("[data-bkexport]");
   if(be){ exportBackup(); return; }
 
 });
 document.getElementById("sheetBody").addEventListener("click",e=>{
+  const ps=e.target.closest("[data-prsave]");
+  if(ps && priceCtx){
+    const ui=+document.getElementById("prUnit").value, v=+document.getElementById("prVal").value||0;
+    if(!S.nutEdits[priceCtx.key]) S.nutEdits[priceCtx.key]={};
+    S.nutEdits[priceCtx.key].precio = v / priceCtx.units[ui][1];
+    save(); closeSheet(); refreshAfterNut();
+    showToast("💲 Precio guardado · totales actualizados"); return; }
+  const pr=e.target.closest("[data-prreset]");
+  if(pr && priceCtx){
+    if(S.nutEdits[priceCtx.key]){ delete S.nutEdits[priceCtx.key].precio;
+      if(!Object.keys(S.nutEdits[priceCtx.key]).length) delete S.nutEdits[priceCtx.key]; }
+    save(); closeSheet(); refreshAfterNut();
+    showToast("Precio estimado restaurado ✓"); return; }
   const pick=e.target.closest("[data-pick]");
   if(pick){ const id=pick.dataset.pick, j=+pick.dataset.alt;
     if(j<0) delete S.swaps[id]; else S.swaps[id]=j;
@@ -2003,6 +2172,7 @@ function showCongrats(){
   setTimeout(()=>{ el.classList.remove("show"); setTimeout(()=>el.remove(),350); },1900);
 }
 function launchConfetti(anchor){
+  if(S.ui && S.ui.anim===false) return;
   const cols=["#2fb5a3","#59cfe0","#b09bff","#7ee081","#f2b544"];
   const r=anchor.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
   for(let i=0;i<26;i++){
@@ -2211,7 +2381,8 @@ $("bodySave").onclick=()=>{
   const ex=S.body.find(x=>x.d===fecha);
   if(ex) Object.assign(ex,rec); else S.body.push(rec);
   save(); $("bKg").value=""; $("bFat").value=""; $("bMme").value="";
-  renderBody(); showToast("Medición guardada: "+fmtDateShort(fecha)+" ✓");
+  applyPersona(); renderTargets(); renderMeals(); renderShop(); renderGearSheet();
+  renderBody(); showToast(kg?"Medición guardada · dieta recalculada a tu nuevo peso ✓":"Medición guardada: "+fmtDateShort(fecha)+" ✓");
 };
 document.addEventListener("click",e=>{
   const del=e.target.closest("[data-delbody]");

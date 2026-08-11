@@ -51,9 +51,17 @@ completa → Implementar. Listo en 1 minuto.
 │  DÓNDE SE EDITA CADA COSA                                 │
 └──────────────────────────────────────────────────────────┘
   Desde la pestaña AJUSTES (abajo, sin código):
-    🖼 Imágenes ..... foto de cualquier alimento o ejercicio
-    🍽 Nutrición .... etiquetas, precios y alimentos nuevos
-    🎯 Ajustes ...... objetivos, metas, respaldo, instalación
+    🍎 Alimentos .... etiqueta, precio e imagen de cada alimento,
+                      y agregar alimentos nuevos
+    🏋️ Ejercicios ... fotos de ejercicios y unidad kg/lb
+    🎯 Ajustes ...... TUS DATOS (peso, estatura, objetivo…);
+                      la dieta se calcula sola y va bloqueada.
+                      Respaldo e instalación.
+    🎨 Diseño ....... tamaño de texto, fotos, animaciones
+
+  PRECIOS: en el MANDADO toca el precio de cualquier alimento:
+  eliges la unidad en que lo compras (kilo, pieza, litro…),
+  pones lo que pagas y el total se calcula solo.
 
   En app.js (estructura del plan):
     CONFIG ......... valores por defecto de los objetivos
