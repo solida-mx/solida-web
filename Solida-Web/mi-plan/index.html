@@ -717,6 +717,20 @@
 
   :focus-visible{outline:2px solid var(--em);outline-offset:2px}
   @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+  /* ── Visor de imagen a pantalla completa ─────────────────────── */
+  .ex-photo img,.fico img,.img-th img,#rpImg{cursor:zoom-in}
+  #lightbox{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;
+    background:rgba(8,20,39,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    cursor:zoom-out;padding:24px}
+  #lightbox.abierto{display:flex;animation:lbIn .18s ease-out}
+  #lightbox img{max-width:min(92vw,560px);max-height:78vh;object-fit:contain;border-radius:18px;
+    animation:lbZoom .18s ease-out}
+  #lightbox .lb-cerrar{position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;
+    width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);
+    color:var(--ink);font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center}
+  @keyframes lbIn{from{opacity:0}to{opacity:1}}
+  @keyframes lbZoom{from{transform:scale(.9)}to{transform:scale(1)}}
+  @media (prefers-reduced-motion: reduce){#lightbox.abierto,#lightbox img{animation:none}}
 </style>
 </head>
 <body>
@@ -1012,6 +1026,46 @@
   </div>
 </div>
 
+<div id="lightbox" aria-hidden="true">
+  <button class="lb-cerrar" aria-label="Cerrar imagen">✕</button>
+  <img alt="Imagen ampliada">
+</div>
+
 <script src="app.js"></script>
+<script>
+/* ── Visor estandarizado: cualquier imagen de la app se expande al tocarla ── */
+(function(){
+  const lb  = document.getElementById("lightbox");
+  const pic = lb.querySelector("img");
+
+  function abrir(src){
+    pic.src = src;
+    lb.classList.add("abierto");
+    lb.setAttribute("aria-hidden","false");
+    document.body.style.overflow = "hidden";
+  }
+  function cerrar(){
+    lb.classList.remove("abierto");
+    lb.setAttribute("aria-hidden","true");
+    document.body.style.overflow = "";
+    pic.src = "";
+  }
+
+  /* Delegación en fase de captura: funciona con todo el contenido que
+     app.js genera dinámicamente (rutina, ajustes, mandado, snacks…) y
+     evita que el toque también active la tarjeta que contiene la imagen. */
+  document.addEventListener("click", function(e){
+    if (lb.classList.contains("abierto")) { cerrar(); e.stopPropagation(); e.preventDefault(); return; }
+    const img = e.target.closest(".ex-photo img, .fico img, .img-th img, #rpImg");
+    if (!img || !img.src) return;
+    /* No interceptar si la imagen vive dentro de un control de cambio de archivo */
+    if (e.target.closest("label.chg")) return;
+    e.stopPropagation(); e.preventDefault();
+    abrir(img.src);
+  }, true);
+
+  document.addEventListener("keydown", e => { if (e.key === "Escape") cerrar(); });
+})();
+</script>
 </body>
 </html>

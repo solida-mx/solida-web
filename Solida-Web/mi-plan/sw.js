@@ -1,6 +1,6 @@
 /* Service worker de Mi Plan — funciona sin conexión en el gimnasio.
    Sube VERSION cuando cambies index.html o app.js para forzar actualización. */
-const VERSION = "mi-plan-v2.3.0";
+const VERSION = "mi-plan-v2.4.0";
 const SHELL = ["./", "index.html", "app.js", "manifest.json",
                "img/icon-192.png", "img/icon-512.png"];
 
