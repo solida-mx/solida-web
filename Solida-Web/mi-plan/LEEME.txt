@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════╗
-║   MI PLAN v4 — aplicación completa (Salvador)                 ║
+║   MI PLAN v5 — aplicación completa (Salvador)                 ║
 ║   Sólida Aplicaciones · azul marino + verde azulado           ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -131,6 +131,31 @@ completa → Implementar. Listo en 1 minuto.
   · Los que más repites suben solos a la primera fila.
   · Los antojos siguen descontando del presupuesto semanal
     y ahora también suman al día en que los comes.
+
+┌──────────────────────────────────────────────────────────┐
+│  DETALLE DE CADA ALIMENTO                                 │
+└──────────────────────────────────────────────────────────┘
+  · Toca el renglón de cualquier alimento (en Mandado o en
+    Hoy) y se abre su ficha: imagen, macros REALES de esa
+    cantidad, etiqueta por 100 g o por pieza, precio y el
+    consejo de compra. Desde ahí cambias precio y equivalencia.
+  · La fila queda en una línea: caben 9 alimentos en pantalla
+    en vez de 2.
+  · En Modo súper el toque en la fila MARCA en vez de abrir
+    la ficha: con el carrito en la mano quieres velocidad.
+  · Las 90 equivalencias ahora sí tienen imagen: usan la del
+    alimento que las representa, con una marquita ↻ en la
+    esquina. Puedes ponerles tu propia foto desde Ajustes.
+
+┌──────────────────────────────────────────────────────────┐
+│  SONIDOS                                                  │
+└──────────────────────────────────────────────────────────┘
+  · Suenan al marcar comidas y snacks, al completar series,
+    al echar productos al carrito y al terminar el descanso.
+  · Se apagan en Ajustes → 🎨 Diseño → Sonidos.
+  · OJO EN IPHONE: el switch físico de silencio apaga el
+    sonido de las apps web. Por eso el fin del descanso
+    SIEMPRE vibra además de sonar.
 
 ┌──────────────────────────────────────────────────────────┐
 │  HISTORIAL (antes «Progreso»)                             │

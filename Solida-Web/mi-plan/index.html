@@ -86,20 +86,20 @@
   .splash{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:0;
     background:var(--hdr);
-    animation:spSalida .38s ease .78s forwards}
+    animation:spSalida .42s cubic-bezier(.32,.72,0,1) 1.62s forwards}
   .splash.fuera{animation:spSalida .35s ease forwards}
   @keyframes spSalida{to{opacity:0;visibility:hidden;transform:scale(1.04)}}
   .splash::before{content:"";position:absolute;width:420px;height:420px;border-radius:50%;
     background:radial-gradient(circle,rgba(42,157,142,.32),transparent 66%);
-    animation:spHalo 1.4s ease-out}
+    animation:spHalo 1.9s cubic-bezier(.22,.9,.3,1)}
   @keyframes spHalo{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
 
   .sp-logo{position:relative;width:78px;height:78px;filter:drop-shadow(0 10px 26px rgba(0,0,0,.4))}
   .sp-logo svg{width:100%;height:100%;overflow:visible}
   /* las 3 barras del logo entran una por una, de abajo hacia arriba */
   .sp-r{transform-origin:center;opacity:0;animation:spBarra .5s cubic-bezier(.2,.9,.3,1.3) forwards}
-  .sp-r1{fill:#2a9d8e;animation-delay:.30s}
-  .sp-r2{fill:#eef7f6;animation-delay:.15s}
+  .sp-r1{fill:#2a9d8e;animation-delay:.42s}
+  .sp-r2{fill:#eef7f6;animation-delay:.21s}
   .sp-r3{fill:#2a9d8e;animation-delay:0s}
   @keyframes spBarra{
     0%  {opacity:0;transform:translateX(-14px) scaleX(.35)}
@@ -108,23 +108,23 @@
   }
   .sp-nm{position:relative;margin-top:18px;font-family:"Space Grotesk",system-ui,sans-serif;
     font-size:23px;font-weight:700;letter-spacing:.20em;color:#fff;
-    opacity:0;animation:spTexto .5s ease .48s forwards}
+    opacity:0;animation:spTexto .55s cubic-bezier(.32,.72,0,1) .66s forwards}
   .sp-sub{position:relative;margin-top:4px;font-size:10.5px;font-weight:800;letter-spacing:.20em;
     text-transform:uppercase;color:var(--hdr-ink);
-    opacity:0;animation:spTexto .5s ease .60s forwards}
+    opacity:0;animation:spTexto .55s cubic-bezier(.32,.72,0,1) .84s forwards}
   @keyframes spTexto{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
   .sp-bar{position:relative;margin-top:24px;width:104px;height:3px;border-radius:99px;
     background:rgba(255,255,255,.18);overflow:hidden;
-    opacity:0;animation:spTexto .4s ease .68s forwards}
+    opacity:0;animation:spTexto .45s ease .95s forwards}
   .sp-bar i{display:block;height:100%;width:0;border-radius:99px;background:#5fe0cc;
-    animation:spCarga .75s cubic-bezier(.4,0,.2,1) .70s forwards}
+    animation:spCarga 1.02s cubic-bezier(.45,.05,.25,1) .98s forwards}
   @keyframes spCarga{to{width:100%}}
 
   /* respeta "sin animaciones": se muestra un instante y se va, sin movimiento */
   html.noanim .splash,
   html.noanim .splash *{animation-duration:.01s!important;animation-delay:0s!important}
   @media (prefers-reduced-motion:reduce){
-    .splash{animation:spSalida .2s ease .3s forwards}
+    .splash{animation:spSalida .25s ease .55s forwards}
     .splash *{animation-duration:.01s!important;animation-delay:0s!important}
   }
   /* si ya se abrió hace poco, no la repetimos */
@@ -177,24 +177,57 @@
   .hdr-mini b{font-family:"Space Grotesk",system-ui,sans-serif;font-size:15px}
   .hdr-mini .sep{opacity:.35}
 
-  /* ===== colapsado: pasa de ~440 px a ~112 px ===== */
-  body.hdr-min header{padding-top:calc(9px + env(safe-area-inset-top));padding-bottom:10px}
-  body.hdr-min .brandmark{width:20px;height:20px}
-  body.hdr-min .hello{font-size:0;margin-top:0;opacity:0;height:0;overflow:hidden}
-  body.hdr-min .datemeta{opacity:0;max-height:0;overflow:hidden;margin:0}
-  body.hdr-min .macro-strip{display:none}
-  body.hdr-min .hdr-mini{display:flex}
+  /* ===== COLAPSO LIGADO AL SCROLL =====
+     --h va de 0 (abierto) a 1 (colapsado) y lo escribe el scroll con rAF.
+     Antes esto era un cambio de clase con font-size:0 al cruzar 56 px: el
+     header desaparecía de golpe. Ahora se encoge siguiendo el dedo, sin
+     transiciones que peleen con el scrub.                                 */
+  header{ --h:0 }
+  .hello{
+    max-height:calc(34px * (1 - var(--h)));
+    margin-top:calc(12px * (1 - var(--h)));
+    opacity:clamp(0, calc(1 - var(--h) * 1.7), 1);
+    transform:translateY(calc(-10px * var(--h)));
+    overflow:hidden}
+  .datemeta{
+    max-height:calc(20px * (1 - var(--h)));
+    margin-top:calc(3px * (1 - var(--h)));
+    opacity:clamp(0, calc(.85 - var(--h) * 1.7), 1);
+    transform:translateY(calc(-8px * var(--h)));
+    overflow:hidden}
+  .macro-strip,.hdr-extra{
+    max-height:calc(64px * (1 - var(--h)));
+    margin-top:calc(14px * (1 - var(--h)));
+    opacity:clamp(0, calc(1 - var(--h) * 1.9), 1);
+    transform:translateY(calc(-6px * var(--h)));
+    overflow:hidden}
+  .hdr-mini{
+    display:flex;
+    max-height:calc(24px * var(--h));
+    margin-top:calc(9px * var(--h));
+    opacity:clamp(0, calc(var(--h) * 2.2 - 1.05), 1);
+    overflow:hidden}
+  .brandmark{width:calc(26px - 6px * var(--h));height:calc(26px - 6px * var(--h))}
+  /* el sticky del header ya no necesita transición: lo mueve el scroll */
+  header{transition:none}
 
   /* ===== el header cambia según la pestaña =====
      los macros de la dieta no pintan nada en Rutina, Progreso ni Ajustes */
   body[data-tab="rutina"] .macro-strip,
   body[data-tab="progreso"] .macro-strip,
   body[data-tab="config"] .macro-strip{display:none}
+  /* al cambiar de pestaña sí queremos una transición suave */
+  body:not(.scrolleando) .hello,
+  body:not(.scrolleando) .datemeta,
+  body:not(.scrolleando) .macro-strip,
+  body:not(.scrolleando) .hdr-extra,
+  body:not(.scrolleando) .hdr-mini{
+    transition:max-height .34s cubic-bezier(.32,.72,0,1),
+               opacity .26s ease, margin .34s cubic-bezier(.32,.72,0,1),
+               transform .34s cubic-bezier(.32,.72,0,1)}
   body[data-tab="rutina"] .hdr-extra,
   body[data-tab="progreso"] .hdr-extra,
   body[data-tab="config"] .hdr-extra{display:flex}
-  body.hdr-min .macro-strip,
-  body.hdr-min[data-tab] .hdr-extra{display:none}
   .hdr-extra{position:relative;display:none;gap:8px;margin-top:14px}
   .hdr-extra .he{flex:1;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.17);
     border-radius:13px;padding:9px 8px;text-align:center}
@@ -282,6 +315,13 @@
   .fico .fe{display:none;font-size:26px;line-height:1}
   .fico.noimg img{display:none}
   .fico.noimg .fe{display:block}
+  /* marca de equivalencia: la foto es del alimento que representa,
+     no del producto exacto — y eso hay que decirlo */
+  .fico .eq-mk{position:absolute;right:-1px;bottom:-1px;width:16px;height:16px;
+    border-radius:6px 0 12px 0;background:var(--amber);color:#1a1200;
+    font-size:10px;font-weight:800;line-height:16px;text-align:center;
+    box-shadow:-1px -1px 0 var(--lienzo)}
+  .fico:not(.equiv) .eq-mk{display:none}
 
   /* foto de ejercicio */
   .ex-photo{position:relative;width:58px;height:58px;flex:none;border-radius:14px;overflow:hidden;
@@ -536,6 +576,67 @@
   .shop-cat-h{display:flex;align-items:center;gap:9px;margin-bottom:9px}
   .shop-cat-h .sq{width:10px;height:10px;border-radius:3px;background:var(--cc)}
   .shop-cat-h h3{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--cc)}
+  /* ===== Detalle de alimento ===== */
+  .dt-top{display:flex;align-items:flex-start;gap:12px;padding-bottom:14px;
+    border-bottom:1px solid var(--line)}
+  .dt-top .fico{width:64px;height:64px;border-radius:16px}
+  .dt-ti{flex:1;min-width:0}
+  .dt-ti b{display:block;font-family:"Space Grotesk",system-ui,sans-serif;
+    font-size:16.5px;line-height:1.25;color:var(--ink)}
+  .dt-ti small{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px}
+  .dt-ti .badges{margin-top:6px}
+  .dt-q{flex:none;text-align:right}
+  .dt-q b{display:block;font-family:"Space Grotesk",system-ui,sans-serif;
+    font-size:17px;color:var(--em)}
+  .dt-q span{font-size:9.5px;font-weight:800;letter-spacing:.03em;color:var(--muted);
+    text-transform:uppercase}
+
+  .dt-macros{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:14px 0}
+  .dt-m{position:relative;overflow:hidden;background:var(--velo);
+    border:1px solid var(--line);border-radius:13px;padding:11px 4px 9px;text-align:center}
+  .dt-m::after{content:"";position:absolute;left:0;top:0;height:3px;width:100%;background:var(--dc)}
+  .dt-m b{display:block;font-family:"Space Grotesk",system-ui,sans-serif;
+    font-size:18px;font-weight:700;color:var(--dc);line-height:1.1}
+  .dt-m b em{font-style:normal;font-size:.55em;font-weight:600;opacity:.8}
+  .dt-m span{font-size:9px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--muted);font-weight:800}
+
+  .dt-fila{display:flex;align-items:flex-start;gap:10px;padding:11px 0;
+    border-bottom:1px solid var(--line);font-size:12.5px}
+  .dt-l{flex:none;width:64px;font-size:10.5px;font-weight:800;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--muted);padding-top:2px}
+  .dt-v{flex:1;font-weight:700;color:var(--ink);line-height:1.5}
+  .dt-v em{display:block;font-style:normal;font-size:11.5px;color:var(--muted);font-weight:600;margin-top:1px}
+  .dt-nota{margin-top:13px;padding:11px 13px;border-radius:12px;background:var(--velo);
+    border:1px dashed var(--line-str);font-size:12px;color:var(--muted);
+    font-weight:600;line-height:1.55}
+  .dt-nota b{color:var(--ink)}
+  .dt-btns{display:flex;gap:8px;margin-top:16px}
+  .dt-b{flex:1;min-height:48px;border-radius:13px;font-family:inherit;
+    font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;padding:0 10px}
+  .dt-precio{background:var(--velo);border:1px solid var(--line-str);color:var(--ink)}
+  .dt-swap{background:var(--em);border:none;color:light-dark(#fff,var(--on-em))}
+  .dt-b:active{transform:scale(.97)}
+
+  /* ===== filas a una línea ===== */
+  .row-mas{flex:none;align-self:center;color:var(--faint);font-size:20px;
+    font-weight:700;line-height:1;padding-left:2px}
+  .shop-row{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .shop-row:active{opacity:.72}
+  .shop-row .nm{min-width:0}
+  .shop-row .nm b{font-size:13.5px;line-height:1.3;display:-webkit-box;
+    -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  /* el "equivalencia de …" se queda en una línea con puntos suspensivos */
+  .shop-row .nm small{display:block;font-size:10.5px;color:var(--muted);font-weight:600;
+    margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .shop-row .qty small.q-pr{display:block;margin-top:3px;font-size:11px;
+    font-weight:800;color:var(--sky)}
+  .shop-row .qty small.q-pr.pagado{color:var(--em)}
+  .food{cursor:pointer}
+  .food:active{opacity:.72}
+  body.modo-mandado .row-mas{display:none}
+
   /* ===== Registro de compra ===== */
   .sc-chk{flex:none;width:44px;height:44px;margin:-4px 0 0 -6px;border:none;background:none;
     display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -820,7 +921,11 @@
   .mas-info summary{list-style:none;cursor:pointer;padding:13px 15px;font-size:12.5px;
     font-weight:800;color:var(--muted);display:flex;align-items:center;justify-content:space-between;min-height:44px}
   .mas-info summary::-webkit-details-marker{display:none}
-  .mas-info summary::after{content:"▾";color:var(--faint);transition:transform .2s}
+  .mas-info summary{gap:9px}
+  .mas-info .mi-i{flex:none;display:flex;color:var(--muted)}
+  .mas-info .mi-i svg{width:19px;height:19px}
+  .mas-info summary>*:not(.mi-i){flex:1}
+  .mas-info summary::after{content:"▾";color:var(--faint);transition:transform .2s;flex:none}
   .mas-info[open] summary::after{transform:rotate(180deg)}
   .mas-info .mi-body{padding:0 15px 14px;font-size:12.5px;color:var(--ink);line-height:1.6}
 
@@ -1264,24 +1369,15 @@
   <section class="tab" id="tab-mandado">
     <div class="sec-title"><h2>Mandado semanal</h2><span class="ln"></span><span class="chip">7 días</span></div>
 
-    <div class="banner em" data-super="ocultar">
-      <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg></span>
-      <div><b>Elige tu presupuesto.</b> Estos tres botones cambian los alimentos del mandado <b>y de tus platillos</b> por opciones equivalentes en macros: más baratas, las del plan, o más prácticas/premium. Comer económico aquí <b>no</b> significa comer feo: solo comprar con cabeza.</div>
-    </div>
+    <details class="mas-info" data-super="ocultar"><summary><span class="mi-i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg></span>Elige tu presupuesto</summary><div class="mi-body">Estos tres botones cambian los alimentos del mandado <b>y de tus platillos</b> por opciones equivalentes en macros: más baratas, las del plan, o más prácticas/premium. Comer económico aquí <b>no</b> significa comer feo: solo comprar con cabeza.</div></details>
     <div class="shop-total" id="shopTotal"></div>
       <div class="tier-bar" id="tierBar"></div>
 
-    <div class="banner amber" data-super="ocultar">
-      <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></span>
-      <div><b>Cómo se lee esta lista.</b> Todo lo que aparece aquí se compra: es el mandado completo de la semana, con la cantidad exacta de cada cosa.
+    <details class="mas-info" data-super="ocultar"><summary><span class="mi-i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></span>Cómo se lee esta lista</summary><div class="mi-body">Todo lo que aparece aquí se compra: es el mandado completo de la semana, con la cantidad exacta de cada cosa.
       Debajo de cada cantidad dice <b>para cuántas comidas alcanza</b>.
       Lo marcado como <span class="rot-b">↻ ROTACIÓN</span> <b>no se suma</b>: sustituye al pollo un día de la semana
-      (por eso el pollo alcanza para 5 comidas y no para 7). Si cambias un alimento con el botón <b>“Cambiar por equivalencia”</b>, la cantidad ya viene ajustada para cubrir los mismos macros y tus platillos se actualizan solos.</div>
-    </div>
-    <div class="banner violet" style="align-items:center" data-super="ocultar">
-      <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></span>
-      <div><span class="hair-b">CABELLO</span> = aporta nutrientes capilares · <span class="prep-b listo">LISTO</span> = cero cocina · <span class="prep-b rapido">RÁPIDO</span> = menos de 8 min · <span class="prep-b cocina">COCINA</span> = requiere sartén u olla</div>
-    </div>
+      (por eso el pollo alcanza para 5 comidas y no para 7). Si cambias un alimento con el botón <b>“Cambiar por equivalencia”</b>, la cantidad ya viene ajustada para cubrir los mismos macros y tus platillos se actualizan solos.</div></details>
+    <details class="mas-info" data-super="ocultar"><summary><span class="mi-i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></span>Más información</summary><div class="mi-body"><span class="hair-b">CABELLO</span> = aporta nutrientes capilares · <span class="prep-b listo">LISTO</span> = cero cocina · <span class="prep-b rapido">RÁPIDO</span> = menos de 8 min · <span class="prep-b cocina">COCINA</span> = requiere sartén u olla</div></details>
     <div id="shopList"></div>
 
     <div class="sec-title" data-super="ocultar"><h2>Compra inteligente</h2><span class="ln"></span><span class="chip">dinero · tiempo</span></div>

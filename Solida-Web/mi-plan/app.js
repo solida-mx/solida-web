@@ -136,6 +136,71 @@ function applyUI(){
   applyTema();
 }
 applyPersona();
+/* ==================================================================
+   SONIDOS
+   Sintetizados con Web Audio: cero archivos, funcionan sin conexión y
+   no pesan nada. Cortos y discretos: confirman sin llamar la atención.
+
+   Dos cosas de iPhone que condicionan el diseño:
+     · el audio web necesita un toque previo para desbloquearse
+     · el switch físico de silencio LO APAGA — por eso el fin del
+       descanso siempre va acompañado de vibración, nunca sonido solo
+   ================================================================== */
+let _audio = null, _audioListo = false;
+function audioOn(){ return (S.ui||{}).sonido !== false; }
+function ctxAudio(){
+  if(_audio) return _audio;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return null;
+  try{ _audio = new AC(); }catch(e){ return null; }
+  return _audio;
+}
+/* el primer toque de la sesión desbloquea el audio, sin que se note */
+function desbloqueaAudio(){
+  if(_audioListo) return;
+  const c = ctxAudio(); if(!c) return;
+  if(c.state === "suspended") c.resume().catch(()=>{});
+  _audioListo = true;
+}
+["pointerdown","touchstart","keydown"].forEach(ev=>
+  document.addEventListener(ev, desbloqueaAudio, {once:true, passive:true}));
+
+/* una nota: onda suave con envolvente, para que no suene a pitido barato */
+function _nota(c, freq, t0, dur, vol, tipo){
+  const osc = c.createOscillator(), g = c.createGain();
+  osc.type = tipo || "sine";
+  osc.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(g); g.connect(c.destination);
+  osc.start(t0); osc.stop(t0 + dur + 0.02);
+}
+const SONIDOS = {
+  comida:    { notas:[[880,0,.10],[1174.7,.055,.13]], vol:.11 },
+  deshacer:  { notas:[[740,0,.09],[554,.05,.11]],     vol:.09 },
+  serie:     { notas:[[1318.5,0,.055]],               vol:.09, tipo:"triangle" },
+  ejercicio: { notas:[[784,0,.10],[1046.5,.07,.16]],  vol:.11 },
+  carrito:   { notas:[[1567.9,0,.06]],                vol:.10, tipo:"square" },
+  mandado:   { notas:[[523.3,0,.16],[659.3,.07,.18],[784,.14,.26]], vol:.10 },
+  descanso:  { notas:[[523.3,0,.16],[659.3,.15,.16],[784,.30,.16],
+                      [1046.5,.45,.34],[1046.5,.85,.30]], vol:.16 }
+};
+function sonar(nombre){
+  if(!audioOn()) return;
+  const def = SONIDOS[nombre]; if(!def) return;
+  const c = ctxAudio(); if(!c) return;
+  if(c.state === "suspended"){ c.resume().catch(()=>{}); }
+  const t0 = c.currentTime + 0.01;
+  try{ def.notas.forEach(([f, off, dur]) => _nota(c, f, t0+off, dur, def.vol, def.tipo)); }
+  catch(e){ /* si el navegador no deja, seguimos sin sonido */ }
+}
+/* sonido + vibración juntos: en el gimnasio la vibración es lo confiable */
+function avisar(nombre, ms){
+  sonar(nombre);
+  try{ if(navigator.vibrate) navigator.vibrate(ms || 12); }catch(e){}
+}
+
 /* Banner rojo fijo para avisos que NO se pueden perder (a diferencia del toast) */
 let alertaActiva = null;
 function alertaGrave(titulo, texto, accion){
@@ -1391,11 +1456,60 @@ function dispAmt(id, base, unitOv){
   const val = base*factorOf(id, S.swaps[id]);
   return fmtQty(val, unit);
 }
-function foodIcon(it, forceEmoji){
-  if(!CONFIG.usarFotos || forceEmoji) return `<span class="emoji">${it.e}</span>`;
-  const src = srcImagen("food:"+it.id, "img/"+it.id+".png");
-  return `<span class="fico"><img src="${src}" alt="" loading="lazy" `+
-         `onerror="this.parentNode.classList.add('noimg')"><span class="fe">${it.e}</span></span>`;
+/* ==================================================================
+   IMÁGENES DE LAS EQUIVALENCIAS
+   Ninguna de las 90 equivalencias tiene foto propia: sólo hay imagen de
+   los 25 alimentos base. Antes se mostraba el emoji suelto, que rompía
+   el estilo. Ahora cada equivalencia toma la imagen del alimento que
+   REALMENTE la representa (Requesón → queso, Atún → sardina) y lleva
+   una marca de "equivalencia" para no fingir que es ese producto exacto.
+   También puedes ponerle tu propia foto desde Ajustes → Alimentos.
+   ================================================================== */
+const IMG_EQUIV = [
+  [/pollo|pechuga|pavo/i,                                   "pollo"],
+  [/at[úu]n|sardina|salm[óo]n|tilapia|pescado|camar[óo]n/i,  "sardina"],
+  [/res\b|bistec|falda|diezmillo|h[íi]gado|molida|cerdo/i,   "res"],
+  [/huevo|clara/i,                                           "claras"],
+  [/queso|cottage|reques[óo]n|panela|oaxaca/i,               "queso"],
+  [/yogurt|griego|skyr/i,                                    "yogurt"],
+  [/leche|soya|bebida/i,                                     "leche"],
+  [/arroz|pasta|quinoa|c[úu]scus/i,                          "arroz"],
+  [/tortilla|tostada|pan\b|bolillo/i,                        "tortillas"],
+  [/avena|amaranto|granola|hojuela/i,                        "avena"],
+  [/frijol|lenteja|garbanzo|haba/i,                          "frijoles"],
+  [/pl[áa]tano|banana/i,                                     "platano"],
+  [/manzana|pera|naranja|mandarina|papaya|sand[íi]a|mel[óo]n|pi[ñn]a|fruta|guayaba|kiwi|uva|durazno|d[áa]til/i, "manzana"],
+  [/espinaca|acelga|kale|br[óo]coli|lechuga|nopal|calabac|ejote|chayote|pimiento|verdura/i, "espinaca"],
+  [/zanahoria|betabel|j[íi]cama|pepino/i,                    "zanahoria"],
+  [/papa|camote|elote|ma[íi]z/i,                             "verdura"],
+  [/aceite|oliva|aguacate|mantequilla/i,                     "aceite"],
+  [/pepita|cacahuate|almendra|nuez|semilla|crema de/i,       "pepitas"],
+  [/linaza|ch[íi]a|ajonjol[íi]/i,                            "linaza"],
+  [/cacao|cocoa|chocolate/i,                                 "cacao"],
+  [/galleta|barra|palomita/i,                                "galletas"],
+  [/lim[óo]n|lima/i,                                         "limon"],
+  [/chispa/i,                                                "chispas"],
+];
+/* qué imagen le toca a una equivalencia: primero por su nombre, y si no
+   se reconoce, la del alimento base al que sustituye */
+function imgDeEquivalencia(nombre, idBase){
+  const r = IMG_EQUIV.find(([re]) => re.test(nombre));
+  return r ? r[1] : idBase;
+}
+/* icono de un alimento. `alt` es la equivalencia activa, si la hay. */
+function foodIcon(it, alt){
+  if(!CONFIG.usarFotos) return `<span class="emoji">${it.e}</span>`;
+  if(!alt){
+    const src = srcImagen("food:"+it.id, "img/"+it.id+".png");
+    return `<span class="fico"><img src="${src}" alt="" loading="lazy" `+
+           `onerror="this.parentNode.classList.add('noimg')"><span class="fe">${it.e}</span></span>`;
+  }
+  const clave = "food:" + (alt.customId ? "custom:"+alt.customId : slugName(alt.n));
+  const base  = imgDeEquivalencia(alt.n, it.id);
+  const src   = srcImagen(clave, "img/"+base+".png");
+  return `<span class="fico equiv" title="Equivalencia de ${esc(it.name)}">`+
+         `<img src="${src}" alt="" loading="lazy" onerror="this.parentNode.classList.add('noimg')">`+
+         `<span class="fe">${it.e}</span><span class="eq-mk" aria-hidden="true">↻</span></span>`;
 }
 /* ---------- Imágenes personalizadas (se guardan en este navegador) ---------- */
 const IMG_KEY = "mi_plan_salvador_imgs_v1";
@@ -1434,6 +1548,7 @@ function openSheet(title, sub, html){
   document.body.style.overflow = "hidden";
 }
 function closeSheet(){
+  detalleCtx = null;
   sheetOv.classList.remove("show");
   document.body.style.overflow = "";
 }
@@ -1442,8 +1557,11 @@ sheetOv.addEventListener("click", e=>{ if(e.target===sheetOv) closeSheet(); });
 document.getElementById("cfgPanel").addEventListener("change", e=>{
   const ui = e.target.closest("input[type=checkbox][data-ui]");
   if(ui){ if(!S.ui) S.ui={};
-    S.ui[{fotosAlimentos:"fotosAlimentos",fotosEjercicios:"fotosEjercicios",anim:"anim"}[ui.dataset.ui]] = ui.checked;
+    /* la lista blanca de antes dejaba fuera cualquier interruptor nuevo */
+    const permitidos = ["fotosAlimentos","fotosEjercicios","anim","sonido"];
+    if(permitidos.includes(ui.dataset.ui)) S.ui[ui.dataset.ui] = ui.checked;
     save(); applyUI(); renderMeals(); renderShop(); renderRoutine();
+    if(ui.dataset.ui==="sonido" && ui.checked){ desbloqueaAudio(); sonar("comida"); }
     showToast(ui.checked?"Activado ✓":"Desactivado ✓"); return; }
   const bk = e.target.closest("[data-bkimport]");
   if(bk && bk.files && bk.files[0]){ importBackup(bk.files[0]); return; }
@@ -1765,6 +1883,8 @@ function disenoHtml(){
       ${chk("fotosAlimentos","Imágenes de alimentos","En comidas y mandado", CONFIG.usarFotos)}
       ${chk("fotosEjercicios","Fotos de ejercicios","En la rutina y sus variantes", CONFIG.fotosEjercicios)}
       ${chk("anim","Animaciones","Timer, confeti y transiciones. Apágalas si tu teléfono va lento", u.anim!==false)}
+      ${chk("sonido","Sonidos","Al marcar comidas, series y productos, y al terminar el descanso", u.sonido!==false)}
+      <div class="ui-nota">En iPhone el switch de silencio apaga el sonido de las apps web. Por eso el fin del descanso siempre vibra además de sonar.</div>
     </div>
     <div class="img-note">Los cambios se aplican al instante y se recuerdan en este dispositivo. Nada de aquí afecta tu dieta ni tu rutina: solo cómo se ve la app.</div>`;
 }
@@ -1933,24 +2053,33 @@ function renderHdrExtra(){
   } else el.innerHTML = "";
 }
 
-/* El header se encoge al bajar. Un solo listener pasivo con rAF: nada de
-   trabajo por frame de scroll. */
-(function headerColapsable(){
-  let ticking = false, ultimo = false;
-  const UMBRAL_BAJA = 56, UMBRAL_SUBE = 24;   /* histéresis: no parpadea */
-  function revisa(){
+/* El header se encoge SIGUIENDO el scroll, no de golpe.
+   Un solo listener pasivo con rAF escribe --h de 0 a 1; el CSS interpola
+   tamaños y opacidades. Antes era un salto al cruzar 56 px. */
+(function headerScroll(){
+  const RECORRIDO = 96;          /* px de scroll para colapsar del todo */
+  let ticking = false, ultimo = -1, tQuieto;
+  const header = document.querySelector("header");
+  if(!header || !header.style || !header.style.setProperty) return;   /* sin header no hay nada que animar */
+  function pinta(){
     ticking = false;
-    const y = window.scrollY || 0;
-    const min = ultimo ? y > UMBRAL_SUBE : y > UMBRAL_BAJA;
-    if(min !== ultimo){
-      ultimo = min;
-      document.body.classList.toggle("hdr-min", min);
-      if(min) renderHdrMini();
-    }
+    const y = Math.max(0, window.scrollY || 0);
+    const h = Math.min(1, y / RECORRIDO);
+    if(Math.abs(h - ultimo) < 0.004) return;   /* evita escrituras inútiles */
+    const antes = ultimo;
+    ultimo = h;
+    header.style.setProperty("--h", h.toFixed(3));
+    /* el resumen de una línea se rellena justo antes de empezar a verse */
+    if(antes < 0.45 && h >= 0.45) renderHdrMini();
   }
   window.addEventListener("scroll", ()=>{
-    if(!ticking){ ticking = true; requestAnimationFrame(revisa); }
+    /* mientras el dedo scrollea, sin transiciones: el CSS sigue al dedo */
+    document.body.classList.add("scrolleando");
+    clearTimeout(tQuieto);
+    tQuieto = setTimeout(()=>document.body.classList.remove("scrolleando"), 140);
+    if(!ticking){ ticking = true; requestAnimationFrame(pinta); }
   }, {passive:true});
+  pinta();
 })();
 applyUI(); renderTargets();
 
@@ -2073,13 +2202,15 @@ function renderMeals(){
       </div>
       ${optHtml}
       <ul class="foods">${items.map(f=>{
-        const swapped=!!selAlt(f.ref), h=dispHair(f.ref);
-        return `<li class="food${swapped?' swapped':''}">
-          ${foodIcon(shopById[f.ref], swapped)}
+        const altF=selAlt(f.ref), swapped=!!altF, h=dispHair(f.ref);
+        return `<li class="food${swapped?' swapped':''}" role="button" tabindex="0"
+            data-detalle="${f.ref}" data-g="${f.g}" data-u="${f.unit||''}"
+            aria-label="Ver detalle de ${esc(dispName(f.ref))}">
+          ${foodIcon(shopById[f.ref], altF)}
           <span class="txt"><b>${esc(dispName(f.ref))}</b>${(!swapped && f.extra)?` <small>${esc(f.extra)}</small>`:''}
-            ${swapped?'<span class="sw-note">↻ sustituido en el mandado</span>':''}
-            ${h?`<span class="badges">${hairBadge(h)}</span>`:''}</span>
-          <span class="amt">${(f.tag && !(f.tagBase && swapped))?esc(f.tag)+" ":""}${dispAmt(f.ref,f.g,f.unit)}</span></li>`;
+            ${swapped?'<span class="sw-note">↻ sustituido</span>':''}</span>
+          <span class="amt">${(f.tag && !(f.tagBase && swapped))?esc(f.tag)+" ":""}${dispAmt(f.ref,f.g,f.unit)}</span>
+          <span class="row-mas" aria-hidden="true">›</span></li>`;
       }).join("")}</ul>
     </div>`;
   }).join("");
@@ -2115,9 +2246,12 @@ function updateRing(){
   if($("stMeals")) $("stMeals").textContent=c+"/"+MEALS.length;
 }
 $("meals").addEventListener("click",e=>{
+  const det=e.target.closest("[data-detalle]");
+  if(det){ abrirDetalle(det.dataset.detalle, +det.dataset.g, det.dataset.u || undefined); return; }
   const chk=e.target.closest(".check");
   if(chk){ const i=+chk.dataset.i; S.meals[dayKey][i]=!S.meals[dayKey][i]; save(); renderMeals();
     renderTargets(); renderAhora();  /* header y tarjeta "Ahora" al momento */
+    avisar(S.meals[dayKey][i] ? "comida" : "deshacer");
     if(S.meals[dayKey].every(Boolean)) showToast("¡Completaste todas tus comidas! 🎉");
     else if(S.meals[dayKey][i]) showToast("Comida registrada ✓"); return; }
   const opt=e.target.closest("[data-opt]");
@@ -2215,6 +2349,7 @@ function cerrarMandado(){
   if(!r.ok){ showToast("Marca al menos un producto antes de cerrar"); return; }
   c.cerrada = true; c.ts = Date.now(); c.total = r.gasto;
   save(); renderShop(); renderHistorial();
+  avisar("mandado", [40,60,90]);
   showToast(`Mandado cerrado · ${fmt$(r.gasto)} en ${r.ok} productos ✓`);
 }
 function reabrirMandado(){
@@ -2250,20 +2385,17 @@ function renderShop(){
         const clsE = est===COMPRA_OK ? " comprado" : est===COMPRA_NO ? " nohabia" : "";
         const gastado = est===COMPRA_OK ? gastoItem(it.id) : null;
         return `<div class="shop-item${swapped?' swapped':''}${clsE}" data-id="${it.id}">
-          <div class="shop-row">
+          <div class="shop-row" data-detalle="${it.id}" role="button" tabindex="0"
+               aria-label="Ver detalle de ${esc(swapped?a.n:it.name)}">
             ${it.total?`<button class="sc-chk" data-comprar="${it.id}" aria-pressed="${est===COMPRA_OK}"
                aria-label="${est===COMPRA_OK?"Comprado":est===COMPRA_NO?"No lo encontré":"Marcar como comprado"}: ${esc(swapped?a.n:it.name)}">
                <span class="sc-box"></span></button>`:""}
-            ${foodIcon(it, swapped)}
+            ${foodIcon(it, a)}
             <span class="nm"><b>${esc(swapped?a.n:it.name)}</b>
-              ${sub?`<small>${esc(sub)}</small>`:""}
-              <span class="badges">${it.rol==="rot"?'<span class="rot-b">\u21bb ROTACI\u00d3N</span>':it.rol==="extra"?'<span class="ext-b">EXTRA</span>':""}${hairBadge(h)}${prepBadge(p)}</span></span>
-            <span class="qty">${qty}${it.dur?`<small>${esc(it.dur)}</small>`:""}${it.total?`<button class="pr${gastado!=null?' pagado':''}" data-price="${it.id}">${gastado!=null?fmt$(gastado):"≈ "+fmt$(shopItemCost(it))} <i>✎</i></button>`:""}</span>
+              ${swapped?`<small>equivalencia de ${esc(it.name)}</small>`:""}</span>
+            <span class="qty">${qty}${it.total?`<small class="q-pr${gastado!=null?' pagado':''}">${gastado!=null?fmt$(gastado):"≈ "+fmt$(shopItemCost(it))}</small>`:""}</span>
+            <span class="row-mas" aria-hidden="true">›</span>
           </div>
-          ${it.tip?`<div class="buy-tip"><span class="bt-i"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span><span>${it.tip}</span></div>`:""}
-          ${hasAlts?`<button class="swap-open" data-open="${it.id}">
-            ${swapped?'↻ Sustituido · cambiar de nuevo':'↻ Cambiar por equivalencia'} <span class="so-n">${it.alts.length}</span>
-          </button>`:""}
         </div>`;
       }).join("")}
     </div>`).join("");
@@ -2306,6 +2438,83 @@ function toggleModoMandado(){
   }
 }
 
+/* ==================================================================
+   DETALLE DE UN ALIMENTO
+   La fila queda en una línea y todo lo demás vive aquí: imagen grande,
+   macros REALES (calculados con tu motor, no fijos), costo por unidad y
+   el contexto de compra. Mismo componente para el Mandado y para Hoy.
+   ================================================================== */
+let detalleCtx = null;   /* {id, gramos, unidad} */
+
+function detalleHtml(id, gramos, unidadOv){
+  const it = shopById[id]; if(!it) return "";
+  const alt = selAlt(id), ai = S.swaps[id];
+  const key = nutKey(id, ai);
+  const n   = nutOf(key);
+  const f   = factorOf(id, ai);
+  const nombre = alt ? alt.n : it.name;
+
+  /* cantidad de referencia: la del platillo si viene de Hoy, si no la semanal */
+  const base  = gramos !== undefined ? gramos : it.total;
+  const qty   = base * f;
+  const unidad = (alt && alt.unit) || unidadOv || it.unit;
+  const m = macrosOf(key, qty);
+
+  const porTxt = n.pz ? `por ${n.pzTxt||"pieza"}` : (it.unit==="ml" ? "por 100 ml" : "por 100 g");
+  const precioUnit = n.precio ? fmt$(n.precio) + " " + porTxt : null;
+  const costo = qty ? (n.pz ? qty : qty/100) * (n.precio||0) : 0;
+
+  const macro = (v,l,c)=>`<div class="dt-m" style="--dc:${c}">
+    <b>${Math.round(v)}<em>${l==="kcal"?"":" g"}</em></b><span>${l}</span></div>`;
+
+  const h = alt ? (alt.hair!==undefined?alt.hair:null) : it.hair;
+  const p = alt ? (alt.prep||it.prep) : it.prep;
+
+  return `
+  <div class="dt-top">
+    ${foodIcon(it, alt)}
+    <div class="dt-ti">
+      <b>${esc(nombre)}</b>
+      ${alt?`<small>equivalencia de ${esc(it.name)}</small>`:""}
+      <span class="badges">${hairBadge(h)}${prepBadge(p)}</span>
+    </div>
+    <div class="dt-q"><b>${fmtQty(qty, unidad)}</b>
+      <span>${gramos!==undefined ? "en este platillo" : (it.dur?esc(it.dur):"a la semana")}</span></div>
+  </div>
+
+  <div class="dt-macros">
+    ${macro(m.kcal,"kcal","var(--coral)")}
+    ${macro(m.p,"proteína","var(--em)")}
+    ${macro(m.c,"carbos","var(--amber)")}
+    ${macro(m.f,"grasa","var(--violet)")}
+  </div>
+
+  <div class="dt-fila">
+    <span class="dt-l">Etiqueta</span>
+    <span class="dt-v">${Math.round(n.kcal)} kcal · ${fmtN(n.p)}P / ${fmtN(n.c)}C / ${fmtN(n.f)}G <em>${porTxt}</em></span>
+  </div>
+  ${precioUnit?`<div class="dt-fila">
+    <span class="dt-l">Precio</span>
+    <span class="dt-v">${precioUnit}${costo?` <em>≈ ${fmt$(costo)} en total</em>`:""}</span>
+  </div>`:""}
+
+  ${alt && alt.note?`<div class="dt-nota">${esc(alt.note)}</div>`:""}
+  ${(!alt && it.tip)?`<div class="dt-nota">${it.tip}</div>`:""}
+
+  <div class="dt-btns">
+    ${it.total?`<button class="dt-b dt-precio" data-dtprecio="${id}">Cambiar precio</button>`:""}
+    ${it.alts.length?`<button class="dt-b dt-swap" data-dtswap="${id}">${alt?"Otra equivalencia":"Equivalencias"} · ${it.alts.length}</button>`:""}
+  </div>`;
+}
+
+function abrirDetalle(id, gramos, unidadOv){
+  const it = shopById[id]; if(!it) return;
+  detalleCtx = { id, gramos, unidad: unidadOv };
+  const alt = selAlt(id);
+  openSheet(alt ? alt.n : it.name,
+            alt ? "equivalencia · toca para ver o cambiar" : "información nutricional y de compra",
+            detalleHtml(id, gramos, unidadOv));
+}
 /* ---------- Submenú de precio (desde el mandado) ---------- */
 /* unidades disponibles según cómo se mide el alimento; k = cuántas
    "bases internas" (100 g / 100 ml / pieza) caben en esa unidad */
@@ -2384,10 +2593,12 @@ $("shopList").addEventListener("click",e=>{
   if(pb){ openPriceSheet(pb.dataset.price); return; }
   const open=e.target.closest("[data-open]");
   if(open){ openAltsSheet(open.dataset.open); return; }
-  /* marcar como surtido: el control, o toda la fila en modo súper */
+  /* El check siempre marca. La fila abre el detalle en modo normal y
+     marca en Modo súper, donde lo que quieres es velocidad, no información. */
   const chk = e.target.closest("[data-comprar]");
-  const fila = modoMandado ? e.target.closest(".shop-row") : null;
-  const id = chk ? chk.dataset.comprar : (fila ? fila.closest(".shop-item").dataset.id : null);
+  const fila = e.target.closest("[data-detalle]");
+  if(!chk && fila && !modoMandado){ abrirDetalle(fila.dataset.detalle); return; }
+  const id = chk ? chk.dataset.comprar : (fila ? fila.dataset.detalle : null);
   if(id && shopById[id] && shopById[id].total){
     ciclaItem(id);
     renderShop();
@@ -2395,7 +2606,7 @@ $("shopList").addEventListener("click",e=>{
     if(est===COMPRA_OK){
       const el = document.querySelector(`.shop-item[data-id="${id}"] .sc-chk`);
       if(el) celebra(el);
-      if(navigator.vibrate) navigator.vibrate(12);
+      avisar("carrito");
       const r = resumenCompra();
       if(r.pendientes===0) setTimeout(()=>{
         if(confirm(`Ya marcaste todo.\n\n${r.ok} productos · ${fmt$(r.gasto)}\n\n¿Cerrar el mandado de la semana?`)) cerrarMandado();
@@ -2480,6 +2691,10 @@ document.getElementById("cfgPanel").addEventListener("click",e=>{
 
 });
 document.getElementById("sheetBody").addEventListener("click",e=>{
+  const dp=e.target.closest("[data-dtprecio]");
+  if(dp){ openPriceSheet(dp.dataset.dtprecio); return; }
+  const ds=e.target.closest("[data-dtswap]");
+  if(ds){ openAltsSheet(ds.dataset.dtswap); return; }
   const ps=e.target.closest("[data-prsave]");
   if(ps && priceCtx){
     const ui=+document.getElementById("prUnit").value, v=+document.getElementById("prVal").value||0;
@@ -2490,7 +2705,9 @@ document.getElementById("sheetBody").addEventListener("click",e=>{
     const c = compraDe();
     if(c.items[priceCtx.id] && c.items[priceCtx.id].e===COMPRA_OK)
       c.items[priceCtx.id].$ = Math.round(shopItemCost(shopById[priceCtx.id]));
+    const volverP = detalleCtx;
     save(); closeSheet(); refreshAfterNut(); renderHistorial();
+    if(volverP) setTimeout(()=>abrirDetalle(volverP.id, volverP.gramos, volverP.unidad), 120);
     showToast("Precio guardado · se queda para las próximas semanas ✓"); return; }
   const pr=e.target.closest("[data-prreset]");
   if(pr && priceCtx){
@@ -2501,7 +2718,14 @@ document.getElementById("sheetBody").addEventListener("click",e=>{
   const pick=e.target.closest("[data-pick]");
   if(pick){ const id=pick.dataset.pick, j=+pick.dataset.alt;
     if(j<0) delete S.swaps[id]; else S.swaps[id]=j;
-    save(); renderShop(); renderMeals(); closeSheet();
+    save(); renderShop(); renderMeals(); renderTargets();
+    /* si veníamos del detalle, volvemos a él ya actualizado en vez de
+       cerrar todo: se puede comparar equivalencias sin salir */
+    const volver = detalleCtx;
+    closeSheet();
+    if(volver && volver.id === id){
+      setTimeout(()=>abrirDetalle(volver.id, volver.gramos, volver.unidad), 120);
+    }
     showToast(j<0?"Volviste a la opción original ✓":"Mandado y platillos actualizados 🔄");
     return; }
   const pv=e.target.closest("[data-pickvar]");
@@ -2624,7 +2848,7 @@ function startRest(sec,name){
   restTimer=setInterval(()=>{ if(paintRest()<=0) finishRest(); },500);
 }
 function finishRest(){ clearInterval(restTimer); restActive=false; $("restBar").classList.remove("show","low");
-  showToast("¡A darle! Siguiente serie 💪"); try{navigator.vibrate&&navigator.vibrate(200);}catch(e){} }
+  showToast("¡A darle! Siguiente serie 💪"); avisar("descanso", [180,90,180]); }
 function stopRest(){ clearInterval(restTimer); restActive=false; $("restBar").classList.remove("show","low"); }
 $("restSkip").onclick = stopRest;
 document.addEventListener("visibilitychange",()=>{
@@ -2849,8 +3073,8 @@ $("exList").addEventListener("click",e=>{
     /* tocar el último cuadro marcado lo desmarca; tocar cualquier otro marca hasta ahí */
     const target = (k+1===cur) ? k : k+1;
     S.sets[viewKey][exId]=target; save(); renderRoutine(); renderHdrExtra();
-    if(target>cur && target<total) startRest(rest,name);
-    else if(target>=total){ stopRest(); showToast("Ejercicio completo ✓"); }
+    if(target>cur && target<total){ startRest(rest,name); avisar("serie"); }
+    else if(target>=total){ stopRest(); avisar("ejercicio", [30,50,60]); showToast("Ejercicio completo ✓"); }
     else stopRest();
     return; }
 
@@ -2952,11 +3176,13 @@ function registrarSnack(id){
   const s = SNACKS.find(x=>x.id===id); if(!s) return;
   snacksHoy().push({ id:s.id, n:s.n, kcal:s.kcal, p:protDe(s.p), ts:Date.now() });
   save(); renderSnacks(); renderTargets(); renderAhora();
+  avisar("comida");
   showToast(s.n.split("(")[0].trim()+" registrado ✓");
 }
 function quitarSnack(ts){
   S.snacks[dayKey] = snacksHoy().filter(x=>String(x.ts)!==String(ts));
   save(); renderSnacks(); renderTargets(); renderAhora();
+  sonar("deshacer");
   showToast("Quitado");
 }
 function renderSnacks(){
@@ -2994,7 +3220,6 @@ $("snackList").addEventListener("click", e=>{
   const b = e.target.closest("[data-snack]"); if(!b) return;
   registrarSnack(b.dataset.snack);
   celebra(b.querySelector(".sn-add") || b);
-  if(navigator.vibrate) navigator.vibrate(12);
 });
 $("snackHoy").addEventListener("click", e=>{
   const b = e.target.closest("[data-quitar]"); if(!b) return;
@@ -3039,6 +3264,7 @@ $("antojoList").addEventListener("click",e=>{
   const a=ANTOJOS.find(x=>x.id===b.dataset.log);
   S.antojos[thisWeek].push({id:a.id, n:a.n, kcal:a.kcal, d:dayKey, ts:Date.now()});
   save(); renderBudget(); renderTargets(); renderHistorial();
+  avisar("comida");
   showToast(a.n+" registrado · −"+a.kcal+" kcal");
 });
 $("budgetSplit").textContent = "Sáb + dom: ~"+Math.round(CONFIG.antojosSemana/2)+" c/u";
@@ -3659,7 +3885,7 @@ irAVista("cuerpo");
   if(document.documentElement.classList.contains("sin-splash")){ sp.remove(); return; }
   const quitar = ()=>{ sp.setAttribute("aria-hidden","true"); sp.remove(); };
   sp.addEventListener("animationend", ev=>{ if(ev.animationName==="spSalida") quitar(); });
-  setTimeout(quitar, 2200);            /* red de seguridad */
+  setTimeout(quitar, 3200);            /* red de seguridad */
 })();
 
 /* ---------- PWA: instalable y funciona sin conexión ---------- */
