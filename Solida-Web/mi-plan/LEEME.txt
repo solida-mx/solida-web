@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════╗
-║   MI PLAN v3 — aplicación completa (Salvador)                 ║
+║   MI PLAN v4 — aplicación completa (Salvador)                 ║
 ║   Sólida Aplicaciones · azul marino + verde azulado           ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -108,3 +108,38 @@ completa → Implementar. Listo en 1 minuto.
     fotos de golpe. Hazlo con wifi antes de ir a un gimnasio
     sin señal: si no, sólo se guardan las que ya viste.
   · Ajustes → Diseño → Tema: Automático / Claro / Oscuro.
+
+┌──────────────────────────────────────────────────────────┐
+│  MANDADO CON REGISTRO DE GASTO                            │
+└──────────────────────────────────────────────────────────┘
+  · Toca el cuadrito de un producto cuando lo eches al
+    carrito: queda marcado y cobra el precio estimado.
+  · Si el precio real fue otro, toca el monto y corrígelo.
+    Ese precio SE QUEDA para las próximas semanas, así el
+    estimado se afina solo con tus tickets.
+  · El mismo cuadrito cicla: comprado → no había → pendiente.
+  · Botón «Modo súper»: filas grandes y sin distracciones,
+    para usarlo con una mano en el pasillo.
+  · Al marcar el último producto te pregunta si cerrar la
+    semana. Al cerrarla se guarda en el historial de gastos.
+
+┌──────────────────────────────────────────────────────────┐
+│  SNACKS Y ANTOJOS                                         │
+└──────────────────────────────────────────────────────────┘
+  · Un toque en cualquier snack lo registra y suma a tus
+    macros del día. Se deshace tocando su chip de arriba.
+  · Los que más repites suben solos a la primera fila.
+  · Los antojos siguen descontando del presupuesto semanal
+    y ahora también suman al día en que los comes.
+
+┌──────────────────────────────────────────────────────────┐
+│  HISTORIAL (antes «Progreso»)                             │
+└──────────────────────────────────────────────────────────┘
+  Tres vistas en la misma pestaña:
+    CUERPO ..... peso, grasa, músculo, metas y mediciones
+    GIMNASIO ... sesiones por semana, progresión de fuerza
+                 por ejercicio y últimas sesiones
+    DINERO ..... gasto por semana, reparto por categoría,
+                 presupuesto del mes y mandados cerrados
+  · La progresión de fuerza necesita que cambies pesos en
+    Rutina: cada cambio queda registrado con su fecha.

@@ -7,7 +7,7 @@
                   alimentos. Antes todo vivía junto, así que cada
                   actualización borraba la biblioteca de imágenes y
                   volvías al gimnasio sin fotos. */
-const VERSION     = "mi-plan-v3.0.0";
+const VERSION     = "mi-plan-v4.0.0";
 const SHELL_CACHE = "shell-" + VERSION;
 const IMG_CACHE   = "img-v1";
 const SHELL = ["./", "index.html", "app.js", "manifest.json",

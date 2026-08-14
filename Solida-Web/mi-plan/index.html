@@ -37,7 +37,7 @@
     --coral:#ff8b80;--coral-soft:rgba(255,123,110,.13);
     --sky:#59cfe0;--sky-soft:rgba(89,207,224,.13);--blue:#6ba3ff;
     --violet:#b09bff;--violet-soft:rgba(176,155,255,.14);
-    --lime:#7ee081;
+    --lime:#7ee081;--lime-soft:rgba(126,224,129,.13);
     --on-em:#04231e;
     --nav-bg:#0a1830;
     --lienzo:#16305c;--lienzo-b:#2a4a7d;--lienzo-ph:#7d9bc9;
@@ -52,14 +52,14 @@
     --navy:#1b396b;
     --bg:#eef2f8;--bg-2:#ffffff;--card:#ffffff;--card-2:#f2f6fc;
     --line:#d7e0ed;--line-str:#6b83a6;
-    --ink:#0d1c33;--muted:#4a5f7f;--faint:#5c7091;
-    --em:#0f7a6d;--em-deep:#0b5f55;--em-soft:rgba(15,122,109,.11);
+    --ink:#0d1c33;--muted:#4a5f7f;--faint:#586c8b;
+    --em:#0d6c60;--em-deep:#09564c;--em-soft:rgba(13,108,96,.07);
     --brand:#0f7a6d;
-    --amber:#8a5b00;--amber-soft:rgba(138,91,0,.11);
-    --coral:#b3382b;--coral-soft:rgba(179,56,43,.10);
-    --sky:#0a6b80;--sky-soft:rgba(10,107,128,.10);--blue:#1d5fbf;
-    --violet:#5b46a8;--violet-soft:rgba(91,70,168,.11);
-    --lime:#2b7a3d;
+    --amber:#845700;--amber-soft:rgba(132,87,0,.07);
+    --coral:#ac3629;--coral-soft:rgba(172,54,41,.07);
+    --sky:#0a677b;--sky-soft:rgba(10,103,123,.07);--blue:#1a58ad;
+    --violet:#5b46a8;--violet-soft:rgba(91,70,168,.07);
+    --lime:#266c36;--lime-soft:rgba(38,108,54,.07);
     --on-em:#ffffff;
     --nav-bg:#ffffff;
     --lienzo:#1b3866;--lienzo-b:#2f5691;--lienzo-ph:#8fabd6;
@@ -225,7 +225,8 @@
     line-height:1.2;color:var(--ink)}
   .ah-s{margin-top:3px;font-size:12.5px;font-weight:600;color:var(--muted)}
   .ah-btn{position:relative;flex:none;min-height:46px;padding:0 16px;border-radius:13px;border:none;
-    background:var(--ac,var(--em));color:#fff;font-family:inherit;font-weight:800;font-size:13.5px;
+    background:var(--ac,var(--em));color:light-dark(#fff,#06172e);
+    font-family:inherit;font-weight:800;font-size:13.5px;
     cursor:pointer;box-shadow:0 4px 14px color-mix(in srgb,var(--ac,var(--em)) 40%,transparent);
     transition:transform .12s ease}
   .ah-btn:active{transform:scale(.95)}
@@ -259,11 +260,18 @@
   .banner{border-radius:var(--r);padding:14px 15px;margin-bottom:12px;display:flex;gap:11px;align-items:flex-start;font-size:13px;font-weight:600;line-height:1.5}
   .banner .i{font-size:19px;flex:none;line-height:1}
   .banner .bi{width:21px;height:21px;display:block;margin-top:1px;opacity:.95}
-  .banner.em{background:var(--em-soft);border:1px solid rgba(47,181,163,.34);color:#c9efe8}
-  .banner.amber{background:var(--amber-soft);border:1px solid rgba(242,181,68,.35);color:#f5d9a0}
-  .banner.coral{background:var(--coral-soft);border:1px solid rgba(255,123,110,.35);color:#ffc9c2}
-  .banner.violet{background:var(--violet-soft);border:1px solid rgba(176,155,255,.35);color:#ddd3ff}
-  .banner b{color:#fff}
+  /* El texto va en --ink (legible en los dos temas) y el color de familia
+     se queda en el fondo, el borde y las negritas. Antes el texto tenía
+     un tono pálido fijo del tema oscuro: 1.05:1 sobre blanco. */
+  .banner{color:var(--ink)}
+  .banner.em{background:var(--em-soft);border:1px solid color-mix(in srgb,var(--em) 40%,transparent)}
+  .banner.amber{background:var(--amber-soft);border:1px solid color-mix(in srgb,var(--amber) 40%,transparent)}
+  .banner.coral{background:var(--coral-soft);border:1px solid color-mix(in srgb,var(--coral) 40%,transparent)}
+  .banner.violet{background:var(--violet-soft);border:1px solid color-mix(in srgb,var(--violet) 40%,transparent)}
+  .banner .i{color:var(--muted)}
+  .banner.em b{color:var(--em)} .banner.amber b{color:var(--amber)}
+  .banner.coral b{color:var(--coral)} .banner.violet b{color:var(--violet)}
+  .banner b{font-weight:800}
 
   /* icono/foto de alimento — más grande y protagonista */
   /* lienzo oscuro en LOS DOS temas: las ilustraciones son de trazo claro */
@@ -417,7 +425,7 @@
   .pt-fig b{font-family:"Space Grotesk";font-size:24px;color:var(--em)}
   .pt-fig small{display:block;font-size:9px;color:var(--faint);font-weight:800;letter-spacing:.06em;text-transform:uppercase}
   .tier-bar button .tc{display:block;font-family:"Space Grotesk";font-size:13px;font-weight:700;color:var(--em);margin:2px 0 1px}
-  .tier-bar button .tc i{font-style:normal;font-family:"Manrope";font-size:8.5px;color:var(--faint);font-weight:800}
+  .tier-bar button .tc i{font-style:normal;font-family:inherit;font-size:9.5px;color:var(--muted);font-weight:800}
   .a-q .a-pr{display:block;font-style:normal;font-size:10px;font-weight:800;color:var(--sky);margin-top:2px}
 
   /* ---------- resumen calculado del día ---------- */
@@ -459,7 +467,7 @@
     padding:2px 7px;border-radius:999px;white-space:nowrap;vertical-align:middle}
   .prep-b{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:800;letter-spacing:.04em;
     padding:2px 7px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
-  .prep-b.listo{background:rgba(126,224,129,.13);color:var(--lime);border-color:rgba(126,224,129,.3)}
+  .prep-b.listo{background:var(--lime-soft);color:var(--lime);border-color:color-mix(in srgb,var(--lime) 34%,transparent)}
   .prep-b.rapido{background:var(--sky-soft);color:var(--sky);border-color:rgba(89,207,224,.3)}
   .prep-b.cocina{background:var(--amber-soft);color:var(--amber);border-color:rgba(242,181,68,.3)}
   .badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
@@ -477,7 +485,7 @@
     max-width:72px;text-align:center}
   .water-fig{margin:14px 0 4px;font-family:"Space Grotesk";font-size:34px;font-weight:700;color:var(--sky);line-height:1}
   .water-fig small{font-family:"Manrope";display:block;font-size:11px;color:var(--muted);font-weight:700;margin-top:7px;line-height:1.5}
-  .water-note{margin-top:9px;font-size:10.5px;color:var(--faint);font-weight:700;background:var(--sky-soft);
+  .water-note{margin-top:9px;font-size:11px;color:var(--muted);font-weight:700;background:var(--sky-soft);
     border:1px dashed rgba(89,207,224,.3);border-radius:9px;padding:6px 8px;line-height:1.45}
 
   /* ---------- MEALS ---------- */
@@ -493,7 +501,8 @@
   .check{width:30px;height:30px;border-radius:10px;border:2px solid var(--line-str);flex:none;cursor:pointer;
     display:flex;align-items:center;justify-content:center;color:var(--on-em);transition:all .15s;background:transparent}
   .check.on{background:var(--em);border-color:var(--em)}
-  .meal-time{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mc,var(--em));font-weight:800}
+  .meal-time{font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--mc-txt,var(--mc,var(--em)));font-weight:800}
   .meal-name{font-family:"Space Grotesk";font-weight:700;font-size:16.5px}
   .kcal{margin-left:auto;font-size:11px;font-weight:800;color:var(--muted);background:color-mix(in srgb, var(--ink) 5%, transparent);
     border:1px solid var(--line);padding:4px 8px;border-radius:8px;flex:none;text-align:right;line-height:1.3}
@@ -527,6 +536,59 @@
   .shop-cat-h{display:flex;align-items:center;gap:9px;margin-bottom:9px}
   .shop-cat-h .sq{width:10px;height:10px;border-radius:3px;background:var(--cc)}
   .shop-cat-h h3{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--cc)}
+  /* ===== Registro de compra ===== */
+  .sc-chk{flex:none;width:44px;height:44px;margin:-4px 0 0 -6px;border:none;background:none;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .sc-box{width:26px;height:26px;border-radius:9px;border:2px solid var(--line-str);
+    display:flex;align-items:center;justify-content:center;transition:all .16s ease}
+  .shop-item.comprado .sc-box{background:var(--em);border-color:var(--em)}
+  .shop-item.comprado .sc-box::after{content:"";width:7px;height:12px;margin-top:-3px;
+    border:solid light-dark(#fff,var(--on-em));border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+  .shop-item.nohabia .sc-box{background:var(--velo);border-color:var(--faint)}
+  .shop-item.nohabia .sc-box::after{content:"";width:12px;height:2.5px;background:var(--faint);border-radius:2px}
+  .shop-item.comprado{border-color:color-mix(in srgb,var(--em) 45%,transparent);background:var(--em-soft)}
+  .shop-item.comprado .nm b{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--em) 60%,transparent)}
+  .shop-item.nohabia{opacity:.72}
+  .shop-item.nohabia .nm b{text-decoration:line-through;text-decoration-color:var(--faint)}
+  .qty .pr.pagado{background:var(--em-soft);border-color:color-mix(in srgb,var(--em) 45%,transparent);color:var(--em)}
+  .shop-total.surtiendo b{color:var(--em)}
+
+  /* barra fija mientras surtes */
+  body.con-barra{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+  .mandado-bar{position:fixed;left:0;right:0;z-index:65;background:var(--card);
+    border-top:1px solid var(--line-str);box-shadow:0 -8px 26px rgba(0,0,0,.22);
+    bottom:calc(78px + env(safe-area-inset-bottom));
+    padding:10px 12px calc(10px);animation:mbIn .3s ease}
+  @keyframes mbIn{from{transform:translateY(100%)}to{transform:none}}
+  .mb-prog{height:5px;border-radius:99px;background:var(--velo);overflow:hidden;margin-bottom:9px}
+  .mb-prog i{display:block;height:100%;background:var(--em);transition:width .35s ease}
+  .mb-row{display:flex;align-items:center;gap:9px}
+  .mb-txt{flex:1;min-width:0;line-height:1.2}
+  .mb-txt b{display:block;font-family:"Space Grotesk",system-ui,sans-serif;font-size:19px;color:var(--em)}
+  .mb-txt span{font-size:11px;font-weight:700;color:var(--muted)}
+  .mb-modo,.mb-cerrar{flex:none;min-height:44px;padding:0 13px;border-radius:12px;
+    font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer}
+  .mb-modo{background:var(--velo);border:1px solid var(--line-str);color:var(--ink)}
+  .mb-cerrar{background:var(--em);border:none;color:light-dark(#fff,var(--on-em))}
+
+  /* modo súper: filas grandes, sin nada que distraiga */
+  body.modo-mandado .buy-tip,
+  body.modo-mandado .swap-open,
+  body.modo-mandado .shop-item .badges,
+  body.modo-mandado [data-super="ocultar"],
+  body.modo-mandado #tierBar,
+  body.modo-mandado #smartList,
+  body.modo-mandado #prepSteps,
+  body.modo-mandado #prepCard{display:none}
+  body.modo-mandado .shop-item{padding:6px 10px;margin-bottom:7px}
+  body.modo-mandado .shop-row{align-items:center;min-height:62px}
+  body.modo-mandado .nm b{font-size:15.5px}
+  body.modo-mandado .nm small{display:none}
+  body.modo-mandado .qty{font-size:15px}
+  body.modo-mandado .sc-chk{width:54px;height:54px}
+  body.modo-mandado .sc-box{width:32px;height:32px;border-radius:11px}
+  body.modo-mandado .fico{width:38px;height:38px}
+
   .shop-item{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px 13px;margin-bottom:9px;
     transition:border-color .2s}
   .shop-item.swapped{border-color:rgba(242,181,68,.45);background:linear-gradient(0deg,var(--amber-soft),var(--amber-soft)),var(--card)}
@@ -536,22 +598,27 @@
   .shop-row .nm small{font-size:11px;color:var(--muted);font-weight:600;display:block;margin-top:2px}
   .shop-row .qty{font-weight:800;font-size:13px;color:var(--em);white-space:nowrap;flex:none;padding-top:2px;text-align:right;max-width:38%}
   .shop-item.swapped .shop-row .qty{color:var(--amber)}
-  .shop-row .qty small{display:block;font-size:9.5px;font-weight:700;color:var(--faint);margin-top:3px;letter-spacing:.02em;white-space:normal}
+  .shop-row .qty small{display:block;font-size:10px;font-weight:700;color:var(--muted);margin-top:3px;letter-spacing:.02em;white-space:normal}
   .swap-open{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;
     background:color-mix(in srgb, var(--ink) 4%, transparent);border:1.5px dashed var(--line);border-radius:12px;padding:11px;cursor:pointer;
     color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.03em;transition:all .15s}
   .swap-open:active{transform:scale(.98)}
   .shop-item.swapped .swap-open{border-color:rgba(242,181,68,.5);color:var(--amber);background:var(--amber-soft)}
-  .swap-open .so-n{background:var(--em-soft);color:var(--em);border-radius:999px;padding:2px 9px;font-size:10.5px}
-  .shop-item.swapped .swap-open .so-n{background:rgba(242,181,68,.2);color:var(--amber)}
+  .swap-open .so-n{background:var(--card);border:1px solid color-mix(in srgb,var(--em) 40%,transparent);
+    color:var(--em);border-radius:999px;padding:2px 9px;font-size:10.5px}
+  .shop-item.swapped .swap-open .so-n{background:var(--card);
+    border-color:color-mix(in srgb,var(--amber) 45%,transparent);color:var(--amber)}
   .rot-b{display:inline-flex;align-items:center;background:var(--amber-soft);color:var(--amber);
     border:1px solid rgba(242,181,68,.35);font-size:9.5px;font-weight:800;letter-spacing:.04em;
     padding:2px 7px;border-radius:999px;white-space:nowrap}
   .ext-b{display:inline-flex;align-items:center;background:color-mix(in srgb, var(--ink) 6%, transparent);color:var(--faint);
     border:1px solid var(--line);font-size:9.5px;font-weight:800;letter-spacing:.04em;
     padding:2px 7px;border-radius:999px;white-space:nowrap}
-  .buy-tip{margin-top:9px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb, var(--ink) 35%, transparent);
-    border:1px dashed var(--line);font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.45;display:flex;gap:7px}
+  /* el 35 % de tinta venía de un rgba claro del tema oscuro; en claro
+     pintaba un bloque gris oscuro con texto gris encima */
+  .buy-tip{margin-top:9px;padding:8px 10px;border-radius:10px;background:var(--velo);
+    border:1px dashed var(--line-str);font-size:11.5px;color:var(--muted);font-weight:600;
+    line-height:1.45;display:flex;gap:7px}
   .buy-tip .bt-i{flex:none;font-size:13px}
   .buy-tip b{color:var(--ink)}
 
@@ -688,7 +755,7 @@
   .var .v-act span{display:block;font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--faint);margin-top:2px}
   .var .v-top{font-size:9px;font-weight:800;letter-spacing:.05em;color:var(--lime);display:block;margin-bottom:3px}
 
-  .deload-line{margin-top:10px;font-size:11.5px;font-weight:600;color:#c9efe8;line-height:1.5;
+  .deload-line{margin-top:10px;font-size:11.5px;font-weight:600;color:var(--ink);line-height:1.5;
     background:var(--em-soft);border:1px solid rgba(47,181,163,.3);border-radius:10px;padding:8px 10px}
   .deload-line b{color:#fff}
   .ex-done{margin-top:11px;padding-top:11px;border-top:1px dashed var(--line);display:flex;align-items:center;gap:10px;cursor:pointer}
@@ -704,8 +771,8 @@
   .pend{display:flex;align-items:center;gap:11px;background:var(--amber-soft);border:1px solid rgba(242,181,68,.38);
     border-radius:15px;padding:13px 14px;margin-bottom:9px}
   .pend .p-i{font-size:21px;flex:none}
-  .pend .p-t{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:#f5d9a0;line-height:1.5}
-  .pend .p-t b{color:#fff;display:block;font-size:13.5px;margin-bottom:2px}
+  .pend .p-t{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.5}
+  .pend .p-t b{color:var(--amber);display:block;font-size:13.5px;margin-bottom:2px;font-weight:800}
   .pend .p-n{flex:none;font-family:"Space Grotesk";font-size:24px;font-weight:800;color:var(--amber)}
   .pend-list{list-style:none;margin-top:9px;display:flex;flex-direction:column;gap:6px}
   .pend-list li{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
@@ -721,6 +788,101 @@
   .budget-bar.over i{background:linear-gradient(90deg,var(--amber),var(--coral))}
   .budget-nums{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);flex-wrap:wrap;gap:4px}
   .budget-nums b{color:var(--ink)}
+  /* ===== Snacks registrables ===== */
+  .sn-hoy{background:var(--em-soft);border:1px solid color-mix(in srgb,var(--em) 40%,transparent);
+    border-radius:15px;padding:12px 13px;margin-bottom:12px}
+  .sn-hoy-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .sn-hoy-h b{font-size:13.5px;color:var(--ink)}
+  .sn-hoy-h span{font-family:"Space Grotesk",system-ui,sans-serif;font-size:13px;font-weight:700;color:var(--em)}
+  .sn-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .sn-chip{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 10px;
+    border-radius:999px;border:1px solid var(--line-str);background:var(--card);
+    color:var(--ink);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+  .sn-chip i{font-style:normal;font-size:11px;color:var(--muted)}
+  .sn-chip:active{transform:scale(.95)}
+  .sn-vacio{font-size:12px;color:var(--muted);font-weight:600;line-height:1.5;
+    background:var(--velo);border:1px dashed var(--line-str);border-radius:14px;
+    padding:12px 13px;margin-bottom:12px}
+  .sn-btn{width:100%;text-align:left;font-family:inherit;cursor:pointer;align-items:center;
+    transition:transform .1s ease,border-color .18s ease,background .18s ease}
+  .sn-btn:active{transform:scale(.985)}
+  .sn-btn.usado{border-color:color-mix(in srgb,var(--em) 45%,transparent);background:var(--em-soft)}
+  .sn-add{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;
+    justify-content:center;font-size:20px;font-weight:700;
+    background:var(--em-soft);border:1px solid color-mix(in srgb,var(--em) 40%,transparent);color:var(--em)}
+  .sn-btn.usado .sn-add{background:var(--em);border-color:var(--em);color:light-dark(#fff,var(--on-em))}
+  .sn-x{font-size:11px;color:var(--em);font-weight:800}
+  .sn-fav{display:block;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--amber);margin-top:3px}
+  .antojo .kc small{color:var(--muted);font-size:10.5px}
+  /* bloque plegable de contexto: la info deja de robar pantalla */
+  .mas-info{margin:6px 0 14px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+  .mas-info summary{list-style:none;cursor:pointer;padding:13px 15px;font-size:12.5px;
+    font-weight:800;color:var(--muted);display:flex;align-items:center;justify-content:space-between;min-height:44px}
+  .mas-info summary::-webkit-details-marker{display:none}
+  .mas-info summary::after{content:"▾";color:var(--faint);transition:transform .2s}
+  .mas-info[open] summary::after{transform:rotate(180deg)}
+  .mas-info .mi-body{padding:0 15px 14px;font-size:12.5px;color:var(--ink);line-height:1.6}
+
+  /* ===== Historial: 3 vistas ===== */
+  .hist-tabs{display:flex;gap:6px;margin-bottom:14px;background:var(--velo);
+    border:1px solid var(--line);border-radius:14px;padding:4px}
+  .hist-tabs button{flex:1;min-height:42px;border:none;border-radius:11px;background:none;
+    color:var(--muted);font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer;
+    transition:background .18s,color .18s}
+  .hist-tabs button.on,.hist-tabs button[aria-selected="true"]{background:var(--card);color:var(--em);
+    box-shadow:0 2px 8px rgba(0,0,0,.14)}
+  .hv{display:none}
+  .hv.activa{display:block}
+  .hist-select{width:100%;margin:10px 0 4px;padding:12px 11px;border-radius:12px;
+    border:1.5px solid var(--line-str);background:var(--velo);color:var(--ink);
+    font-family:inherit;font-size:16px;font-weight:700}
+  .hist-vacio{font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.55;
+    padding:14px 2px;text-align:center}
+
+  /* barras */
+  .barras{display:flex;align-items:flex-end;gap:5px;margin-top:14px;min-height:130px}
+  .ba{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .ba-v{font-family:"Space Grotesk",system-ui,sans-serif;font-size:10.5px;font-weight:700;
+    color:var(--ink);white-space:nowrap}
+  .ba-col{width:100%;height:84px;border-radius:7px;background:var(--velo);
+    display:flex;align-items:flex-end;overflow:hidden}
+  .ba-col i{display:block;width:100%;border-radius:7px;transition:height .45s cubic-bezier(.4,0,.2,1)}
+  .ba-t{font-size:9px;font-weight:800;color:var(--muted);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .hist-pie{margin-top:12px;font-size:12px;color:var(--muted);font-weight:700;text-align:center}
+
+  /* listas del historial */
+  .hist-list{list-style:none;margin-top:12px}
+  .hist-list li{display:flex;align-items:center;gap:10px;padding:11px 2px;
+    border-bottom:1px solid var(--line);font-size:12.5px}
+  .hist-list li:last-child{border-bottom:none}
+  .hl-d{flex:none;width:56px;font-weight:800;color:var(--muted);font-size:11.5px}
+  .hl-n{flex:1;min-width:0;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis}
+  .hl-v{flex:none;font-family:"Space Grotesk",system-ui,sans-serif;font-weight:700;color:var(--em)}
+
+  /* reparto por categoría */
+  .cat-list{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+  .cat-row{display:flex;align-items:center;gap:9px}
+  .cat-n{flex:none;width:104px;font-size:11px;font-weight:800;color:var(--cc);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cat-bar{flex:1;height:10px;border-radius:99px;background:var(--velo);
+    border:1px solid var(--line);overflow:hidden}
+  .cat-bar i{display:block;height:100%;border-radius:99px;transition:width .45s ease}
+  .cat-v{flex:none;text-align:right;font-family:"Space Grotesk",system-ui,sans-serif;
+    font-size:12.5px;font-weight:700;color:var(--ink)}
+  .cat-v em{display:block;font-style:normal;font-size:9.5px;font-weight:800;color:var(--muted)}
+
+  /* presupuesto del mes */
+  .pres{margin-top:10px}
+  .pres-bar{height:12px;border-radius:99px;background:var(--velo);
+    border:1px solid var(--line-str);overflow:hidden}
+  .pres-bar i{display:block;height:100%;border-radius:99px;background:var(--em);transition:width .45s ease}
+  .pres-bar.over i{background:var(--coral)}
+  .pres-t{margin-top:9px;font-size:12.5px;font-weight:700;color:var(--ink)}
+  .pres-t b{font-family:"Space Grotesk",system-ui,sans-serif;font-size:17px;color:var(--em)}
+  .pres-t span{display:block;font-size:11.5px;color:var(--muted);font-weight:700;margin-top:2px}
+
   .antojo{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:8px;
     display:flex;align-items:flex-start;gap:11px}
   .antojo .nm{flex:1;min-width:0}
@@ -798,7 +960,7 @@
   .note-area:focus{border-color:var(--em)}
   .note-area::placeholder{color:var(--faint)}
   .report-btn{width:100%;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:9px;
-    background:linear-gradient(135deg,var(--em),var(--em-deep));border:none;color:#fff;
+    background:linear-gradient(135deg,var(--em),var(--em-deep));border:none;color:light-dark(#fff,var(--on-em));
     font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:15px;padding:15px;border-radius:14px;cursor:pointer;
     box-shadow:0 10px 26px rgba(42,157,142,.3);transition:transform .12s}
   .report-btn:active{transform:scale(.98)}
@@ -827,10 +989,11 @@
   .cw b{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:var(--muted)}
   .cw span{display:block;font-size:10.5px;font-weight:700;margin-top:3px;color:var(--faint);line-height:1.25}
   .cw.now{border-color:var(--wc);background:color-mix(in srgb, var(--ink) 3%, transparent)}
-  .cw.now b{color:var(--wc)}
+  .cw.now b{color:var(--wc-txt,var(--wc))}
   .cw.now span{color:var(--ink)}
   .cw.now::after{content:"HOY";position:absolute;top:-8px;left:50%;transform:translateX(-50%);
     background:var(--wc);color:#04231e;font-size:8.5px;font-weight:800;letter-spacing:.08em;padding:2px 7px;border-radius:999px}
+  html[data-tema="claro"] .cw.now::after{color:#fff}
 
   /* ===== Toggle de unidad kg/lb ===== */
   .routine-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 10px;flex-wrap:wrap}
@@ -871,12 +1034,14 @@
     border-radius:18px;padding:15px 16px;cursor:pointer;position:relative;overflow:hidden;transition:transform .14s,border-color .2s}
   .trained-hero:active{transform:scale(.98)}
   .trained-hero.on{background:linear-gradient(135deg,var(--em),var(--em-deep));border-color:var(--em)}
-  .trained-hero.on .t-txt b,.trained-hero.on .t-txt small{color:#fff}
-  .trained-hero.on .lifter{color:#fff}
+  .trained-hero.on .t-txt b,.trained-hero.on .t-txt small{color:light-dark(#fff,var(--on-em))}
+  .trained-hero.on .lifter{color:light-dark(#fff,var(--on-em))}
   .t-txt{flex:1;display:flex;flex-direction:column;gap:2px}
   .t-txt b{font-family:"Space Grotesk",sans-serif;font-size:16px;color:var(--ink)}
   .t-txt small{font-size:11.5px;color:var(--muted);font-weight:600}
-  .t-check{flex:none;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;color:#fff}
+  .trained-hero .t-txt small{color:var(--muted)}
+  .t-check{flex:none;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.25);
+    display:flex;align-items:center;justify-content:center;color:light-dark(#fff,var(--on-em))}
   .lifter{position:relative;width:42px;height:42px;flex:none;color:var(--em)}
   .lifter .l-head{position:absolute;left:16px;top:8px;width:10px;height:10px;border-radius:50%;background:currentColor}
   .lifter .l-body{position:absolute;left:19px;top:17px;width:4px;height:15px;background:currentColor;border-radius:2px}
@@ -1099,34 +1264,34 @@
   <section class="tab" id="tab-mandado">
     <div class="sec-title"><h2>Mandado semanal</h2><span class="ln"></span><span class="chip">7 días</span></div>
 
-    <div class="banner em">
+    <div class="banner em" data-super="ocultar">
       <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg></span>
       <div><b>Elige tu presupuesto.</b> Estos tres botones cambian los alimentos del mandado <b>y de tus platillos</b> por opciones equivalentes en macros: más baratas, las del plan, o más prácticas/premium. Comer económico aquí <b>no</b> significa comer feo: solo comprar con cabeza.</div>
     </div>
     <div class="shop-total" id="shopTotal"></div>
       <div class="tier-bar" id="tierBar"></div>
 
-    <div class="banner amber">
+    <div class="banner amber" data-super="ocultar">
       <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></span>
       <div><b>Cómo se lee esta lista.</b> Todo lo que aparece aquí se compra: es el mandado completo de la semana, con la cantidad exacta de cada cosa.
       Debajo de cada cantidad dice <b>para cuántas comidas alcanza</b>.
       Lo marcado como <span class="rot-b">↻ ROTACIÓN</span> <b>no se suma</b>: sustituye al pollo un día de la semana
       (por eso el pollo alcanza para 5 comidas y no para 7). Si cambias un alimento con el botón <b>“Cambiar por equivalencia”</b>, la cantidad ya viene ajustada para cubrir los mismos macros y tus platillos se actualizan solos.</div>
     </div>
-    <div class="banner violet" style="align-items:center">
+    <div class="banner violet" style="align-items:center" data-super="ocultar">
       <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></span>
       <div><span class="hair-b">CABELLO</span> = aporta nutrientes capilares · <span class="prep-b listo">LISTO</span> = cero cocina · <span class="prep-b rapido">RÁPIDO</span> = menos de 8 min · <span class="prep-b cocina">COCINA</span> = requiere sartén u olla</div>
     </div>
     <div id="shopList"></div>
 
-    <div class="sec-title"><h2>Compra inteligente</h2><span class="ln"></span><span class="chip">dinero · tiempo</span></div>
+    <div class="sec-title" data-super="ocultar"><h2>Compra inteligente</h2><span class="ln"></span><span class="chip">dinero · tiempo</span></div>
     <div class="banner amber">
       <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.2v.3h6v-.3c0-.8.4-1.6 1-2.2A6 6 0 0 0 12 2Z"/></svg></span>
       <div>Precios aproximados de Monterrey. Lo que importa es la <b>proporción</b>: cuánto ahorras y cuánto tiempo te quitas de encima. Ajústalos a lo que veas en tu súper.</div>
     </div>
     <div id="smartList"></div>
 
-    <div class="sec-title"><h2>Prep del domingo · 35 min</h2><span class="ln"></span><span class="chip">1 vez / semana</span></div>
+    <div class="sec-title" data-super="ocultar"><h2>Prep del domingo · 35 min</h2><span class="ln"></span><span class="chip">1 vez / semana</span></div>
     <div class="card">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
         <span style="font-size:22px">🍱</span>
@@ -1193,12 +1358,16 @@
 
   <!-- ============ TAB: SNACKS ============ -->
   <section class="tab" id="tab-antojos">
-    <div class="sec-title"><h2>Snacks del plan</h2><span class="ln"></span><span class="chip">ya incluidos</span></div>
-    <div class="banner em">
-      <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l1 13H5Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span>
-      <div><b>Estos ya están contados en tus 2,400 kcal.</b> No son antojo: son parte del plan y están pensados para llevarlos al trabajo. Rota el que quieras cada día.</div>
-    </div>
+    <div class="sec-title"><h2>Snacks del plan</h2><span class="ln"></span><span class="chip">un toque</span></div>
+    <!-- Lo de hoy, arriba de todo: registrar y deshacer sin buscar -->
+    <div id="snackHoy"></div>
     <div id="snackList"></div>
+    <details class="mas-info">
+      <summary>¿Por qué estos snacks?</summary>
+      <div class="mi-body">Ya están contados en tus 2,400 kcal. No son antojo: son parte del plan
+      y están pensados para llevarlos al trabajo. Rota el que quieras cada día. Registrarlos
+      no cambia tu meta, sólo te deja ver qué comes de verdad.</div>
+    </details>
 
     <div class="sec-title"><h2>Antojos libres</h2><span class="ln"></span><span class="chip" id="antojoChip">fin de semana</span></div>
     <div class="card">
@@ -1221,12 +1390,20 @@
   </section>
 
   <!-- ============ TAB: PROGRESO ============ -->
-  <section class="tab" id="tab-progreso">
-    <div class="sec-title"><h2>Tu progreso</h2><span class="ln"></span><span class="chip">en este teléfono</span></div>
+  <section class="tab" id="tab-progreso" aria-labelledby="histTitulo">
+    <div class="sec-title"><h2 id="histTitulo">Tu historial</h2><span class="ln"></span><span class="chip">en este teléfono</span></div>
+    <!-- Tres vistas en el mismo espacio: no hacía falta una 7ª pestaña,
+         que en 390 px habría quedado por debajo del mínimo táctil. -->
+    <div class="hist-tabs" role="tablist" aria-label="Vistas del historial">
+      <button role="tab" data-hv="cuerpo" aria-selected="true"  aria-controls="hv-cuerpo">Cuerpo</button>
+      <button role="tab" data-hv="gym"    aria-selected="false" aria-controls="hv-gym">Gimnasio</button>
+      <button role="tab" data-hv="dinero" aria-selected="false" aria-controls="hv-dinero">Dinero</button>
+    </div>
+    <div class="hv activa" id="hv-cuerpo" role="tabpanel">
     <div class="stat-grid">
-      <div class="stat" style="--sc:#2fb5a3"><b id="stMeals">0/5</b><span>comidas hoy</span></div>
-      <div class="stat" style="--sc:#f2b544"><b id="stBudget">0%</b><span>antojos usados</span></div>
-      <div class="stat" style="--sc:#59cfe0"><b id="stDelta">—</b><span>peso vs. anterior</span></div>
+      <div class="stat" style="--sc:var(--em)"><b id="stMeals">0/5</b><span>comidas hoy</span></div>
+      <div class="stat" style="--sc:var(--amber)"><b id="stBudget">0%</b><span>antojos usados</span></div>
+      <div class="stat" style="--sc:var(--sky)"><b id="stDelta">—</b><span>peso vs. anterior</span></div>
     </div>
 
     <div class="ind-grid" id="indGrid"></div>
@@ -1280,6 +1457,52 @@
       <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg></span>
       <div>Todo se guarda <b>en este dispositivo</b>. Usa siempre el mismo navegador y no borres los datos del sitio. Guarda el resumen semanal como respaldo.</div>
     </div>
+    </div><!-- /hv-cuerpo -->
+
+    <div class="hv" id="hv-gym" role="tabpanel">
+      <div class="stat-grid" id="gymStats"></div>
+      <div class="card">
+        <b style="font-size:14.5px">Sesiones por semana</b>
+        <div class="subtle">Cada barra es una semana. La marca es tu plan de 5 sesiones.</div>
+        <div id="gymSemanas"></div>
+      </div>
+      <div class="card">
+        <b style="font-size:14.5px">Progresión de fuerza</b>
+        <div class="subtle">Elige un ejercicio para ver cómo ha subido el peso.</div>
+        <select id="gymEjercicio" class="hist-select" aria-label="Ejercicio"></select>
+        <div id="gymCarga"></div>
+      </div>
+      <div class="card">
+        <b style="font-size:14.5px">Últimas sesiones</b>
+        <ul class="hist-list" id="gymSesiones"></ul>
+      </div>
+    </div>
+
+    <div class="hv" id="hv-dinero" role="tabpanel">
+      <div class="stat-grid" id="dinStats"></div>
+      <div class="card">
+        <b style="font-size:14.5px">Gasto por semana</b>
+        <div class="subtle">Sólo cuenta lo que marcaste como surtido en el mandado.</div>
+        <div id="dinSemanas"></div>
+      </div>
+      <div class="card">
+        <b style="font-size:14.5px">En qué se va el dinero</b>
+        <div class="subtle">Reparto por categoría de tu último mandado cerrado.</div>
+        <div id="dinCategorias"></div>
+      </div>
+      <div class="card">
+        <b style="font-size:14.5px">Presupuesto del mes</b>
+        <div class="body-form" style="margin-top:8px">
+          <label>Cuánto quieres gastar al mes <span>$</span>
+            <input type="number" step="50" min="0" inputmode="decimal" id="dinMeta" placeholder="6000"></label>
+        </div>
+        <div id="dinMes"></div>
+      </div>
+      <div class="card">
+        <b style="font-size:14.5px">Mandados cerrados</b>
+        <ul class="hist-list" id="dinLista"></ul>
+      </div>
+    </div>
   </section>
 
 <section class="tab" id="tab-config">
@@ -1301,7 +1524,7 @@
   <button class="nb" data-tab="mandado"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Mandado</button>
   <button class="nb" data-tab="rutina"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m21 21-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/></svg>Rutina</button>
   <button class="nb" data-tab="antojos"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 8.5c-1 1-1.5 2.3-1.5 3.5a5 5 0 0 0 10 0c0-1.2-.5-2.5-1.5-3.5L12 5 8.5 8.5Z"/><path d="M12 5V2"/></svg>Snacks</button>
-  <button class="nb" data-tab="progreso"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Progreso</button>
+  <button class="nb" data-tab="progreso"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Historial</button>
   <button class="nb" data-tab="config"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Ajustes</button>
 </nav>
 

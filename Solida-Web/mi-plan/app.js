@@ -641,7 +641,17 @@ S.customFoods.forEach(cf=>{ if(cf.base==="fruta") cf.base="manzana"; });
 function saneaEstado(){
   const obj = k => (S[k] && typeof S[k]==="object" && !Array.isArray(S[k])) ? S[k] : (S[k]={});
   ["meals","water","swaps","mealOpt","lifts","liftHi","antojos","trained",
-   "note","sets","varSel","warm","cardio","nutEdits"].forEach(obj);
+   "note","sets","varSel","warm","cardio","nutEdits",
+   /* nuevos: compra semanal, historial de cargas y snacks registrados */
+   "compras","liftHist","snacks"].forEach(obj);
+  /* cada semana de compra: {items:{id:{e:0|1|2, $:num}}, cerrada:bool} */
+  Object.keys(S.compras).forEach(k=>{
+    const c = S.compras[k];
+    if(!c || typeof c!=="object"){ delete S.compras[k]; return; }
+    if(!c.items || typeof c.items!=="object") c.items = {};
+  });
+  Object.keys(S.liftHist).forEach(k=>{ if(!Array.isArray(S.liftHist[k])) delete S.liftHist[k]; });
+  Object.keys(S.snacks).forEach(k=>{ if(!Array.isArray(S.snacks[k])) delete S.snacks[k]; });
   if(!Array.isArray(S.body)) S.body = [];
   if(!Array.isArray(S.customFoods)) S.customFoods = [];
 
@@ -1326,6 +1336,43 @@ const toast = $("toast"); let toastT;
 function showToast(m){ toast.textContent=m; toast.classList.add("show");
   clearTimeout(toastT); toastT=setTimeout(()=>toast.classList.remove("show"),2200); }
 const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+/* ==================================================================
+   TONOS SEGÚN EL TEMA
+   Los colores de MEALS, CYCLE, CATS y las gráficas están elegidos para
+   fondo oscuro. Sobre blanco daban 1.1:1 — invisibles. En vez de
+   duplicar la paleta a mano, se oscurece el mismo tono hasta que llega
+   a 4.5:1 sobre blanco, y se emite con light-dark(): el navegador elige
+   solo y NO hay que volver a pintar nada al cambiar de tema.
+   ================================================================== */
+const _tonoCache = {};
+function _rgb(hex){
+  let h = String(hex).replace("#","");
+  if(h.length===3) h = h.split("").map(c=>c+c).join("");
+  return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
+}
+function _hex(c){ return "#"+c.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,"0")).join(""); }
+function _lum(c){
+  const f = c.map(v=>{ v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); });
+  return .2126*f[0] + .7152*f[1] + .0722*f[2];
+}
+function _ratioBlanco(c){ return 1.05 / (_lum(c) + .05); }
+/* oscurece conservando el matiz hasta alcanzar el contraste pedido */
+function tonoOscuro(hex, minimo){
+  /* 4.9 y no 4.5: estos tonos casi siempre caen sobre una píldora
+     tintada, que baja el contraste ~0.5 respecto al blanco puro. */
+  const min = minimo || 5.4;
+  const clave = hex + "|" + min;
+  if(_tonoCache[clave]) return _tonoCache[clave];
+  let c = _rgb(hex), guarda = 0;
+  while(_ratioBlanco(c) < min && guarda++ < 40) c = c.map(v=>v*0.92);
+  return (_tonoCache[clave] = _hex(c));
+}
+/* un color que se resuelve solo en los dos temas */
+function tono(hex, minimo){
+  if(!hex || String(hex)[0] !== "#") return hex;    /* ya es var(--x) */
+  return `light-dark(${tonoOscuro(hex, minimo)}, ${hex})`;
+}
 const fmtQty = (v,u)=> (u==="paquete"||u==="paquetes") ? (Math.round(v)+" paquete"+(v>1?"s":"")) :
   (u==="latas"||u==="lata") ? (Math.round(v*10)/10+" "+(v>1?"latas":"lata")) :
   (u==="pzas"||u==="claras"||u==="reb"||u==="bolsas"||u==="barras") ? Math.round(v)+" "+u :
@@ -1805,7 +1852,13 @@ $("todayName").textContent = DAYS[now.getDay()];
 function macrosComidos(){
   const hechas = S.meals[dayKey] || [];
   const lista = MEALS.map((m,i)=> hechas[i] ? mealMacros(m,i) : {kcal:0,p:0,c:0,f:0});
-  return sumM(lista);
+  const t = sumM(lista);
+  /* lo que registraste aparte (snacks y antojos) también cuenta */
+  (S.snacks[dayKey]||[]).forEach(x=>{ t.kcal += x.kcal||0; t.p += x.p||0; });
+  Object.keys(S.antojos||{}).forEach(w=>{
+    (S.antojos[w]||[]).forEach(x=>{ if(x.d===dayKey) t.kcal += x.kcal||0; });
+  });
+  return t;
 }
 /* Los 4 recuadros del header ahora son BARRAS que se llenan durante el día.
    Antes eran las metas fijas: el número más grande de la pantalla no
@@ -2012,7 +2065,7 @@ function renderMeals(){
     const keys = m.options ? Object.keys(m.options) : [];
     const optHtml = m.options ? `<div class="opt-toggle">${keys.map((k,j)=>
       `<button data-opt="${k}" data-meal="${i}" class="${mealOpt(i)===k?'on':''}">${esc(m.optLabel?m.optLabel[j]:("Opción "+k))}<small>${Math.round(optionMacros(m,k).kcal)} kcal</small></button>`).join("")}</div>` : "";
-    return `<div class="meal${done[i]?' done':''}" style="--mc:${m.color}">
+    return `<div class="meal${done[i]?' done':''}" style="--mc:${tono(m.color,3)};--mc-txt:${tono(m.color)}">
       <div class="meal-top">
         <div class="check${done[i]?' on':''}" data-i="${i}" role="button" tabindex="0">${done[i]?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</div>
         <div><div class="meal-time">${m.time}</div><div class="meal-name">${m.name}</div></div>
@@ -2040,8 +2093,8 @@ function renderDaySummary(){
   const row=(lbl,val,goal,unit,col)=>{
     const pct=Math.min(130, val/goal*100);
     return `<div class="ds-row"><span class="ds-l">${lbl}</span>
-      <span class="ds-bar"><i style="width:${Math.min(pct,100)}%;background:${col}${pct>112?';opacity:.55':''}"></i></span>
-      <span class="ds-v" style="color:${col}">${Math.round(val)}<small>/${goal}${unit}</small></span></div>`;
+      <span class="ds-bar"><i style="width:${Math.min(pct,100)}%;background:${tono(col,3)}${pct>112?';opacity:.55':''}"></i></span>
+      <span class="ds-v" style="color:${tono(col)}">${Math.round(val)}<small>/${goal}${unit}</small></span></div>`;
   };
   const diff=Math.round(d.kcal-CONFIG.kcal);
   el.innerHTML = `
@@ -2102,14 +2155,87 @@ function weekCost(tier){
   }, 0);
 }
 function fmt$(v){ return "$"+Math.round(v).toLocaleString("es-MX"); }
+
+/* ==================================================================
+   REGISTRO DE COMPRA
+   Un toque en la fila marca lo que ya surtiste y cobra el precio que
+   la app ya estimaba. Sólo si el precio real difiere lo corriges, y
+   ese precio se queda para la próxima semana (va a S.nutEdits, que es
+   de donde sale el estimado). Así el estimado se afina solo.
+
+   Estados por ítem:  0 pendiente · 1 comprado · 2 no lo encontré
+   ================================================================== */
+const COMPRA_PEND = 0, COMPRA_OK = 1, COMPRA_NO = 2;
+let modoMandado = false;
+
+function compraDe(semana){
+  const k = semana || thisWeek;
+  if(!S.compras[k]) S.compras[k] = { items:{}, cerrada:false };
+  return S.compras[k];
+}
+function estadoItem(id, semana){
+  const it = compraDe(semana).items[id];
+  return it ? (it.e|0) : COMPRA_PEND;
+}
+function gastoItem(id, semana){
+  const it = compraDe(semana).items[id];
+  return (it && it.e===COMPRA_OK) ? (+it.$ || 0) : 0;
+}
+/* Ciclo de un solo control: pendiente → comprado → no había → pendiente */
+function ciclaItem(id){
+  const c = compraDe(), it = shopById[id];
+  if(!it) return;
+  const actual = estadoItem(id);
+  const siguiente = (actual + 1) % 3;
+  if(siguiente === COMPRA_PEND) delete c.items[id];
+  else c.items[id] = { e: siguiente, $: siguiente===COMPRA_OK ? Math.round(shopItemCost(it)) : 0 };
+  save();
+}
+function resumenCompra(semana){
+  const c = compraDe(semana);
+  let ok=0, no=0, gasto=0;
+  const conPrecio = SHOP.filter(it=>it.total>0);
+  conPrecio.forEach(it=>{
+    const e = estadoItem(it.id, semana);
+    if(e===COMPRA_OK){ ok++; gasto += gastoItem(it.id, semana); }
+    else if(e===COMPRA_NO) no++;
+  });
+  return { ok, no, gasto, total:conPrecio.length,
+           pendientes: conPrecio.length - ok - no, cerrada: !!c.cerrada };
+}
+/* semanas ya cerradas, de la más nueva a la más vieja */
+function historialCompras(){
+  return Object.keys(S.compras)
+    .filter(k=>S.compras[k] && S.compras[k].cerrada)
+    .sort().reverse()
+    .map(k=>Object.assign({semana:k}, resumenCompra(k)));
+}
+function cerrarMandado(){
+  const c = compraDe(), r = resumenCompra();
+  if(!r.ok){ showToast("Marca al menos un producto antes de cerrar"); return; }
+  c.cerrada = true; c.ts = Date.now(); c.total = r.gasto;
+  save(); renderShop(); renderHistorial();
+  showToast(`Mandado cerrado · ${fmt$(r.gasto)} en ${r.ok} productos ✓`);
+}
+function reabrirMandado(){
+  const c = compraDe(); c.cerrada = false; save(); renderShop();
+  showToast("Mandado reabierto");
+}
+
 function renderShop(){
   const groups={prot:[],carb:[],veg:[],fat:[]};
   SHOP.forEach(it=>groups[it.cat].push(it));
   const tot = weekCost();
-  $("shopTotal").innerHTML = `<span class="st-l">🧾 Mandado de la semana, como lo tienes ahora</span>
-    <b>≈ ${fmt$(tot)}</b><small>toca cualquier precio para ponerle el de tu tienda</small>`;
+  const r = resumenCompra();
+  $("shopTotal").innerHTML = r.ok || r.no
+    ? `<span class="st-l">Llevas surtido</span>
+       <b>${fmt$(r.gasto)}</b>
+       <small>${r.ok} de ${r.total} productos${r.no?` · ${r.no} no había`:""} · estimado ${fmt$(tot)}</small>`
+    : `<span class="st-l">Mandado de la semana, como lo tienes ahora</span>
+       <b>≈ ${fmt$(tot)}</b><small>toca un producto cuando lo eches al carrito</small>`;
+  $("shopTotal").className = "shop-total" + (r.ok||r.no ? " surtiendo" : "");
   $("shopList").innerHTML = Object.entries(groups).map(([cat,items])=>`
-    <div class="shop-cat" style="--cc:${CATS[cat].c}">
+    <div class="shop-cat" style="--cc:${tono(CATS[cat].c)}">
       <div class="shop-cat-h"><span class="sq"></span><h3>${CATS[cat].t}</h3></div>
       ${items.map(it=>{
         const a=selAlt(it.id), swapped=!!a;
@@ -2120,22 +2246,66 @@ function renderShop(){
         const h = swapped ? (a.hair!==undefined?a.hair:null) : it.hair;
         const p = swapped ? (a.prep||it.prep) : it.prep;
         const sub = swapped ? ("en lugar de "+it.name+(a.note?" · "+a.note:"")) : "";
-        return `<div class="shop-item${swapped?' swapped':''}" data-id="${it.id}">
+        const est = it.total ? estadoItem(it.id) : COMPRA_PEND;
+        const clsE = est===COMPRA_OK ? " comprado" : est===COMPRA_NO ? " nohabia" : "";
+        const gastado = est===COMPRA_OK ? gastoItem(it.id) : null;
+        return `<div class="shop-item${swapped?' swapped':''}${clsE}" data-id="${it.id}">
           <div class="shop-row">
+            ${it.total?`<button class="sc-chk" data-comprar="${it.id}" aria-pressed="${est===COMPRA_OK}"
+               aria-label="${est===COMPRA_OK?"Comprado":est===COMPRA_NO?"No lo encontré":"Marcar como comprado"}: ${esc(swapped?a.n:it.name)}">
+               <span class="sc-box"></span></button>`:""}
             ${foodIcon(it, swapped)}
             <span class="nm"><b>${esc(swapped?a.n:it.name)}</b>
               ${sub?`<small>${esc(sub)}</small>`:""}
               <span class="badges">${it.rol==="rot"?'<span class="rot-b">\u21bb ROTACI\u00d3N</span>':it.rol==="extra"?'<span class="ext-b">EXTRA</span>':""}${hairBadge(h)}${prepBadge(p)}</span></span>
-            <span class="qty">${qty}${it.dur?`<small>${esc(it.dur)}</small>`:""}${it.total?`<button class="pr" data-price="${it.id}">≈ ${fmt$(shopItemCost(it))} <i>✎</i></button>`:""}</span>
+            <span class="qty">${qty}${it.dur?`<small>${esc(it.dur)}</small>`:""}${it.total?`<button class="pr${gastado!=null?' pagado':''}" data-price="${it.id}">${gastado!=null?fmt$(gastado):"≈ "+fmt$(shopItemCost(it))} <i>✎</i></button>`:""}</span>
           </div>
-          ${it.tip?`<div class="buy-tip"><span class="bt-i">🛒</span><span>${it.tip}</span></div>`:""}
+          ${it.tip?`<div class="buy-tip"><span class="bt-i"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span><span>${it.tip}</span></div>`:""}
           ${hasAlts?`<button class="swap-open" data-open="${it.id}">
             ${swapped?'↻ Sustituido · cambiar de nuevo':'↻ Cambiar por equivalencia'} <span class="so-n">${it.alts.length}</span>
           </button>`:""}
         </div>`;
       }).join("")}
     </div>`).join("");
+  renderBarraMandado();
 }
+
+/* Barra fija mientras surtes: avance, gasto y cierre. Es lo único que
+   necesitas ver con el carrito en la mano. */
+function renderBarraMandado(){
+  let bar = document.getElementById("mandadoBar");
+  const r = resumenCompra();
+  const activa = (r.ok || r.no) && !r.cerrada;
+  if(!activa){ if(bar) bar.remove(); document.body.classList.remove("con-barra"); return; }
+  if(!bar){
+    bar = document.createElement("div");
+    bar.id = "mandadoBar"; bar.className = "mandado-bar";
+    document.body.appendChild(bar);
+    bar.addEventListener("click", ev=>{
+      if(ev.target.closest("[data-cerrarmandado]")) cerrarMandado();
+      if(ev.target.closest("[data-modomandado]")) toggleModoMandado();
+    });
+  }
+  document.body.classList.add("con-barra");
+  const pct = r.total ? Math.round((r.ok+r.no)/r.total*100) : 0;
+  bar.innerHTML = `
+    <div class="mb-prog"><i style="width:${pct}%"></i></div>
+    <div class="mb-row">
+      <div class="mb-txt"><b>${fmt$(r.gasto)}</b><span>${r.ok} de ${r.total}${r.pendientes?` · faltan ${r.pendientes}`:""}</span></div>
+      <button class="mb-modo" data-modomandado="1" aria-pressed="${modoMandado}">${modoMandado?"Salir":"Modo súper"}</button>
+      <button class="mb-cerrar" data-cerrarmandado="1">Cerrar</button>
+    </div>`;
+}
+function toggleModoMandado(){
+  modoMandado = !modoMandado;
+  document.body.classList.toggle("modo-mandado", modoMandado);
+  renderBarraMandado();
+  if(modoMandado){
+    showToast("Modo súper: filas grandes, sin distracciones");
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+}
+
 /* ---------- Submenú de precio (desde el mandado) ---------- */
 /* unidades disponibles según cómo se mide el alimento; k = cuántas
    "bases internas" (100 g / 100 ml / pieza) caben en esa unidad */
@@ -2214,6 +2384,24 @@ $("shopList").addEventListener("click",e=>{
   if(pb){ openPriceSheet(pb.dataset.price); return; }
   const open=e.target.closest("[data-open]");
   if(open){ openAltsSheet(open.dataset.open); return; }
+  /* marcar como surtido: el control, o toda la fila en modo súper */
+  const chk = e.target.closest("[data-comprar]");
+  const fila = modoMandado ? e.target.closest(".shop-row") : null;
+  const id = chk ? chk.dataset.comprar : (fila ? fila.closest(".shop-item").dataset.id : null);
+  if(id && shopById[id] && shopById[id].total){
+    ciclaItem(id);
+    renderShop();
+    const est = estadoItem(id);
+    if(est===COMPRA_OK){
+      const el = document.querySelector(`.shop-item[data-id="${id}"] .sc-chk`);
+      if(el) celebra(el);
+      if(navigator.vibrate) navigator.vibrate(12);
+      const r = resumenCompra();
+      if(r.pendientes===0) setTimeout(()=>{
+        if(confirm(`Ya marcaste todo.\n\n${r.ok} productos · ${fmt$(r.gasto)}\n\n¿Cerrar el mandado de la semana?`)) cerrarMandado();
+      }, 350);
+    } else if(est===COMPRA_NO) showToast("Marcado como «no había»");
+  }
 });
 $("tierBar").addEventListener("click",e=>{
   const b=e.target.closest("[data-tier]"); if(!b) return;
@@ -2297,8 +2485,13 @@ document.getElementById("sheetBody").addEventListener("click",e=>{
     const ui=+document.getElementById("prUnit").value, v=+document.getElementById("prVal").value||0;
     if(!S.nutEdits[priceCtx.key]) S.nutEdits[priceCtx.key]={};
     S.nutEdits[priceCtx.key].precio = v / priceCtx.units[ui][1];
-    save(); closeSheet(); refreshAfterNut();
-    showToast("💲 Precio guardado · totales actualizados"); return; }
+    /* si ya lo habías marcado como comprado, el gasto de esta semana se
+       corrige con el precio real que acabas de poner */
+    const c = compraDe();
+    if(c.items[priceCtx.id] && c.items[priceCtx.id].e===COMPRA_OK)
+      c.items[priceCtx.id].$ = Math.round(shopItemCost(shopById[priceCtx.id]));
+    save(); closeSheet(); refreshAfterNut(); renderHistorial();
+    showToast("Precio guardado · se queda para las próximas semanas ✓"); return; }
   const pr=e.target.closest("[data-prreset]");
   if(pr && priceCtx){
     if(S.nutEdits[priceCtx.key]){ delete S.nutEdits[priceCtx.key].precio;
@@ -2375,6 +2568,18 @@ let weekOffset = 0;            // 0 = semana actual
 function getVarIdx(exId){ const i=S.varSel[exId]; return (i===undefined)?0:i; }
 function getVar(ex){ return ex.v[Math.min(getVarIdx(ex.id), ex.v.length-1)]; }
 function liftKey(ex){ return ex.id+"|"+getVarIdx(ex.id); }
+/* Historial de cargas: antes sólo se guardaba el ÚLTIMO peso, así que no
+   había forma de ver si el press subió en tres meses. Un registro por
+   día y variante: barato de guardar y suficiente para graficar. */
+function guardarCarga(ex, kg){
+  const k = liftKey(ex);
+  if(!S.liftHist[k]) S.liftHist[k] = [];
+  const h = S.liftHist[k];
+  const ultimo = h[h.length-1];
+  if(ultimo && ultimo.d === dayKey) ultimo.kg = kg;      /* mismo día: se corrige */
+  else h.push({ d: dayKey, kg });
+  if(h.length > 400) h.splice(0, h.length-400);          /* tope sano */
+}
 function getW(ex){ const k=liftKey(ex); const v=getVar(ex);
   return S.lifts[k]!==undefined ? S.lifts[k] : v.base; }
 function roundP(v){ return Math.round(v/2.5)*2.5; }
@@ -2473,12 +2678,12 @@ $("wNext").onclick=()=>{ weekOffset++; renderWeekStrip(); };
 function renderFase(){
   const f=faseDe(viewKey), cyc=CYCLE[f.idx];
   $("cycleChip").textContent = "Semana "+f.w+" de "+f.tot;
-  $("cycleChip").style.background="rgba(255,255,255,.06)";
-  $("cycleChip").style.color=cyc.c;
+  $("cycleChip").style.background="color-mix(in srgb, var(--ink) 6%, transparent)";
+  $("cycleChip").style.color=tono(cyc.c);
   $("fasePill").textContent = CYCLE[faseDe(dayKey).idx].n;
   $("cycleCal").innerHTML = Array.from({length:f.tot},(_,k)=>{
     const wn=k+1, c=CYCLE[cycleIndexFor(wn,f.tot)];
-    return `<div class="cw${wn===f.w?' now':''}" style="--wc:${c.c}"><b>Sem ${wn}</b><span>${c.n}</span></div>`;
+    return `<div class="cw${wn===f.w?' now':''}" style="--wc:${tono(c.c,3)};--wc-txt:${tono(c.c)}"><b>Sem ${wn}</b><span>${c.n}</span></div>`;
   }).join("");
   const banner=$("deloadBanner");
   if(f.idx===3){
@@ -2622,6 +2827,7 @@ $("exList").addEventListener("change",e=>{
   const kg = S.unidad==="lb" ? v/KG2LB : v;
   const b=bloqueDe(viewKey); const ex=RUTINA[b.id].find(x=>x.id===inp.dataset.exw);
   S.lifts[liftKey(ex)]=Math.round(kg*100)/100;
+  guardarCarga(ex, Math.round(kg*100)/100);
   save(); renderRoutine(); showToast("Peso guardado ✓");
 });
 $("exList").addEventListener("keydown",e=>{
@@ -2658,7 +2864,7 @@ $("exList").addEventListener("click",e=>{
     let nuevoVisible = actualVisible + (wb.dataset.w==="+"?pasoVisible:-pasoVisible);
     if(nuevoVisible<0) nuevoVisible=0;
     const w = enLb ? Math.round(nuevoVisible/KG2LB*100)/100 : nuevoVisible;
-    S.lifts[liftKey(ex)]=w; save(); renderRoutine(); return; }
+    S.lifts[liftKey(ex)]=w; guardarCarga(ex, w); save(); renderRoutine(); return; }
 
   const hi=e.target.closest("[data-hi]");
   if(hi){ const ex=list.find(x=>x.id===hi.dataset.hi); const k=liftKey(ex);
@@ -2725,12 +2931,75 @@ function launchConfetti(anchor){
 /* ============================================================
    SNACKS Y ANTOJOS
    ============================================================ */
-$("snackList").innerHTML = SNACKS.map(s=>`
-  <div class="antojo">
-    <span class="nm"><b>${esc(s.n)}</b><small>${esc(s.note)}</small>
-      ${s.hair?`<span class="badges">${hairBadge(s.hair)}</span>`:""}</span>
-    <span class="kc">~${s.kcal} kcal<br><small style="color:var(--faint)">${esc(s.p)}</small></span>
-  </div>`).join("");
+/* ==================================================================
+   SNACKS REGISTRABLES
+   Un toque = registrado. Nada de formularios. Los que más repites
+   suben solos a la primera fila, así el de siempre queda al alcance.
+   ================================================================== */
+SNACKS.forEach((s,i)=>{ if(!s.id) s.id = "sn"+i; });
+const protDe = t => { const m = String(t||"").match(/([\d.]+)/); return m ? +m[1] : 0; };
+
+function snacksHoy(){ return S.snacks[dayKey] || (S.snacks[dayKey] = []); }
+function vecesUsado(id){
+  let n = 0;
+  Object.keys(S.snacks).forEach(d=>{ (S.snacks[d]||[]).forEach(x=>{ if(x.id===id) n++; }); });
+  return n;
+}
+function macrosSnacks(){
+  return snacksHoy().reduce((t,x)=>({kcal:t.kcal+(x.kcal||0), p:t.p+(x.p||0)}), {kcal:0,p:0});
+}
+function registrarSnack(id){
+  const s = SNACKS.find(x=>x.id===id); if(!s) return;
+  snacksHoy().push({ id:s.id, n:s.n, kcal:s.kcal, p:protDe(s.p), ts:Date.now() });
+  save(); renderSnacks(); renderTargets(); renderAhora();
+  showToast(s.n.split("(")[0].trim()+" registrado ✓");
+}
+function quitarSnack(ts){
+  S.snacks[dayKey] = snacksHoy().filter(x=>String(x.ts)!==String(ts));
+  save(); renderSnacks(); renderTargets(); renderAhora();
+  showToast("Quitado");
+}
+function renderSnacks(){
+  const hoy = snacksHoy();
+  const m = macrosSnacks();
+  $("snackHoy").innerHTML = hoy.length
+    ? `<div class="sn-hoy">
+        <div class="sn-hoy-h"><b>Hoy comiste</b>
+          <span>${Math.round(m.kcal)} kcal · ${Math.round(m.p)} g prot</span></div>
+        <div class="sn-chips">${hoy.map(x=>`
+          <button class="sn-chip" data-quitar="${x.ts}" aria-label="Quitar ${esc(x.n)}">
+            ${esc(x.n.split("·")[0].split("(")[0].trim())}<i>✕</i></button>`).join("")}</div>
+      </div>`
+    : `<div class="sn-vacio">Toca un snack cuando te lo comas. Se suma a tu día y puedes deshacerlo.</div>`;
+
+  /* los más repetidos primero, conservando el orden original al empatar */
+  const orden = SNACKS.map((s,i)=>({s, i, n:vecesUsado(s.id)}))
+    .sort((a,b)=> b.n-a.n || a.i-b.i);
+  const veces = orden[0] ? orden[0].n : 0;
+  $("snackList").innerHTML = orden.map(({s,n})=>{
+    const hoyN = hoy.filter(x=>x.id===s.id).length;
+    return `
+    <button class="antojo sn-btn${hoyN?' usado':''}" data-snack="${s.id}"
+            aria-label="Registrar ${esc(s.n)}">
+      <span class="nm"><b>${esc(s.n)}${hoyN>1?` <span class="sn-x">×${hoyN}</span>`:""}</b>
+        <small>${esc(s.note)}</small>
+        ${s.hair?`<span class="badges">${hairBadge(s.hair)}</span>`:""}</span>
+      <span class="kc">~${s.kcal} kcal<br><small>${esc(s.p)}</small>
+        ${n>0 && n===veces && veces>1?`<em class="sn-fav">tu favorito</em>`:""}</span>
+      <span class="sn-add">${hoyN?"✓":"+"}</span>
+    </button>`;
+  }).join("");
+}
+$("snackList").addEventListener("click", e=>{
+  const b = e.target.closest("[data-snack]"); if(!b) return;
+  registrarSnack(b.dataset.snack);
+  celebra(b.querySelector(".sn-add") || b);
+  if(navigator.vibrate) navigator.vibrate(12);
+});
+$("snackHoy").addEventListener("click", e=>{
+  const b = e.target.closest("[data-quitar]"); if(!b) return;
+  quitarSnack(b.dataset.quitar);
+});
 
 if(!S.antojos[thisWeek]) S.antojos[thisWeek]=[];
 function usedKcal(){ return S.antojos[thisWeek].reduce((a,x)=>a+x.kcal,0); }
@@ -2768,8 +3037,8 @@ function renderAntojos(){
 $("antojoList").addEventListener("click",e=>{
   const b=e.target.closest("[data-log]"); if(!b) return;
   const a=ANTOJOS.find(x=>x.id===b.dataset.log);
-  S.antojos[thisWeek].push({id:a.id, kcal:a.kcal, ts:Date.now()});
-  save(); renderBudget();
+  S.antojos[thisWeek].push({id:a.id, n:a.n, kcal:a.kcal, d:dayKey, ts:Date.now()});
+  save(); renderBudget(); renderTargets(); renderHistorial();
   showToast(a.n+" registrado · −"+a.kcal+" kcal");
 });
 $("budgetSplit").textContent = "Sáb + dom: ~"+Math.round(CONFIG.antojosSemana/2)+" c/u";
@@ -2793,7 +3062,7 @@ function trendCard(label, unit, cur, prev, goalDir, color){
       cls=((goalDir==="down"&&down)||(goalDir==="up"&&!down))?"good":"bad"; }
     delta=(d>0?"+":"")+d.toFixed(1);
   }
-  return `<div class="ind" style="--ic:${color}">
+  return `<div class="ind" style="--ic:${tono(color,3)};--ic-txt:${tono(color)}">
     <span class="ind-lbl">${label}</span>
     <b class="ind-val">${cur!=null?cur.toFixed(1):"—"}<i>${unit}</i></b>
     <span class="ind-tr ${cls}">${arrow} ${delta?delta+" "+unit:"sin cambio"}</span></div>`;
@@ -2826,9 +3095,9 @@ function goalBar(label, unit, base, cur, meta, color){
   const pct=Math.min(100, Math.round(adv/total*100));
   const left=Math.max(0, +(total-Math.min(adv,total)).toFixed(1));
   return `<div class="goal">
-    <div class="g-top"><span>${label}</span><b style="color:${pct>0?color:'var(--muted)'}">${
+    <div class="g-top"><span>${label}</span><b style="color:${pct>0?tono(color):'var(--muted)'}">${
       pct>0?pct+"%":"sin avance aún"}</b></div>
-    <div class="g-bar${pct===0?' cero':''}"><i style="width:${pct}%;background:${color}"></i></div>
+    <div class="g-bar${pct===0?' cero':''}"><i style="width:${pct}%;background:${tono(color,3)}"></i></div>
     <small>Hoy: ${cur.toFixed(1)}${unit} · Meta: ${meta}${unit} · ${left>0?`Te faltan ${left}${unit}`:"¡Meta alcanzada!"}</small></div>`;
 }
 function mealStreak(){
@@ -2868,7 +3137,7 @@ function renderBody(){
 
   if(lastW&&prevW){ const d=lastW.kg-prevW.kg;
     $("stDelta").textContent=(d>0?"+":"")+d.toFixed(1)+" kg";
-    $("stDelta").style.color = d<=0 ? "#7ee081" : "#ff7b6e";
+    $("stDelta").style.color = d<=0 ? "var(--lime)" : "var(--coral)";
   } else $("stDelta").textContent="—";
 
   $("indGrid").innerHTML =
@@ -3166,6 +3435,7 @@ function pantallaRescate(err){
 try{
   renderMeals(); renderShop(); renderTierBar(); renderUnitToggle(); renderGearSheet();
   renderWeekStrip(); renderRoutine(); renderTrained(); renderAhora();
+  renderSnacks();
   renderBudget(); renderAntojos(); renderBody(); renderReportDue();
   renderRespaldoAviso();
 
@@ -3187,6 +3457,197 @@ try{
   console.error("Mi Plan · fallo al arrancar", err);
   pantallaRescate(err);
 }
+
+/* ==================================================================
+   HISTORIAL — tres vistas dentro de la misma pestaña
+   ================================================================== */
+let histVista = "cuerpo";
+
+/* barras sencillas, sin librerías: SVG inline y accesible */
+function barras(datos, opciones){
+  const o = opciones || {};
+  if(!datos.length) return `<div class="hist-vacio">${esc(o.vacio || "Todavía no hay datos.")}</div>`;
+  const max = Math.max(o.min || 0, ...datos.map(d=>d.v)) || 1;
+  const color = o.color || "var(--em)";
+  return `<div class="barras" role="img" aria-label="${esc(o.alt || "")}">
+    ${datos.map(d=>{
+      /* un valor de 0 no debe pintar una rayita: parecía un error */
+      const pct = d.v > 0 ? Math.max(6, d.v/max*100) : 0;
+      return `<div class="ba" title="${esc(d.t)}: ${esc(d.txt||d.v)}">
+        <span class="ba-v">${esc(d.txt!==undefined?d.txt:d.v)}</span>
+        <span class="ba-col"><i style="height:${pct}%;background:${d.c||color}"></i></span>
+        <span class="ba-t">${esc(d.t)}</span></div>`;
+    }).join("")}
+  </div>`;
+}
+function nombreSemana(k){
+  const d = fromKey(k), f = addDays(d,6);
+  return d.getDate()+" "+MONTHS[d.getMonth()]+(d.getMonth()!==f.getMonth()?"":"");
+}
+function mesDe(k){ return k.slice(0,7); }
+function nombreMes(ym){
+  const [a,m] = ym.split("-").map(Number);
+  return MONTHS_FULL[m-1]+" "+a;
+}
+
+/* ---------- vista GIMNASIO ---------- */
+function semanasEntrenadas(n){
+  const out = [];
+  for(let i=n-1; i>=0; i--){
+    const lunes = weekKey(addDays(now, -7*i));
+    const dias = Object.keys(S.trained||{}).filter(k=>S.trained[k]===true && weekKey(fromKey(k))===lunes).length;
+    const card = Object.keys(S.cardio||{}).filter(k=>S.cardio[k]===true && weekKey(fromKey(k))===lunes).length;
+    out.push({ semana:lunes, dias, cardio:card });
+  }
+  return out;
+}
+function ejerciciosConHistorial(){
+  const out = [];
+  Object.keys(S.liftHist).forEach(k=>{
+    if(!S.liftHist[k] || S.liftHist[k].length < 1) return;
+    const [id, vi] = k.split("|");
+    let nombre = id;
+    Object.keys(RUTINA).forEach(b=>{
+      const ex = RUTINA[b].find(x=>x.id===id);
+      if(ex){ const v = ex.v[+vi]; nombre = v ? v.n : ex.id; }
+    });
+    out.push({ k, nombre, n:S.liftHist[k].length });
+  });
+  return out.sort((a,b)=> b.n-a.n || a.nombre.localeCompare(b.nombre));
+}
+function renderGym(){
+  if(!$("gymStats")) return;
+  const sem = semanasEntrenadas(8);
+  const totalSes = Object.keys(S.trained||{}).filter(k=>S.trained[k]===true).length;
+  const totalCard = Object.keys(S.cardio||{}).filter(k=>S.cardio[k]===true).length;
+  const ultimas4 = sem.slice(-4);
+  const prom = ultimas4.length ? (ultimas4.reduce((a,x)=>a+x.dias,0)/ultimas4.length) : 0;
+  const st = (v,l,c)=>`<div class="stat" style="--sc:${c}"><b>${v}</b><span>${l}</span></div>`;
+  $("gymStats").innerHTML = st(totalSes,"sesiones","var(--em)")+
+                            st(prom.toFixed(1),"prom. x semana","var(--sky)")+
+                            st(totalCard,"cardios","var(--violet)");
+
+  $("gymSemanas").innerHTML = barras(
+    sem.map(x=>({ t:nombreSemana(x.semana), v:x.dias, txt:x.dias,
+                  c: x.dias>=5 ? "var(--em)" : x.dias>=3 ? "var(--amber)" : "var(--coral)" })),
+    { min:5, alt:"Sesiones de las últimas 8 semanas", vacio:"Marca «Entrené hoy» y aquí verás tus semanas." });
+
+  const lista = ejerciciosConHistorial();
+  const sel = $("gymEjercicio");
+  if(!lista.length){
+    sel.style.display = "none";
+    $("gymCarga").innerHTML = `<div class="hist-vacio">Cambia el peso de algún ejercicio en Rutina y aquí verás cómo progresa.</div>`;
+  }else{
+    sel.style.display = "";
+    const actual = sel.value && lista.some(x=>x.k===sel.value) ? sel.value : lista[0].k;
+    sel.innerHTML = lista.map(x=>`<option value="${esc(x.k)}"${x.k===actual?" selected":""}>${esc(x.nombre)}</option>`).join("");
+    const h = (S.liftHist[actual]||[]).slice(-12);
+    const primero = h[0], ultimo = h[h.length-1];
+    const dif = (primero && ultimo) ? +(ultimo.kg - primero.kg).toFixed(1) : 0;
+    $("gymCarga").innerHTML =
+      barras(h.map(x=>({ t:fmtDateShort(x.d), v:x.kg, txt:toUnit(x.kg)+"" })),
+             { color:"var(--sky)", alt:"Peso levantado" }) +
+      (h.length>1 ? `<div class="hist-pie">${dif>0?"Subiste":dif<0?"Bajaste":"Sin cambio:"} <b style="color:${dif>0?"var(--lime)":dif<0?"var(--coral)":"var(--muted)"}">${dif>0?"+":""}${toUnit(Math.abs(dif))} ${unitLabel()}</b> desde ${fmtDateShort(primero.d)}</div>` : "");
+  }
+
+  const dias = Object.keys(S.trained||{}).filter(k=>S.trained[k]===true).sort().reverse().slice(0,12);
+  $("gymSesiones").innerHTML = dias.length ? dias.map(k=>{
+    const b = bloqueDe(k);
+    const series = Object.values(S.sets[k]||{}).reduce((a,v)=>a+(v||0),0);
+    return `<li><span class="hl-d">${fmtDateShort(k)}</span>
+      <span class="hl-n">${b?esc(b.short||b.title):"Entreno"}</span>
+      <span class="hl-v">${series} series</span></li>`;
+  }).join("") : `<li class="hist-vacio">Sin sesiones registradas todavía.</li>`;
+}
+
+/* ---------- vista DINERO ---------- */
+function gastoPorCategoria(semana){
+  const c = compraDe(semana), acc = {prot:0, carb:0, veg:0, fat:0};
+  Object.keys(c.items).forEach(id=>{
+    const it = shopById[id];
+    if(it && c.items[id].e===COMPRA_OK) acc[it.cat] += (+c.items[id].$||0);
+  });
+  return acc;
+}
+function gastoDelMes(ym){
+  return Object.keys(S.compras)
+    .filter(k=>S.compras[k].cerrada && mesDe(k)===ym)
+    .reduce((a,k)=>a+resumenCompra(k).gasto, 0);
+}
+function renderDinero(){
+  if(!$("dinStats")) return;
+  const hist = historialCompras();
+  const st = (v,l,c)=>`<div class="stat" style="--sc:${c}"><b>${v}</b><span>${l}</span></div>`;
+  const totales = hist.map(h=>h.gasto);
+  const prom = totales.length ? totales.reduce((a,b)=>a+b,0)/totales.length : 0;
+  const esteMes = gastoDelMes(mesDe(dayKey));
+  $("dinStats").innerHTML = st(fmt$(esteMes),"este mes","var(--em)")+
+                            st(totales.length?fmt$(prom):"—","prom. semanal","var(--sky)")+
+                            st(hist.length,"mandados","var(--violet)");
+
+  const ult = hist.slice(0,8).reverse();
+  $("dinSemanas").innerHTML = barras(
+    ult.map(h=>({ t:nombreSemana(h.semana), v:h.gasto, txt:fmt$(h.gasto) })),
+    { alt:"Gasto de las últimas semanas",
+      vacio:"Marca productos en el Mandado y cierra la semana para empezar tu historial." });
+
+  const refSemana = hist.length ? hist[0].semana : thisWeek;
+  const cats = gastoPorCategoria(refSemana);
+  const sumaCat = Object.values(cats).reduce((a,b)=>a+b,0);
+  $("dinCategorias").innerHTML = sumaCat ? `<div class="cat-list">${
+    Object.keys(cats).sort((a,b)=>cats[b]-cats[a]).map(k=>{
+      const pct = Math.round(cats[k]/sumaCat*100);
+      return `<div class="cat-row">
+        <span class="cat-n" style="--cc:${tono(CATS[k].c)}">${CATS[k].t}</span>
+        <span class="cat-bar"><i style="width:${pct}%;background:${tono(CATS[k].c,3)}"></i></span>
+        <span class="cat-v">${fmt$(cats[k])}<em>${pct}%</em></span></div>`;
+    }).join("")}</div>` : `<div class="hist-vacio">Aún no hay un mandado cerrado.</div>`;
+
+  const meta = +S.presupuestoMes || 0;
+  if($("dinMeta") && document.activeElement !== $("dinMeta")) $("dinMeta").value = meta || "";
+  $("dinMes").innerHTML = meta ? (()=>{
+    const pct = Math.min(100, Math.round(esteMes/meta*100));
+    const sobra = meta - esteMes;
+    return `<div class="pres">
+      <div class="pres-bar${esteMes>meta?" over":""}"><i style="width:${pct}%"></i></div>
+      <div class="pres-t"><b>${fmt$(esteMes)}</b> de ${fmt$(meta)} en ${nombreMes(mesDe(dayKey))}
+        <span>${sobra>=0?`te quedan ${fmt$(sobra)}`:`te pasaste ${fmt$(-sobra)}`}</span></div>
+    </div>`;
+  })() : `<div class="hist-vacio">Pon una cantidad y te aviso cómo vas cada mes.</div>`;
+
+  $("dinLista").innerHTML = hist.length ? hist.slice(0,12).map(h=>
+    `<li><span class="hl-d">${fmtDateShort(h.semana)}</span>
+      <span class="hl-n">${h.ok} productos${h.no?` · ${h.no} sin encontrar`:""}</span>
+      <span class="hl-v">${fmt$(h.gasto)}</span></li>`).join("")
+    : `<li class="hist-vacio">Cierra tu primer mandado para verlo aquí.</li>`;
+}
+
+function renderHistorial(){
+  if(!document.getElementById("hv-cuerpo")) return;
+  if(histVista==="gym") renderGym();
+  else if(histVista==="dinero") renderDinero();
+}
+function irAVista(v){
+  histVista = v;
+  document.querySelectorAll(".hist-tabs [data-hv]").forEach(b=>{
+    const on = b.dataset.hv===v;
+    b.setAttribute("aria-selected", on ? "true" : "false");
+    b.classList.toggle("on", on);
+  });
+  document.querySelectorAll(".hv").forEach(x=>x.classList.toggle("activa", x.id==="hv-"+v));
+  renderHistorial();
+}
+document.querySelector(".hist-tabs").addEventListener("click", e=>{
+  const b = e.target.closest("[data-hv]"); if(!b) return;
+  irAVista(b.dataset.hv);
+});
+$("gymEjercicio").addEventListener("change", renderGym);
+$("dinMeta").addEventListener("input", e=>{
+  S.presupuestoMes = +e.target.value || 0;
+  clearTimeout(window._presT);
+  window._presT = setTimeout(()=>{ save(); renderDinero(); }, 400);
+});
+irAVista("cuerpo");
 
 /* ---------- Quitar la pantalla de apertura ----------
    La animación CSS ya la oculta sola aunque este código no llegue a
