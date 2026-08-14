@@ -41,9 +41,19 @@ let S = { meals:{}, water:{}, swaps:{}, mealOpt:{}, lifts:{}, liftHi:{}, antojos
           note:{}, lastReport:null, unidad:CONFIG.unidad, sets:{}, sessions:0, body:[],
           varSel:{}, warm:{}, cardio:{}, cicloShift:0, tier:"med" };
 const LS_KEY = "mi_plan_salvador_v1";
+const PRE_KEY = LS_KEY + "__antes_de_importar";
 let canStore = true;
-try { const raw = localStorage.getItem(LS_KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); }
-catch(e){ canStore = false; }
+let cargaCorrupta = false;   /* había datos guardados pero no se pudieron leer */
+try {
+  const raw = localStorage.getItem(LS_KEY);
+  if (raw){
+    let parsed = null;
+    try { parsed = JSON.parse(raw); }
+    catch(pe){ cargaCorrupta = true; }           /* JSON roto: NO desactivamos el guardado */
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) S = Object.assign(S, parsed);
+    else if (parsed) cargaCorrupta = true;
+  }
+} catch(e){ canStore = false; }                  /* storage bloqueado de verdad */
 /* migración de ajustes viejos → nuevo modelo (persona + diseño) */
 if(S.cfg && !S.persona){
   S.persona = {};
@@ -67,8 +77,23 @@ const PERSONA_DEF = { estatura:183, edad:29, sexo:"m", act:1.55,
                       objetivo:"perder", metaGrasa:15, metaMusculo:47.5, cardioMin:15 };
 function personaGet(){ return Object.assign({}, PERSONA_DEF, S.persona||{}); }
 function pesoActual(){
-  const withKg = (S.body||[]).filter(b=>b.kg);
-  return withKg.length ? withKg[withKg.length-1].kg : 94.7; /* medición base */
+  /* el más reciente POR FECHA, no el último capturado: si registras un
+     InBody viejo después, no debe recalcularte la dieta con ese peso. */
+  const withKg = (Array.isArray(S.body)?S.body:[]).filter(b=>b && b.kg && b.d);
+  if(!withKg.length) return MEDICION_BASE.kg;
+  return withKg.reduce((a,b)=> b.d > a.d ? b : a).kg;
+}
+/* Peso objetivo derivado de TU meta de grasa, manteniendo la masa magra:
+     magra = peso × (1 − grasa/100)   →   metaPeso = magra / (1 − metaGrasa/100)
+   Si vas a subir masa, la meta va hacia arriba, no a un 85.5 fijo. */
+function metaPesoKg(){
+  const P = personaGet(), kg = pesoActual();
+  const ult = (Array.isArray(S.body)?S.body:[]).filter(b=>b && b.grasa && b.d);
+  const grasa = ult.length ? ult.reduce((a,b)=> b.d>a.d?b:a).grasa : MEDICION_BASE.grasa;
+  if(!grasa || !P.metaGrasa) return kg;
+  const magra = kg * (1 - grasa/100);
+  const meta = magra / (1 - P.metaGrasa/100);
+  return Math.round(meta*10)/10;
 }
 function applyPersona(){
   const P = personaGet(), kg = pesoActual();
@@ -85,15 +110,123 @@ function applyPersona(){
   CONFIG.perfil.metaGrasa = P.metaGrasa; CONFIG.perfil.metaMusculo = P.metaMusculo;
   CONFIG.perfil.altura = P.estatura;     CONFIG.perfil.edad = P.edad;
 }
+/* Tema: "auto" sigue al sistema, o se fija en claro/oscuro */
+const mqClaro = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+function temaResuelto(){
+  const t = (S.ui||{}).tema || "auto";
+  if(t==="claro" || t==="oscuro") return t;
+  return (mqClaro && mqClaro.matches) ? "claro" : "oscuro";
+}
+function applyTema(){
+  const t = temaResuelto();
+  document.documentElement.setAttribute("data-tema", t);
+  /* la barra de estado del teléfono tiene que combinar */
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute("content", t==="claro" ? "#1b396b" : "#081427");
+}
+if(mqClaro && mqClaro.addEventListener)
+  mqClaro.addEventListener("change", ()=>{ if(((S.ui||{}).tema||"auto")==="auto") applyTema(); });
+
 function applyUI(){
   const u = S.ui || {};
   CONFIG.usarFotos       = u.fotosAlimentos !== false;
   CONFIG.fotosEjercicios = u.fotosEjercicios !== false;
   document.body.style.zoom = u.texto==="grande" ? "1.08" : u.texto==="chico" ? "0.94" : "";
   document.documentElement.classList.toggle("noanim", u.anim===false);
+  applyTema();
 }
 applyPersona();
-function save(){ if(!canStore) return; try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ canStore=false; } }
+/* Banner rojo fijo para avisos que NO se pueden perder (a diferencia del toast) */
+let alertaActiva = null;
+function alertaGrave(titulo, texto, accion){
+  if(alertaActiva === titulo) return;            /* no apilar el mismo aviso */
+  alertaActiva = titulo;
+  const prev = document.getElementById("alertaGrave"); if(prev) prev.remove();
+  const el = document.createElement("div");
+  el.id = "alertaGrave"; el.className = "alerta-grave"; el.setAttribute("role","alert");
+  el.innerHTML = `<div class="ag-txt"><b>${esc(titulo)}</b><span>${esc(texto)}</span></div>`+
+    (accion?`<button class="ag-act" data-agact="1">${esc(accion)}</button>`:``)+
+    `<button class="ag-x" data-agclose="1" aria-label="Cerrar aviso">✕</button>`;
+  document.body.appendChild(el);
+  el.addEventListener("click", ev=>{
+    if(ev.target.closest("[data-agclose]")){ el.remove(); alertaActiva=null; return; }
+    if(ev.target.closest("[data-agact]")){ exportBackup(); return; }
+  });
+}
+/* Guardado. Si falla la cuota avisamos SIEMPRE y seguimos intentando:
+   apagarlo en silencio era la forma de perder una semana entera de progreso. */
+let guardadoFallando = false;
+function save(){
+  if(!canStore) return;
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify(S));
+    if(guardadoFallando){                        /* se recuperó: quitamos el aviso */
+      guardadoFallando = false;
+      const el = document.getElementById("alertaGrave");
+      if(el && alertaActiva==="No se está guardando"){ el.remove(); alertaActiva=null; }
+      showToast("Ya se está guardando otra vez ✓");
+    }
+  }catch(e){
+    guardadoFallando = true;
+    alertaGrave("No se está guardando",
+      "Se llenó el espacio de este navegador. Exporta un respaldo ahora y borra algunas fotos en Ajustes → Alimentos.",
+      "Exportar respaldo");
+  }
+}
+/* Registro de cuándo fue el último respaldo, para poder insistir */
+function diasSinRespaldo(){
+  if(!S.lastBackup) return null;
+  return Math.floor((Date.now() - S.lastBackup) / 864e5);
+}
+function respaldoAvisoHtml(){
+  const d = diasSinRespaldo();
+  if(d===null) return `<div class="bk-aviso urge"><b>Nunca has hecho un respaldo.</b>
+    <span>Si cambias de teléfono o borras los datos del navegador, todo esto se va. Toma 10 segundos.</span></div>`;
+  if(d>=7) return `<div class="bk-aviso urge"><b>Tu último respaldo fue hace ${d} día${d===1?"":"s"}.</b>
+    <span>Ya te toca uno nuevo.</span></div>`;
+  return `<div class="bk-aviso ok"><b>Último respaldo: ${d===0?"hoy":"hace "+d+" día"+(d===1?"":"s")}.</b>
+    <span>Vas bien.</span></div>`;
+}
+function renderRespaldoAviso(){
+  const el = document.getElementById("respaldoAviso");
+  if(el) el.innerHTML = respaldoAvisoHtml();
+}
+
+/* ---------- Descargar todas las fotos para usar sin señal ---------- */
+let precacheEstado = null;   /* null | {hechas,total,fin} */
+function precacheHtml(){
+  if(!("serviceWorker" in navigator))
+    return `<div class="bk-aviso urge"><b>No disponible</b><span>Este navegador no soporta uso sin conexión.</span></div>`;
+  if(!precacheEstado)
+    return `<button class="nut-addbtn" data-precache="1" style="margin-bottom:0">⬇️ Descargar todo para el gimnasio</button>`;
+  const {hechas, total, fin, fallidas} = precacheEstado;
+  const pct = total ? Math.round(hechas/total*100) : 0;
+  if(fin) return `<div class="bk-aviso ok"><b>Listo: ${hechas} de ${total} imágenes guardadas.</b>
+    <span>${fallidas?fallidas+" no se encontraron. ":""}Ya puedes abrir la app sin señal.</span></div>`;
+  return `<div class="pc-prog"><div class="pc-bar"><i style="width:${pct}%"></i></div>
+    <span>Descargando… ${hechas} de ${total}</span></div>`;
+}
+function renderPrecache(){
+  const el = document.getElementById("precacheBox");
+  if(el) el.innerHTML = precacheHtml();
+}
+/* lista de todo lo que hay que tener guardado antes de ir al gym */
+function urlsDeImagenes(){
+  const urls = new Set();
+  SHOP.forEach(it=>urls.add("img/"+it.id+".png"));
+  exVariantList().forEach(v=>urls.add("img/ej-"+v.sl+".png"));
+  return [...urls];
+}
+function descargarImagenes(){
+  if(!navigator.serviceWorker || !navigator.serviceWorker.controller){
+    showToast("Abre y cierra la app una vez y vuelve a intentar"); return;
+  }
+  const urls = urlsDeImagenes();
+  precacheEstado = {hechas:0, fallidas:0, total:urls.length}; renderPrecache();
+  const ch = new MessageChannel();
+  ch.port1.onmessage = ev => { precacheEstado = ev.data; renderPrecache(); };
+  navigator.serviceWorker.controller.postMessage({tipo:"precachear-imagenes", urls}, [ch.port2]);
+}
 
 /* ============================================================
    MANDADO
@@ -482,8 +615,8 @@ const NUTBASE = {
 const MAIN_MACRO = {prot:"p", carb:"c", veg:"kcal", fat:"f"};
 
 /* --- alimentos agregados por ti (viven en tu navegador) --- */
-if(!S.customFoods) S.customFoods = [];
-if(!S.nutEdits)   S.nutEdits   = {};
+if(!Array.isArray(S.customFoods)) S.customFoods = [];
+if(!S.nutEdits || typeof S.nutEdits!=="object" || Array.isArray(S.nutEdits)) S.nutEdits = {};
 function attachCustomFoods(){
   S.customFoods.forEach(cf=>{
     const base = shopById[cf.base]; if(!base) return;
@@ -497,6 +630,41 @@ attachCustomFoods();
 if(S.swaps && S.swaps.fruta!==undefined){ delete S.swaps.fruta; }
 if(S.nutEdits){ Object.keys(S.nutEdits).forEach(k=>{ if(k==="fruta"||k.startsWith("fruta~")) delete S.nutEdits[k]; }); }
 S.customFoods.forEach(cf=>{ if(cf.base==="fruta") cf.base="manzana"; });
+
+/* ------------------------------------------------------------------
+   SANEADO DEL ESTADO GUARDADO
+   Todo lo que se guarda apunta a POSICIONES de array. Si una
+   actualización quita una equivalencia o reordena algo, esos índices
+   quedan colgados y antes tronaban la app entera antes de pintar nada.
+   Aquí los revisamos una sola vez al arrancar.
+   ------------------------------------------------------------------ */
+function saneaEstado(){
+  const obj = k => (S[k] && typeof S[k]==="object" && !Array.isArray(S[k])) ? S[k] : (S[k]={});
+  ["meals","water","swaps","mealOpt","lifts","liftHi","antojos","trained",
+   "note","sets","varSel","warm","cardio","nutEdits"].forEach(obj);
+  if(!Array.isArray(S.body)) S.body = [];
+  if(!Array.isArray(S.customFoods)) S.customFoods = [];
+
+  /* sustituciones: el índice tiene que existir todavía */
+  Object.keys(S.swaps).forEach(id=>{
+    const it = shopById[id], i = S.swaps[id];
+    if(!it || !Array.isArray(it.alts) || typeof i!=="number" || i<0 || !it.alts[i]) delete S.swaps[id];
+  });
+  /* opción de comida: la letra tiene que existir en esa comida */
+  Object.keys(S.mealOpt).forEach(i=>{
+    const m = MEALS[+i];
+    if(!m || !m.options || !m.options[S.mealOpt[i]]) delete S.mealOpt[i];
+  });
+  /* unidad de peso: hubo dos claves distintas (S.unit y S.unidad) que no se
+     hablaban. Nos quedamos con S.unidad y absorbemos la vieja. */
+  if(S.unit && !["kg","lb"].includes(S.unidad)) S.unidad = S.unit;
+  if(S.unit){ if(S.unit!==S.unidad) S.unidad = S.unit; delete S.unit; }
+  if(!["kg","lb"].includes(S.unidad)) S.unidad = "kg";
+
+  /* mediciones: ordenadas por fecha y sin basura */
+  S.body = S.body.filter(b=>b && b.d).sort((a,b)=> a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+}
+/* Ojo: saneaEstado() se llama más abajo, cuando MEALS ya existe. */
 
 /* clave nutricional de un alimento efectivo */
 function nutKey(id, altIdx){
@@ -516,18 +684,30 @@ function nutOf(key){
   return n;
 }
 /* factor de cantidad efectivo base→equivalencia: iguala el macro principal */
+/* ¿hay ediciones de MACROS (no de precio) para esta clave? Editar un precio
+   nunca debe mover los gramos de la dieta. */
+function tieneEdicionMacros(key){
+  const e = S.nutEdits[key]; if(!e) return false;
+  return ["kcal","p","c","f","pz"].some(k=>e[k]!==undefined);
+}
 function factorOf(id, altIdx){
   if(altIdx===undefined||altIdx===null||altIdx<0) return 1;
-  const it = shopById[id], a = it.alts[altIdx];
+  const it = shopById[id]; if(!it) return 1;
+  const a = it.alts && it.alts[altIdx];
+  if(!a) return 1;                       /* índice viejo o equivalencia eliminada */
   const kB = nutKey(id), kA = nutKey(id, altIdx);
-  /* si nada se ha editado y la equivalencia es del plan, respeta el factor curado */
-  if(!a.customId && !S.nutEdits[kB] && !S.nutEdits[kA]) return a.f;
   const m = MAIN_MACRO[it.cat] || "kcal";
   const nb = nutOf(kB), na = nutOf(kA);
+  /* Si no se han editado macros y la equivalencia es del plan, respeta el
+     factor curado a mano — PERO sólo cuando los dos se miden igual. Un factor
+     curado en gramos no se puede aplicar a un alimento que se cuenta por pieza:
+     con arroz→tortilla eso multiplicaba los carbos del día por 40. */
+  if(!a.customId && !tieneEdicionMacros(kB) && !tieneEdicionMacros(kA) && !!nb.pz === !!na.pz)
+    return a.f;
   const db = nb.pz ? nb[m] : nb[m]/100;   /* densidad por unidad propia */
   const da = na.pz ? na[m] : na[m]/100;
   if(!da || !db) return a.f || 1;
-  return db/da * (nb.pz&&!na.pz ? 1 : 1); /* misma cantidad de macro principal */
+  return db/da;                          /* misma cantidad de macro principal */
 }
 /* macros de una cantidad qty (en la unidad propia del alimento) */
 function macrosOf(key, qty){
@@ -1136,6 +1316,11 @@ const ANTOJOS = [
 /* ============================================================
    HELPERS
    ============================================================ */
+/* Ya existen MEALS, RUTINA y las demás tablas: ahora sí se puede sanear
+   el estado guardado y recalcular la persona con las mediciones ordenadas. */
+saneaEstado();
+applyPersona();
+
 const $ = id => document.getElementById(id);
 const toast = $("toast"); let toastT;
 function showToast(m){ toast.textContent=m; toast.classList.add("show");
@@ -1153,12 +1338,15 @@ function dispPrep(id){ const a=selAlt(id); return (a&&a.prep)||shopById[id].prep
 function dispAmt(id, base, unitOv){
   const it=shopById[id], a=selAlt(id);
   const unit = (a&&a.unit)||unitOv||it.unit;
-  const val = base*(a?a.f:1);
+  /* MISMO factor que usa el motor de macros y el costo del mandado.
+     Antes esto usaba a.f directo, así que la app te decía una cantidad
+     y sumaba los macros de otra distinta. */
+  const val = base*factorOf(id, S.swaps[id]);
   return fmtQty(val, unit);
 }
 function foodIcon(it, forceEmoji){
   if(!CONFIG.usarFotos || forceEmoji) return `<span class="emoji">${it.e}</span>`;
-  const src = CIMG["food:"+it.id] || ("img/"+it.id+".png");
+  const src = srcImagen("food:"+it.id, "img/"+it.id+".png");
   return `<span class="fico"><img src="${src}" alt="" loading="lazy" `+
          `onerror="this.parentNode.classList.add('noimg')"><span class="fe">${it.e}</span></span>`;
 }
@@ -1166,6 +1354,12 @@ function foodIcon(it, forceEmoji){
 const IMG_KEY = "mi_plan_salvador_imgs_v1";
 let CIMG = {};
 try{ CIMG = JSON.parse(localStorage.getItem(IMG_KEY) || "{}"); }catch(e){ CIMG = {}; }
+if(!CIMG || typeof CIMG!=="object" || Array.isArray(CIMG)) CIMG = {};
+/* sólo aceptamos data:image — es lo único que genera fileToSquare, y evita
+   que un valor manipulado se salga del atributo src e inyecte HTML */
+const ES_IMAGEN = v => typeof v==="string" && /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/.test(v);
+Object.keys(CIMG).forEach(k=>{ if(!ES_IMAGEN(CIMG[k])) delete CIMG[k]; });
+const srcImagen = (clave, fallback) => ES_IMAGEN(CIMG[clave]) ? CIMG[clave] : fallback;
 function saveImgs(){
   try{ localStorage.setItem(IMG_KEY, JSON.stringify(CIMG)); return true; }
   catch(e){ showToast("⚠️ Sin espacio: borra alguna imagen personalizada"); return false; }
@@ -1179,7 +1373,7 @@ const DUMBBELL_SVG = `<svg class="ph" width="24" height="24" viewBox="0 0 24 24"
 function exPhoto(v, small){
   if(!CONFIG.fotosEjercicios) return "";
   const sl = slugName(v.n);
-  const src = CIMG["ex:"+sl] || ("img/ej-"+sl+".png");
+  const src = srcImagen("ex:"+sl, "img/ej-"+sl+".png");
   return `<span class="ex-photo${small?' sm':''}"><img src="${src}" alt="" loading="lazy" onerror="this.parentNode.classList.add('noimg')">${DUMBBELL_SVG}</span>`;
 }
 
@@ -1268,28 +1462,96 @@ function parseBackup(text){
   }
   try{
     const d = JSON.parse(raw);
-    return (d && d.app==="mi-plan" && d.S) ? d : null;
+    if(!d || d.app!=="mi-plan") return null;
+    /* S tiene que ser un objeto de verdad: antes pasaba un string o un array
+       y la app quedaba en blanco al recargar, sin forma de volver a Ajustes. */
+    if(!d.S || typeof d.S!=="object" || Array.isArray(d.S)) return null;
+    if(typeof d.v === "number" && d.v > 2) return null;   /* respaldo de una versión futura */
+    /* las imágenes sólo pueden ser data:image — si no, cualquiera podría
+       inyectar HTML dentro de la app mandándote un respaldo por WhatsApp */
+    if(d.CIMG && typeof d.CIMG==="object" && !Array.isArray(d.CIMG)){
+      Object.keys(d.CIMG).forEach(k=>{
+        const v = d.CIMG[k];
+        if(typeof v!=="string" || !/^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/.test(v))
+          delete d.CIMG[k];
+      });
+    } else d.CIMG = null;
+    return d;
   }catch(e){ return null; }
 }
-function exportBackup(){
+/* nombre con hora, para que dos respaldos del mismo día no se pisen */
+function nombreRespaldo(){
+  const n = new Date(), z = v => String(v).padStart(2,"0");
+  return `mi-plan-respaldo-${n.getFullYear()}-${z(n.getMonth()+1)}-${z(n.getDate())}`+
+         `-${z(n.getHours())}${z(n.getMinutes())}.html`;
+}
+function marcaRespaldo(){ S.lastBackup = Date.now(); save(); renderRespaldoAviso(); }
+
+async function exportBackup(){
   const data = { app:"mi-plan", v:2, fecha:new Date().toISOString(), S, CIMG };
   const blob = new Blob([buildBackupHtml(data)], {type:"text/html"});
+  const nombre = nombreRespaldo();
+  /* En iPhone la descarga se pierde en Archivos. La hoja de compartir deja
+     mandarlo a iCloud, Drive o WhatsApp de un toque: es la única forma
+     realista de sincronizar entre teléfonos. */
+  try{
+    const f = new File([blob], nombre, {type:"text/html"});
+    if(navigator.canShare && navigator.canShare({files:[f]})){
+      await navigator.share({files:[f], title:"Respaldo de Mi Plan"});
+      marcaRespaldo(); showToast("⬆️ Respaldo compartido ✓");
+      return;
+    }
+  }catch(e){ if(e && e.name==="AbortError") return; /* si falla, descargamos */ }
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "mi-plan-respaldo-"+dayKey+".html";
+  a.download = nombre;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+  marcaRespaldo();
   showToast("⬇️ Respaldo descargado · ábrelo para verlo bonito");
+}
+
+/* resumen legible de un respaldo, para poder comparar antes de sobrescribir */
+function resumenDe(St){
+  const dias = St && St.trained ? Object.keys(St.trained).length : 0;
+  const comidas = St && St.meals ? Object.keys(St.meals).length : 0;
+  const med = St && Array.isArray(St.body) ? St.body.length : 0;
+  return `${dias} días entrenados · ${comidas} días de comidas · ${med} mediciones`;
 }
 function importBackup(file){
   const rd = new FileReader();
+  rd.onerror = ()=> showToast("No se pudo leer ese archivo 😕 vuelve a intentar");
   rd.onload = ()=>{
     const d = parseBackup(rd.result);
     if(!d){ showToast("Ese archivo no parece un respaldo de Mi Plan 😕"); return; }
-    localStorage.setItem(LS_KEY, JSON.stringify(d.S));
-    if(d.CIMG) localStorage.setItem(IMG_KEY, JSON.stringify(d.CIMG));
-    showToast("⬆️ Respaldo restaurado · recargando…");
-    setTimeout(()=>location.reload(), 900);
+
+    /* comparar contra lo que hay hoy y PEDIR CONFIRMACIÓN: un dedazo en la
+       lista de archivos no puede borrar meses de progreso. */
+    const f = d.fecha ? new Date(d.fecha) : null;
+    const cuando = f && !isNaN(f) ?
+      `${f.getDate()} de ${MONTHS_FULL[f.getMonth()]} de ${f.getFullYear()}` : "fecha desconocida";
+    const ok = confirm(
+      `Vas a REEMPLAZAR todo tu progreso.\n\n`+
+      `El respaldo es del ${cuando}\n   ${resumenDe(d.S)}\n\n`+
+      `Lo que tienes ahora\n   ${resumenDe(S)}\n\n`+
+      `¿Continuar? Se guarda una copia de lo actual por si te arrepientes.`);
+    if(!ok){ showToast("Importación cancelada · nada cambió"); return; }
+
+    try{
+      /* red de seguridad: copia de lo actual ANTES de tocar nada */
+      try{ localStorage.setItem(PRE_KEY, localStorage.getItem(LS_KEY) || ""); }catch(e){}
+      localStorage.setItem(LS_KEY, JSON.stringify(d.S));
+      if(d.CIMG){
+        try{ localStorage.setItem(IMG_KEY, JSON.stringify(d.CIMG)); }
+        catch(e){ showToast("Progreso restaurado, pero no cupieron las fotos"); }
+      }
+      showToast("⬆️ Respaldo restaurado · recargando…");
+      setTimeout(()=>location.reload(), 900);
+    }catch(e){
+      alertaGrave("No se pudo restaurar",
+        "No hay espacio suficiente en este navegador. Tu progreso anterior sigue intacto.", null);
+      try{ const prev = localStorage.getItem(PRE_KEY); if(prev) localStorage.setItem(LS_KEY, prev); }catch(e2){}
+    }
   };
   rd.readAsText(file);
 }
@@ -1327,8 +1589,8 @@ function nutRowsHtml(){
     const n = nutOf(x.key), edited = !!S.nutEdits[x.key];
     const per = n.pz ? "por "+(n.pzTxt||"pieza") : "por 100 "+(shopById[x.base].unit==="ml"?"ml":"g");
     const open = nutOpen===x.key;
-    const imgK = "food:"+x.base, hasCustomImg = !!CIMG[imgK];
-    const imgSrc = hasCustomImg ? CIMG[imgK] : "img/"+x.base+".png";
+    const imgK = "food:"+x.base, hasCustomImg = ES_IMAGEN(CIMG[imgK]);
+    const imgSrc = srcImagen(imgK, "img/"+x.base+".png");
     return `<div class="nut-row${open?' open':''}${x.isBase?'':' isalt'}" data-nutrow="${x.key}">
       <div class="nut-head" data-nutopen="${x.key}">
         ${x.isBase?`<span class="img-th sm"><img src="${imgSrc}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${shopById[x.base].e}'))"></span>`:""}
@@ -1377,8 +1639,8 @@ function nutAddFormHtml(){
 function exRowsHtml(){
   const f = imgFilter.trim().toLowerCase();
   return exVariantList().filter(x => !f || x.n.toLowerCase().includes(f)).map(x => {
-    const k = "ex:"+x.sl, custom = !!CIMG[k];
-    const src = custom ? CIMG[k] : "img/ej-"+x.sl+".png";
+    const k = "ex:"+x.sl, custom = ES_IMAGEN(CIMG[k]);
+    const src = srcImagen(k, "img/ej-"+x.sl+".png");
     return `<div class="img-row">
       <span class="img-th"><img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('🏋️'))"></span>
       <span class="img-nm">${esc(x.n)}${custom?`<small>★ TU IMAGEN</small>`:""}</span>
@@ -1425,11 +1687,16 @@ function personaHtml(){
       <div class="nut-hint" style="padding:10px 2px 2px">🔒 Estos valores se calculan solos con la fórmula Mifflin-St Jeor y van bloqueados a propósito: así un dedazo no te descompone la dieta. Cambia tus datos de arriba (o registra un peso nuevo en Progreso) y se actualizan al momento.</div>
     </div>
     <div class="set-h">Respaldo</div>
+    <div id="respaldoAviso">${respaldoAvisoHtml()}</div>
     <div class="img-note" style="margin-top:0">Todo tu progreso vive en este dispositivo. Exporta un respaldo de vez en cuando: es tu seguro y tu forma de pasar todo a otro teléfono.</div>
     <div class="nut-btns">
       <button class="nb-save" data-bkexport="1">⬇️ Exportar respaldo</button>
       <label class="nb-reset bk-imp">⬆️ Importar respaldo<input type="file" accept=".html,.json,text/html,application/json" data-bkimport="1" style="display:none"></label>
     </div>
+    <div class="set-h">Sin señal en el gimnasio</div>
+    <div class="img-note" style="margin-top:0">Las fotos se guardan solas la primera vez que las ves. Si vas a un gimnasio sin señal, bájalas todas de una vez desde aquí.</div>
+    <div id="precacheBox">${precacheHtml()}</div>
+
     <div class="set-h">Instalar como aplicación</div>
     <div class="img-note" style="margin-top:0">
       <b>Android (Chrome):</b> menú ⋮ → «Agregar a pantalla de inicio» o «Instalar app».<br>
@@ -1445,6 +1712,8 @@ function disenoHtml(){
   return `
     <div class="set-h">Apariencia</div>
     <div class="nut-form open2">
+      ${seg("tema","Tema",[["auto","Automático"],["claro","Claro"],["oscuro","Oscuro"]], u.tema||"auto")}
+      <div class="ui-nota">Automático sigue el modo de tu teléfono. El claro se lee mejor a pleno sol.</div>
       ${seg("texto","Tamaño del texto",[["chico","Chico"],["normal","Normal"],["grande","Grande"]], u.texto||"normal")}
       ${chk("fotosAlimentos","Imágenes de alimentos","En comidas y mandado", CONFIG.usarFotos)}
       ${chk("fotosEjercicios","Fotos de ejercicios","En la rutina y sus variantes", CONFIG.fotosEjercicios)}
@@ -1466,8 +1735,8 @@ function renderGearSheet(){
     inner = `
       <div class="set-h" style="margin-top:0">Unidad de peso</div>
       <div class="ui-seg" style="margin-bottom:14px">
-        <button data-unit="kg" class="${(S.unit||"kg")==="kg"?"on":""}">Kilogramos</button>
-        <button data-unit="lb" class="${S.unit==="lb"?"on":""}">Libras</button>
+        <button data-unit="kg" class="${S.unidad!=="lb"?"on":""}">Kilogramos</button>
+        <button data-unit="lb" class="${S.unidad==="lb"?"on":""}">Libras</button>
       </div>
       <div class="set-h">Fotos de los ejercicios</div>
       <input class="img-flt" id="imgFlt" type="search" placeholder="Buscar ejercicio…" value="${esc(imgFilter)}">
@@ -1480,10 +1749,10 @@ function renderGearSheet(){
   }
   body.innerHTML = `
     <div class="ctabs">
-      <button data-geartab="ali" class="${gearTab==='ali'?'on':''}"><i>🍎</i>Alimentos</button>
-      <button data-geartab="ejer" class="${gearTab==='ejer'?'on':''}"><i>🏋️</i>Ejercicios</button>
-      <button data-geartab="set" class="${gearTab==='set'?'on':''}"><i>🎯</i>Ajustes</button>
-      <button data-geartab="dis" class="${gearTab==='dis'?'on':''}"><i>🎨</i>Diseño</button>
+      <button data-geartab="ali" class="${gearTab==='ali'?'on':''}"><i><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7c-1.6-1.4-4-1.6-5.7-.2C4.2 8.5 4 12 5.4 15c1 2.2 2.6 4.4 4.2 4.4.9 0 1.5-.5 2.4-.5s1.5.5 2.4.5c1.6 0 3.2-2.2 4.2-4.4 1.4-3 1.2-6.5-.9-8.2C16 5.4 13.6 5.6 12 7Z"/><path d="M12 7c0-1.7.9-3.3 2.6-3.9"/></svg></i>Alimentos</button>
+      <button data-geartab="ejer" class="${gearTab==='ejer'?'on':''}"><i><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5 17.5 17.5"/><path d="m21 21-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/></svg></i>Ejercicios</button>
+      <button data-geartab="set" class="${gearTab==='set'?'on':''}"><i><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3"/></svg></i>Ajustes</button>
+      <button data-geartab="dis" class="${gearTab==='dis'?'on':''}"><i><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1.2"/><circle cx="17.5" cy="10.5" r="1.2"/><circle cx="8.5" cy="7.5" r="1.2"/><circle cx="6.5" cy="12.5" r="1.2"/><path d="M12 2a10 10 0 1 0 0 20c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a6 6 0 0 0 6-6c0-4.9-4.5-8.6-10-8.6Z"/></svg></i>Diseño</button>
     </div>${inner}`;
   const flt = document.getElementById("imgFlt");
   if(flt) flt.addEventListener("input", ()=>{ imgFilter = flt.value;
@@ -1532,15 +1801,207 @@ function prepBadge(p){ return p?`<span class="prep-b ${PREP_CLS[p]}">${PREP_TXT[
 if(!S.meals[dayKey]) S.meals[dayKey]=MEALS.map(()=>false);
 $("dateMeta").textContent = DAYS[now.getDay()]+" "+now.getDate()+" "+MONTHS[now.getMonth()]+" · dieta y entrenamiento";
 $("todayName").textContent = DAYS[now.getDay()];
+/* Macros de lo que YA marcaste como comido hoy (no del plan completo) */
+function macrosComidos(){
+  const hechas = S.meals[dayKey] || [];
+  const lista = MEALS.map((m,i)=> hechas[i] ? mealMacros(m,i) : {kcal:0,p:0,c:0,f:0});
+  return sumM(lista);
+}
+/* Los 4 recuadros del header ahora son BARRAS que se llenan durante el día.
+   Antes eran las metas fijas: el número más grande de la pantalla no
+   reflejaba nada de lo que hacías. */
 function renderTargets(){
-  $("mKcal").textContent = CONFIG.kcal.toLocaleString("es-MX");
-  $("mProt").textContent = CONFIG.prot+" g";
-  $("mCarb").textContent = CONFIG.carb+" g";
-  $("mFat").textContent = CONFIG.fat+" g";
+  const hecho = macrosComidos();
+  const filas = [
+    ["mKcal", hecho.kcal, CONFIG.kcal, v=>Math.round(v).toLocaleString("es-MX"), ""],
+    ["mProt", hecho.p,    CONFIG.prot, v=>Math.round(v), "g"],
+    ["mCarb", hecho.c,    CONFIG.carb, v=>Math.round(v), "g"],
+    ["mFat",  hecho.f,    CONFIG.fat,  v=>Math.round(v), "g"],
+  ];
+  filas.forEach(([id, val, meta, fmt, u])=>{
+    const el = $(id); if(!el) return;
+    el.innerHTML = `${fmt(val)}<em> / ${fmt(meta)}${u?" "+u:""}</em>`;
+    const caja = el.closest(".macro"); if(!caja) return;
+    const barra = caja.querySelector("i");
+    const pct = meta ? Math.min(100, val/meta*100) : 0;
+    if(barra) barra.style.width = pct.toFixed(1)+"%";
+    caja.classList.toggle("over", meta>0 && val > meta*1.05);
+    el.setAttribute("aria-label", `${fmt(val)} de ${fmt(meta)} ${u||"kcal"}`);
+  });
+  renderHdrMini(hecho);
+  renderHdrExtra();
   if($("aguaFig")){ $("aguaFig").textContent = CONFIG.aguaLitros+" L";
     $("aguaSub").innerHTML = "≈ "+Math.round(CONFIG.aguaLitros*4)+" vasos de 250 ml<br>repartidos en el día"; }
 }
+/* Resumen de una línea que aparece cuando el header se encoge */
+function renderHdrMini(hecho){
+  const el = $("hdrMini"); if(!el) return;
+  const h = hecho || macrosComidos();
+  const tab = document.body.dataset.tab || "hoy";
+  const hechas = (S.meals[dayKey]||[]).filter(Boolean).length;
+  if(tab==="rutina"){
+    const b = bloqueDe(viewKey), f = faseDe(viewKey);
+    el.innerHTML = `<span>${b?esc(b.short||b.title):"Descanso"}</span><span class="sep">·</span>`+
+                   `<span>${esc(CYCLE[f.idx].n)}</span>`;
+  } else if(tab==="progreso"){
+    el.innerHTML = `<b>${pesoActual()}</b><span>kg</span><span class="sep">·</span>`+
+                   `<span>meta ${metaPesoKg()} kg</span>`;
+  } else {
+    el.innerHTML = `<b>${Math.round(h.kcal).toLocaleString("es-MX")}</b>`+
+                   `<span>de ${CONFIG.kcal.toLocaleString("es-MX")} kcal</span>`+
+                   `<span class="sep">·</span><span>${hechas}/${MEALS.length} comidas</span>`;
+  }
+}
+/* En Rutina / Progreso / Ajustes el header muestra datos de ESA pestaña */
+function renderHdrExtra(){
+  const el = $("hdrExtra"); if(!el) return;
+  const tab = document.body.dataset.tab || "hoy";
+  const caja = (v,l)=>`<div class="he"><b>${v}</b><span>${l}</span></div>`;
+  if(tab==="rutina"){
+    const b = bloqueDe(viewKey), f = faseDe(viewKey);
+    const lista = b ? (RUTINA[b.id]||[]) : [];
+    const hechas = lista.filter(x=>{
+      const st = (S.sets[viewKey]||{})[x.id]||0; return x.s>0 && st >= x.s;
+    }).length;
+    el.innerHTML = caja(b?esc(b.short||b.title):"Descanso","bloque")+
+                   caja(`${hechas}/${lista.length}`,"ejercicios")+
+                   caja(esc(CYCLE[f.idx].n.split(" ")[0]),`semana ${f.w} de ${f.tot}`);
+  } else if(tab==="progreso"){
+    const p = pesoActual(), meta = metaPesoKg();
+    const dif = Math.round((p-meta)*10)/10;
+    el.innerHTML = caja(p+" kg","peso")+
+                   caja(meta+" kg","meta")+
+                   caja((dif>0?"−":"+")+Math.abs(dif)+" kg","faltan");
+  } else if(tab==="config"){
+    const d = diasSinRespaldo();
+    el.innerHTML = caja(Object.keys(S.trained||{}).length,"entrenos")+
+                   caja((S.customFoods||[]).length,"tuyos")+
+                   caja(d===null?"—":(d===0?"hoy":d+"d"),"respaldo");
+  } else el.innerHTML = "";
+}
+
+/* El header se encoge al bajar. Un solo listener pasivo con rAF: nada de
+   trabajo por frame de scroll. */
+(function headerColapsable(){
+  let ticking = false, ultimo = false;
+  const UMBRAL_BAJA = 56, UMBRAL_SUBE = 24;   /* histéresis: no parpadea */
+  function revisa(){
+    ticking = false;
+    const y = window.scrollY || 0;
+    const min = ultimo ? y > UMBRAL_SUBE : y > UMBRAL_BAJA;
+    if(min !== ultimo){
+      ultimo = min;
+      document.body.classList.toggle("hdr-min", min);
+      if(min) renderHdrMini();
+    }
+  }
+  window.addEventListener("scroll", ()=>{
+    if(!ticking){ ticking = true; requestAnimationFrame(revisa); }
+  }, {passive:true});
+})();
 applyUI(); renderTargets();
+
+/* ------------------------------------------------------------------
+   "AHORA" — la tarjeta que dice qué sigue.
+   Es lo único de la pantalla con jerarquía 1: más grande, con acento y
+   con un botón que hace la acción sin buscarla.
+   ------------------------------------------------------------------ */
+/* "7:00–8:30 am" → minutos desde medianoche del INICIO de la ventana */
+function minutosDe(txt){
+  const m = String(txt||"").match(/(\d{1,2})(?::(\d{2}))?\s*(–|-|a\.?m|p\.?m)?/i);
+  if(!m) return null;
+  let h = +m[1], min = m[2]?+m[2]:0;
+  const tarde = /p\.?\s?m/i.test(txt);
+  const finVentana = String(txt).split(/[–-]/)[1] || "";
+  const pmFinal = /p\.?\s?m/i.test(finVentana) || tarde;
+  if(pmFinal && h < 12) h += 12;
+  return h*60 + min;
+}
+function siguienteComida(){
+  const hechas = S.meals[dayKey] || [];
+  const ahora = new Date(); const min = ahora.getHours()*60 + ahora.getMinutes();
+  const pendientes = MEALS.map((m,i)=>({m,i,t:minutosDe(m.time)}))
+                          .filter(x=>!hechas[x.i]);
+  if(!pendientes.length) return null;
+  /* la primera pendiente cuya ventana ya empezó; si ninguna, la más próxima */
+  const vencidas = pendientes.filter(x=>x.t!==null && x.t<=min);
+  return vencidas.length ? vencidas[vencidas.length-1] : pendientes[0];
+}
+function renderAhora(){
+  const box = $("ahora"); if(!box) return;
+  const bloque = bloqueDe(dayKey);
+  const sig = siguienteComida();
+  const hechas = (S.meals[dayKey]||[]).filter(Boolean).length;
+  const ahora = new Date(); const min = ahora.getHours()*60 + ahora.getMinutes();
+
+  /* si es día de entreno y ya pasó de las 4pm sin entrenar, eso es lo urgente */
+  const entrenado = !!S.trained[dayKey];
+  const tocaEntrenar = bloque && !entrenado && min >= 16*60;
+
+  if(tocaEntrenar){
+    const lista = RUTINA[bloque.id]||[];
+    const listos = lista.filter(x=>{
+      const st = (S.sets[dayKey]||{})[x.id]||0;
+      return x.s > 0 && st >= x.s;
+    }).length;
+    box.innerHTML = `
+      <div class="ahora ahora-gym" style="--ac:var(--blue)">
+        <div class="ah-tag">Ahora</div>
+        <div class="ah-body">
+          <div class="ah-t">${esc(bloque.short||bloque.title)}</div>
+          <div class="ah-s">${listos} de ${lista.length} ejercicios · ${esc(CYCLE[faseDe(dayKey).idx].n)}</div>
+        </div>
+        <button class="ah-btn" data-ir="rutina">Ir a la rutina</button>
+      </div>`;
+    return;
+  }
+  if(!sig){
+    box.innerHTML = `
+      <div class="ahora ahora-fin" style="--ac:var(--em)">
+        <div class="ah-tag">Hoy</div>
+        <div class="ah-body">
+          <div class="ah-t">Ya comiste todo 🎉</div>
+          <div class="ah-s">${hechas} de ${MEALS.length} comidas · ${Math.round(macrosComidos().kcal).toLocaleString("es-MX")} kcal</div>
+        </div>
+      </div>`;
+    return;
+  }
+  const m = sig.m, mm = mealMacros(m, sig.i);
+  const tarde = sig.t!==null && min > sig.t + 90;
+  box.innerHTML = `
+    <div class="ahora${tarde?' ah-tarde':''}" style="--ac:${m.color||'var(--em)'}">
+      <div class="ah-tag">${tarde?"Pendiente":"Ahora"}</div>
+      <div class="ah-body">
+        <div class="ah-t">${esc(m.name)}</div>
+        <div class="ah-s">${esc(m.time)} · ${Math.round(mm.kcal)} kcal · ${Math.round(mm.p)} g proteína</div>
+      </div>
+      <button class="ah-btn" data-comer="${sig.i}" aria-label="Marcar ${esc(m.name)} como comida">Ya comí</button>
+    </div>`;
+}
+$("ahora").addEventListener("click", e=>{
+  const c = e.target.closest("[data-comer]");
+  if(c){
+    const i = +c.dataset.comer;
+    S.meals[dayKey][i] = true; save();
+    renderMeals(); renderTargets(); renderAhora();
+    celebra(c);
+    showToast(S.meals[dayKey].every(Boolean) ? "¡Completaste todas tus comidas! 🎉" : "Comida registrada ✓");
+    return;
+  }
+  const ir = e.target.closest("[data-ir]");
+  if(ir) irAPestana(ir.dataset.ir);
+});
+/* chispita al completar: confirma la acción sin robar atención */
+function celebra(el){
+  if((S.ui||{}).anim===false) return;
+  const r = el.getBoundingClientRect();
+  const d = document.createElement("div");
+  d.className = "chispa";
+  d.style.left = (r.left + r.width/2) + "px";
+  d.style.top  = (r.top + r.height/2) + "px";
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(), 700);
+}
 
 function mealOpt(i){ return S.mealOpt[i] || "A"; }
 function renderMeals(){
@@ -1597,16 +2058,17 @@ function renderDaySummary(){
 function updateRing(){
   const done=S.meals[dayKey], c=done.filter(Boolean).length;
   $("ringNum").textContent=c+"/"+MEALS.length;
-  $("ringProg").style.strokeDashoffset = 238.8*(1-c/MEALS.length);
+  $("ringProg").style.strokeDashoffset = 270.2*(1-c/MEALS.length);
   if($("stMeals")) $("stMeals").textContent=c+"/"+MEALS.length;
 }
 $("meals").addEventListener("click",e=>{
   const chk=e.target.closest(".check");
   if(chk){ const i=+chk.dataset.i; S.meals[dayKey][i]=!S.meals[dayKey][i]; save(); renderMeals();
+    renderTargets(); renderAhora();  /* header y tarjeta "Ahora" al momento */
     if(S.meals[dayKey].every(Boolean)) showToast("¡Completaste todas tus comidas! 🎉");
     else if(S.meals[dayKey][i]) showToast("Comida registrada ✓"); return; }
   const opt=e.target.closest("[data-opt]");
-  if(opt){ S.mealOpt[+opt.dataset.meal]=opt.dataset.opt; save(); renderMeals(); }
+  if(opt){ S.mealOpt[+opt.dataset.meal]=opt.dataset.opt; save(); renderMeals(); renderTargets(); renderAhora(); }
 });
 
 
@@ -1652,7 +2114,7 @@ function renderShop(){
       ${items.map(it=>{
         const a=selAlt(it.id), swapped=!!a;
         const qty = it.total===0 ? it.unit :
-          a ? (a.totalTxt || fmtQty(it.total*a.f, a.unit||it.unit)) :
+          a ? (a.totalTxt || fmtQty(it.total*factorOf(it.id, S.swaps[it.id]), a.unit||it.unit)) :
           (it.totalTxt || fmtQty(it.total,it.unit));
         const hasAlts=it.alts.length>0;
         const h = swapped ? (a.hair!==undefined?a.hair:null) : it.hair;
@@ -1743,7 +2205,7 @@ function openAltsSheet(id){
   html += optBtn(it.name, "opción original del plan", it.hair, it.prep,
                  it.total===0?it.unit:(it.totalTxt||fmtQty(it.total,it.unit)), -1, "EL PLAN");
   html += it.alts.map((al,j)=>optBtn(al.n, al.note, al.hair, al.prep||it.prep,
-                 al.totalTxt||fmtQty(it.total*al.f, al.unit||it.unit), j)).join("");
+                 al.totalTxt||fmtQty(it.total*factorOf(it.id, j), al.unit||it.unit), j)).join("");
   html += `</div><div class="sheet-note">La cantidad ya viene ajustada para cubrir los mismos macros.<br>Al elegir, el mandado y tus platillos del día se actualizan solos.</div>`;
   openSheet("Cambiar alimento", it.alts.length+" equivalencias · mismos macros", html);
 }
@@ -1762,8 +2224,8 @@ document.getElementById("cfgPanel").addEventListener("click",e=>{
   const gt=e.target.closest("[data-geartab]");
   if(gt){ gearTab=gt.dataset.geartab; renderGearSheet(); return; }
   const un=e.target.closest("[data-unit]");
-  if(un){ S.unit=un.dataset.unit; save(); renderUnitToggle(); renderRoutine(); renderGearSheet();
-    showToast("Pesos en "+(S.unit==="lb"?"libras":"kilogramos")+" ✓"); return; }
+  if(un){ S.unidad=un.dataset.unit; save(); renderUnitToggle(); renderRoutine(); renderGearSheet();
+    showToast("Pesos en "+(S.unidad==="lb"?"libras":"kilogramos")+" ✓"); return; }
   const seg=e.target.closest(".ui-seg [data-ui]");
   if(seg){ if(!S.ui) S.ui={}; S.ui[seg.dataset.ui]=seg.dataset.v; save(); applyUI(); renderGearSheet(); return; }
   const idel=e.target.closest("[data-imgdel]");
@@ -1825,6 +2287,8 @@ document.getElementById("cfgPanel").addEventListener("click",e=>{
     showToast("Valores originales restaurados ✓"); return; }
   const be=e.target.closest("[data-bkexport]");
   if(be){ exportBackup(); return; }
+  const pc=e.target.closest("[data-precache]");
+  if(pc){ descargarImagenes(); return; }
 
 });
 document.getElementById("sheetBody").addEventListener("click",e=>{
@@ -1883,12 +2347,25 @@ function weekOfMonth(d){ const f=new Date(d.getFullYear(),d.getMonth(),1); const
   return Math.floor((d.getDate()-1+o)/7)+1; }
 function weeksInMonth(y,m){ const f=new Date(y,m,1); const o=(f.getDay()+6)%7;
   return Math.ceil((new Date(y,m+1,0).getDate()+o)/7); }
+/* Fases del mes: 0 Arranque · 1 Carga · 2 Alta intensidad · 3 DESCARGA.
+   La descarga es SIEMPRE la última semana y sólo esa. Antes, en los meses de
+   6 semanas, las semanas 5 y 6 caían las dos en descarga: dos semanas
+   seguidas al 62 %. Ahora las de en medio reparten Carga. */
 function cycleIndexFor(w,tot){
-  if(tot>=5){ if(w<=1) return 0; if(w===2||w===3) return 1; if(w===4) return 2; return 3; }
-  if(w<=1) return 0; if(w===2) return 1; if(w===3) return 2; return 3;
+  if(w >= tot)    return 3;   /* última semana: descarga, siempre y sólo ella */
+  if(w <= 1)      return 0;   /* primera: arranque */
+  if(w === tot-1) return 2;   /* penúltima: alta intensidad */
+  return 1;                   /* todo lo de en medio: carga */
 }
-function faseDe(key){ const d=fromKey(key); const tot=weeksInMonth(d.getFullYear(),d.getMonth());
-  return {idx:cycleIndexFor(weekOfMonth(d),tot), w:weekOfMonth(d), tot}; }
+/* La fase se calcula con el LUNES de la semana de entrenamiento, no con el día
+   suelto. Si no, el lunes 31 de agosto era descarga y el martes 1 de septiembre
+   arranque: dos fases distintas dentro de la misma semana de entrenamiento. */
+function faseDe(key){
+  const lunes = fromKey(weekKey(fromKey(key)));
+  const tot = weeksInMonth(lunes.getFullYear(), lunes.getMonth());
+  const w = weekOfMonth(lunes);
+  return {idx:cycleIndexFor(w,tot), w, tot};
+}
 
 function bloqueDe(key){ return BLOQUES[ PLAN_SEMANAL[fromKey(key).getDay()] ]; }
 
@@ -2005,12 +2482,12 @@ function renderFase(){
   }).join("");
   const banner=$("deloadBanner");
   if(f.idx===3){
-    banner.innerHTML = `<div class="banner em"><span class="i">🧘</span>
+    banner.innerHTML = `<div class="banner em"><span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6M12 13 7 20M12 13l5 7M5 10h14"/></svg></span>
       <div><b>Semana de DESCARGA.</b> Usa el 60–65 % del peso de la semana previa (ya calculado abajo), sin llegar al fallo.
       La descarga no frena el progreso: es donde el cuerpo consolida lo que ganaste.</div></div>`;
   }else{
     const rest=f.tot-f.w;
-    banner.innerHTML = `<div class="banner ${f.idx===2?'coral':'amber'}"><span class="i">${f.idx===2?'🔥':'📅'}</span>
+    banner.innerHTML = `<div class="banner ${f.idx===2?'coral':'amber'}"><span class="i">${f.idx===2?`<svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2c1.5 3.5-1 5-1 7a3 3 0 0 0 6 0c0-1-.3-2-.8-2.8C18.7 8 20 10.7 20 13a8 8 0 1 1-16 0C4 8.5 8.5 6 12 2Z"/></svg>`:`<svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`}</span>
       <div><b>Semana ${f.w} · ${cyc.n}.</b> ${cyc.d} ${rest>0?`Faltan <b>${rest} semana${rest>1?'s':''}</b> para la descarga.`:''}</div></div>`;
   }
 }
@@ -2165,7 +2642,7 @@ $("exList").addEventListener("click",e=>{
     const cur=S.sets[viewKey][exId]||0;
     /* tocar el último cuadro marcado lo desmarca; tocar cualquier otro marca hasta ahí */
     const target = (k+1===cur) ? k : k+1;
-    S.sets[viewKey][exId]=target; save(); renderRoutine();
+    S.sets[viewKey][exId]=target; save(); renderRoutine(); renderHdrExtra();
     if(target>cur && target<total) startRest(rest,name);
     else if(target>=total){ stopRest(); showToast("Ejercicio completo ✓"); }
     else stopRest();
@@ -2173,8 +2650,14 @@ $("exList").addEventListener("click",e=>{
 
   const wb=e.target.closest("[data-w]");
   if(wb){ const exId=wb.closest(".ex").dataset.ex; const ex=list.find(x=>x.id===exId);
-    const step = ex.grp==="inf"?5:2.5;
-    let w=getW(ex)+(wb.dataset.w==="+"?step:-step); if(w<0)w=0;
+    /* El paso va en la unidad que el usuario VE. Antes siempre sumaba 2.5 kg,
+       que en libras se mostraba como saltos erráticos de 5 lb. */
+    const pasoVisible = ex.grp==="inf" ? 5 : 2.5;
+    const enLb = S.unidad==="lb";
+    const actualVisible = enLb ? Math.round(getW(ex)*KG2LB/2.5)*2.5 : getW(ex);
+    let nuevoVisible = actualVisible + (wb.dataset.w==="+"?pasoVisible:-pasoVisible);
+    if(nuevoVisible<0) nuevoVisible=0;
+    const w = enLb ? Math.round(nuevoVisible/KG2LB*100)/100 : nuevoVisible;
     S.lifts[liftKey(ex)]=w; save(); renderRoutine(); return; }
 
   const hi=e.target.closest("[data-hi]");
@@ -2262,16 +2745,16 @@ function renderBudget(){
   const msg=$("budgetMsg"), dow=now.getDay(), finde=(dow===0||dow===6||dow===5);
   if(used>CONFIG.antojosSemana){
     msg.className="banner coral";
-    msg.innerHTML=`<span class="i">⚠️</span><div><b>Te pasaste ${(used-CONFIG.antojosSemana).toLocaleString("es-MX")} kcal.</b> No compenses saltándote comidas: al día siguiente quita 1 tortilla y el snack del trabajo, y suma 10 min de cardio. Nada más.</div>`;
+    msg.innerHTML=`<span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span><div><b>Te pasaste ${(used-CONFIG.antojosSemana).toLocaleString("es-MX")} kcal.</b> No compenses saltándote comidas: al día siguiente quita 1 tortilla y el snack del trabajo, y suma 10 min de cardio. Nada más.</div>`;
   }else if(used>CONFIG.antojosSemana*0.7){
     msg.className="banner amber";
-    msg.innerHTML=`<span class="i">🟡</span><div><b>Vas al ${Math.round(pct)}% del presupuesto.</b> El resto de la semana quédate con los snacks del plan, que no gastan presupuesto.</div>`;
+    msg.innerHTML=`<span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/></svg></span><div><b>Vas al ${Math.round(pct)}% del presupuesto.</b> El resto de la semana quédate con los snacks del plan, que no gastan presupuesto.</div>`;
   }else if(!finde && used>0){
     msg.className="banner amber";
-    msg.innerHTML=`<span class="i">📅</span><div><b>Estás usando antojo entre semana.</b> No es grave, pero si lo guardas para sábado y domingo tienes ${Math.round(left/2)} kcal para cada día del fin: mucho más margen para disfrutarlo de verdad.</div>`;
+    msg.innerHTML=`<span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><div><b>Estás usando antojo entre semana.</b> No es grave, pero si lo guardas para sábado y domingo tienes ${Math.round(left/2)} kcal para cada día del fin: mucho más margen para disfrutarlo de verdad.</div>`;
   }else{
     msg.className="banner em";
-    msg.innerHTML=`<span class="i">✅</span><div><b>Este presupuesto es tuyo, úsalo.</b> Está calculado para que aun gastándolo completo el fin de semana sigas bajando grasa.</div>`;
+    msg.innerHTML=`<span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.3 2.4 2.4 4.6-4.9"/></svg></span><div><b>Este presupuesto es tuyo, úsalo.</b> Está calculado para que aun gastándolo completo el fin de semana sigas bajando grasa.</div>`;
   }
 }
 function renderAntojos(){
@@ -2397,7 +2880,11 @@ function renderBody(){
   const series = H.map(p=>({d:p.d, v: bodyMetric==="kg"?p.kg : bodyMetric==="grasa"?p.grasa : p.mme}));
   const col = bodyMetric==="kg"?"#59cfe0":bodyMetric==="grasa"?"#ff7b6e":"#7ee081";
   const unit = bodyMetric==="grasa"?"%":"kg";
-  const metaSel = bodyMetric==="grasa"?CONFIG.perfil.metaGrasa : bodyMetric==="mme"?CONFIG.perfil.metaMusculo : 85.5;
+  /* la meta de peso se deduce de tu objetivo y tu meta de grasa, no de un
+     85.5 fijo que no tenía nada que ver contigo */
+  const metaSel = bodyMetric==="grasa"?CONFIG.perfil.metaGrasa
+                : bodyMetric==="mme"  ?CONFIG.perfil.metaMusculo
+                : metaPesoKg();
   $("bodyChart").innerHTML = lineChart(series, col, unit, metaSel) + paceLine(series, unit, metaSel);
 
   $("goalGrid").innerHTML =
@@ -2542,7 +3029,7 @@ function renderReportDue(){
   const due=$("reportDue"); if(!due) return;
   let overdue = S.lastReport ? (Date.now()-S.lastReport)>=7*864e5 : (S.body.length>0||Object.keys(S.trained).length>0);
   if(overdue){
-    due.innerHTML = `<div class="banner amber" style="margin-bottom:12px"><span class="i">🔔</span><div><b>Toca cerrar la semana.</b> Genera tu resumen y guárdalo: en 2 meses vas a poder comparar.</div></div>`;
+    due.innerHTML = `<div class="banner amber" style="margin-bottom:12px"><span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/></svg></span><div><b>Toca cerrar la semana.</b> Genera tu resumen y guárdalo: en 2 meses vas a poder comparar.</div></div>`;
     $("reportChip").textContent="pendiente"; $("reportChip").style.background="var(--amber-soft)"; $("reportChip").style.color="var(--amber)";
   } else {
     due.innerHTML=""; $("reportChip").textContent="al día";
@@ -2550,7 +3037,14 @@ function renderReportDue(){
   }
 }
 $("noteArea").value = S.note[thisWeek]||"";
-$("noteArea").addEventListener("input", e=>{ S.note[thisWeek]=e.target.value; save(); });
+let notaT;
+$("noteArea").addEventListener("input", e=>{
+  S.note[thisWeek]=e.target.value;
+  /* sin esto, cada tecla serializaba meses de comidas, series y mediciones
+     y escribía a disco de forma síncrona: escribir un párrafo se pegaba */
+  clearTimeout(notaT); notaT = setTimeout(save, 400);
+});
+window.addEventListener("pagehide", ()=>{ clearTimeout(notaT); save(); });
 let currentReport=null;
 $("genReport").onclick=()=>{
   currentReport = drawReport();
@@ -2577,29 +3071,134 @@ $("rpDl").onclick=()=>{
 $("rpClose").onclick=()=>$("rpOverlay").classList.remove("show");
 $("rpOverlay").addEventListener("click",e=>{ if(e.target===$("rpOverlay")) $("rpOverlay").classList.remove("show"); });
 
+/* Los elementos con role="button" que no son <button> no disparan click con
+   Enter o Espacio. Antes recibían el foco del teclado y ahí se quedaban. */
+document.addEventListener("keydown", e=>{
+  if(e.key!=="Enter" && e.key!==" " && e.key!=="Spacebar") return;
+  const el = e.target.closest && e.target.closest('[role="button"][tabindex]');
+  if(!el || el.tagName==="BUTTON" || el.tagName==="A") return;
+  e.preventDefault();
+  el.click();
+});
+
 /* ============================================================
    NAVEGACIÓN Y ARRANQUE
    ============================================================ */
-document.querySelectorAll(".nb").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll(".nb").forEach(x=>x.classList.toggle("active",x===b));
-  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.id==="tab-"+b.dataset.tab));
-  window.scrollTo({top:0,behavior:"smooth"});
-});
+function irAPestana(nombre, scroll){
+  const btn = document.querySelector(`.nb[data-tab="${nombre}"]`);
+  if(!btn) return false;
+  document.querySelectorAll(".nb").forEach(x=>{
+    const on = x===btn;
+    x.classList.toggle("active", on);
+    /* aria-current: sin esto un lector de pantalla no sabe en qué pestaña estás */
+    if(on) x.setAttribute("aria-current","page"); else x.removeAttribute("aria-current");
+  });
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.id==="tab-"+nombre));
+  document.body.dataset.tab = nombre;
+  renderHdrExtra(); renderHdrMini();
+  if(scroll!==false) window.scrollTo({top:0,behavior:"smooth"});
+  return true;
+}
+document.querySelectorAll(".nb").forEach(b=>b.onclick=()=>irAPestana(b.dataset.tab));
+
+/* atajos del icono de la app: ./?tab=rutina */
+try{
+  const t = new URLSearchParams(location.search).get("tab");
+  if(t) irAPestana(t, false);
+  else irAPestana("hoy", false);
+}catch(e){ irAPestana("hoy", false); }
 $("bDate").value = dayKey;
 
-renderMeals(); renderShop(); renderTierBar(); renderUnitToggle(); renderGearSheet();
-renderWeekStrip(); renderRoutine(); renderTrained();
-renderBudget(); renderAntojos(); renderBody(); renderReportDue();
-
-/* cambio de día */
+/* ------------------------------------------------------------------
+   ARRANQUE A PRUEBA DE FALLOS
+   Si algo del estado guardado hace tronar un render, antes la app se
+   quedaba en blanco ANTES de pintar la pestaña Ajustes — o sea, sin
+   forma de volver a importar el respaldo bueno. Ahora hay salida.
+   ------------------------------------------------------------------ */
 function rolloverCheck(){ if(localKey(new Date())!==dayKey){ save(); location.reload(); } }
-setInterval(rolloverCheck, 30000);
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) rolloverCheck(); });
-if(!canStore) showToast("Este navegador no permite guardar: el progreso no se conservará");
+
+function pantallaRescate(err){
+  const hayCopia = !!localStorage.getItem(PRE_KEY);
+  document.body.innerHTML = `
+    <div class="rescate">
+      <div class="rescate-card">
+        <div class="rescate-i">🛟</div>
+        <h1>Algo salió mal al abrir tus datos</h1>
+        <p>Tu información sigue guardada en este teléfono. Puedes restaurar un
+           respaldo o, si acabas de importar uno, volver a como estabas antes.</p>
+        <div class="rescate-btns">
+          <label class="rb rb-1">⬆️ Restaurar un respaldo
+            <input type="file" accept=".html,.json,text/html,application/json" id="rescateFile" style="display:none"></label>
+          ${hayCopia?`<button class="rb rb-2" id="rescateUndo">↩️ Deshacer la última importación</button>`:``}
+          <button class="rb rb-3" id="rescateDescarga">⬇️ Descargar mis datos tal cual</button>
+        </div>
+        <details class="rescate-det"><summary>Detalle técnico</summary><pre>${esc(String(err && err.stack || err))}</pre></details>
+      </div>
+    </div>`;
+  document.getElementById("rescateFile").addEventListener("change", ev=>{
+    const f = ev.target.files && ev.target.files[0]; if(!f) return;
+    const rd = new FileReader();
+    rd.onload = ()=>{
+      const d = parseBackup(rd.result);
+      if(!d){ alert("Ese archivo no parece un respaldo de Mi Plan."); return; }
+      try{ localStorage.setItem(PRE_KEY, localStorage.getItem(LS_KEY)||""); }catch(e){}
+      localStorage.setItem(LS_KEY, JSON.stringify(d.S));
+      if(d.CIMG){ try{ localStorage.setItem(IMG_KEY, JSON.stringify(d.CIMG)); }catch(e){} }
+      location.reload();
+    };
+    rd.readAsText(f);
+  });
+  const undo = document.getElementById("rescateUndo");
+  if(undo) undo.addEventListener("click", ()=>{
+    const prev = localStorage.getItem(PRE_KEY);
+    if(prev){ localStorage.setItem(LS_KEY, prev); localStorage.removeItem(PRE_KEY); location.reload(); }
+  });
+  document.getElementById("rescateDescarga").addEventListener("click", ()=>{
+    const crudo = JSON.stringify({app:"mi-plan", v:2, fecha:new Date().toISOString(),
+      S: JSON.parse(localStorage.getItem(LS_KEY)||"{}"), CIMG: JSON.parse(localStorage.getItem(IMG_KEY)||"{}")});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([crudo],{type:"application/json"}));
+    a.download = "mi-plan-rescate.json"; a.click();
+  });
+}
+
+try{
+  renderMeals(); renderShop(); renderTierBar(); renderUnitToggle(); renderGearSheet();
+  renderWeekStrip(); renderRoutine(); renderTrained(); renderAhora();
+  renderBudget(); renderAntojos(); renderBody(); renderReportDue();
+  renderRespaldoAviso();
+
+  /* cambio de día */
+  setInterval(rolloverCheck, 30000);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) rolloverCheck(); });
+
+  if(!canStore) alertaGrave("Este navegador no guarda nada",
+    "Estás en modo privado o con el almacenamiento bloqueado. Nada de lo que registres se va a conservar.", null);
+  else if(cargaCorrupta) alertaGrave("No se pudieron leer tus datos",
+    "El archivo guardado estaba dañado y la app abrió vacía. Si tienes un respaldo, impórtalo desde Ajustes.", null);
+
+  /* pedir almacenamiento persistente: sin esto el sistema puede desalojar
+     los datos cuando el teléfono anda bajo de espacio */
+  if(navigator.storage && navigator.storage.persist){
+    navigator.storage.persisted().then(ya=>{ if(!ya) navigator.storage.persist(); }).catch(()=>{});
+  }
+}catch(err){
+  console.error("Mi Plan · fallo al arrancar", err);
+  pantallaRescate(err);
+}
 
 /* ---------- PWA: instalable y funciona sin conexión ---------- */
 if("serviceWorker" in navigator){
   window.addEventListener("load", ()=>{
-    navigator.serviceWorker.register("sw.js").catch(()=>{ /* sin https o sin soporte: la página funciona igual */ });
+    navigator.serviceWorker.register("sw.js").then(reg=>{
+      /* avisar cuando hay versión nueva esperando */
+      reg.addEventListener("updatefound", ()=>{
+        const sw = reg.installing; if(!sw) return;
+        sw.addEventListener("statechange", ()=>{
+          if(sw.state==="installed" && navigator.serviceWorker.controller)
+            showToast("Hay una versión nueva · ciérrala y ábrela para actualizar");
+        });
+      });
+    }).catch(()=>{ /* sin https o sin soporte: la página funciona igual */ });
   });
 }
