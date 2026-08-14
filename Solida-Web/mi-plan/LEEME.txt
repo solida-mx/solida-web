@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════╗
-║   MI PLAN v5 — aplicación completa (Salvador)                 ║
+║   MI PLAN v6 — aplicación completa (Salvador)                 ║
 ║   Sólida Aplicaciones · azul marino + verde azulado           ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -112,16 +112,25 @@ completa → Implementar. Listo en 1 minuto.
 ┌──────────────────────────────────────────────────────────┐
 │  MANDADO CON REGISTRO DE GASTO                            │
 └──────────────────────────────────────────────────────────┘
-  · Toca el cuadrito de un producto cuando lo eches al
-    carrito: queda marcado y cobra el precio estimado.
-  · Si el precio real fue otro, toca el monto y corrígelo.
-    Ese precio SE QUEDA para las próximas semanas, así el
-    estimado se afina solo con tus tickets.
-  · El mismo cuadrito cicla: comprado → no había → pendiente.
+  · Toca el cuadrito de un producto y se abre la captura:
+    te dice CUÁNTO PIDE TU PLAN y capturas lo que de verdad
+    llevaste (cantidad y precio por kilo, litro o pieza).
+    Si lo llevaste igual al plan, un toque en «Lo llevé tal
+    cual el plan» y listo.
+  · El gasto se calcula con lo REAL, no con una cantidad fija.
+    En el súper nunca compras exactamente lo que pide la dieta.
+  · Cada precio se guarda con su fecha: la app aprende tus
+    precios y en Historial → Dinero ves cómo suben o bajan.
+  · Un segundo toque en un producto ya marcado lo pasa a
+    «no había»; un tercero lo desmarca.
   · Botón «Modo súper»: filas grandes y sin distracciones,
     para usarlo con una mano en el pasillo.
-  · Al marcar el último producto te pregunta si cerrar la
-    semana. Al cerrarla se guarda en el historial de gastos.
+  · NO HAY QUE HACER NADA MÁS: lo que marcas aparece en
+    Historial → Dinero desde el primer toque. El botón
+    «Cerrar» sólo quita la barra cuando ya terminaste, y la
+    semana anterior se cierra sola cuando empieza la nueva.
+  · «Compra inteligente» y «Prep del domingo» ya no ocupan la
+    pestaña: están en los dos botones del final.
 
 ┌──────────────────────────────────────────────────────────┐
 │  SNACKS Y ANTOJOS                                         │
@@ -164,7 +173,8 @@ completa → Implementar. Listo en 1 minuto.
     CUERPO ..... peso, grasa, músculo, metas y mediciones
     GIMNASIO ... sesiones por semana, progresión de fuerza
                  por ejercicio y últimas sesiones
-    DINERO ..... gasto por semana, reparto por categoría,
-                 presupuesto del mes y mandados cerrados
+    DINERO ..... gasto por semana, tendencia de precios por
+                 alimento, reparto por categoría, presupuesto
+                 del mes y mandados por semana
   · La progresión de fuerza necesita que cambies pesos en
     Rutina: cada cambio queda registrado con su fecha.

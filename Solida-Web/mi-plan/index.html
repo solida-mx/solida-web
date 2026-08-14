@@ -436,7 +436,8 @@
     font-family:"Manrope";font-weight:800;font-size:12.5px;cursor:pointer}
   .nb-reset{padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb, var(--ink) 5%, transparent);
     color:var(--muted);font-family:"Manrope";font-weight:800;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-  .nb-del{padding:11px 14px;border-radius:12px;border:1px solid rgba(255,123,110,.4);background:rgba(255,123,110,.08);
+  .nb-del{min-height:48px;padding:11px 14px;border-radius:12px;
+    border:1px solid color-mix(in srgb,var(--coral) 45%,transparent);background:var(--coral-soft);
     color:var(--coral);font-family:"Manrope";font-weight:800;font-size:12px;cursor:pointer}
   .nut-hint{grid-column:1/-1;font-size:10.5px;color:var(--faint);line-height:1.5;margin-top:2px}
   .set-h{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--em);margin:16px 0 9px}
@@ -576,6 +577,47 @@
   .shop-cat-h{display:flex;align-items:center;gap:9px;margin-bottom:9px}
   .shop-cat-h .sq{width:10px;height:10px;border-radius:3px;background:var(--cc)}
   .shop-cat-h h3{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--cc)}
+  /* ===== Accesos a las hojas de referencia ===== */
+  .ref-accesos{display:flex;flex-direction:column;gap:9px;margin:18px 0 6px}
+  .ref-btn{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;
+    padding:12px 14px;border-radius:15px;background:var(--card);
+    border:1px solid var(--line);cursor:pointer;font-family:inherit;text-align:left}
+  .ref-btn:active{transform:scale(.99)}
+  .rb-i{flex:none;width:38px;height:38px;border-radius:12px;display:flex;
+    align-items:center;justify-content:center;background:var(--em-soft);color:var(--em)}
+  .rb-i svg{width:20px;height:20px}
+  .rb-t{flex:1;min-width:0}
+  .rb-t b{display:block;font-size:13.5px;color:var(--ink)}
+  .rb-t small{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin-top:1px}
+  .rb-c{flex:none;color:var(--faint);font-size:20px;font-weight:700}
+
+  /* ===== Submenú de compra ===== */
+  .cp-obj{background:var(--em-soft);border:1px solid color-mix(in srgb,var(--em) 40%,transparent);
+    border-radius:14px;padding:12px 14px;margin-bottom:14px;text-align:center}
+  .cp-obj span{display:block;font-size:10px;font-weight:800;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--muted)}
+  .cp-obj b{display:block;font-family:"Space Grotesk",system-ui,sans-serif;
+    font-size:24px;color:var(--em);margin:2px 0 3px}
+  .cp-obj em{font-style:normal;font-size:11px;color:var(--muted);font-weight:600}
+  .cp-fila{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .cp-total{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    flex-wrap:wrap;margin-top:12px;padding:12px 13px;border-radius:13px;
+    background:var(--velo);border:1px solid var(--line-str)}
+  .cp-total>span{font-size:11.5px;color:var(--muted);font-weight:700}
+  .cp-total .pt-fig{font-size:11px;font-weight:800;color:var(--muted);text-align:right}
+  .cp-total .pt-fig b{display:block;font-family:"Space Grotesk",system-ui,sans-serif;
+    font-size:23px;color:var(--em);font-weight:700}
+  .cp-aviso{margin-top:10px;font-size:12px;font-weight:700;line-height:1.5;text-align:center}
+  .cp-aviso .mas{color:var(--amber)}
+  .cp-aviso .menos{color:var(--coral)}
+  .cp-aviso:empty{margin:0}
+  .cp-rapido{width:100%;min-height:52px;margin-top:12px;border-radius:14px;border:none;
+    background:var(--em);color:light-dark(#fff,var(--on-em));
+    font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;
+    box-shadow:0 6px 18px color-mix(in srgb,var(--em) 35%,transparent)}
+  .cp-rapido:active{transform:scale(.98)}
+  .cp-total+.cp-aviso+.cp-rapido{margin-top:12px}
+
   /* ===== Detalle de alimento ===== */
   .dt-top{display:flex;align-items:flex-start;gap:12px;padding-bottom:14px;
     border-bottom:1px solid var(--line)}
@@ -635,7 +677,7 @@
   .shop-row .qty small.q-pr.pagado{color:var(--em)}
   .food{cursor:pointer}
   .food:active{opacity:.72}
-  body.modo-mandado .row-mas{display:none}
+  body.modo-mandado[data-tab="mandado"] .row-mas{display:none}
 
   /* ===== Registro de compra ===== */
   .sc-chk{flex:none;width:44px;height:44px;margin:-4px 0 0 -6px;border:none;background:none;
@@ -673,22 +715,22 @@
   .mb-cerrar{background:var(--em);border:none;color:light-dark(#fff,var(--on-em))}
 
   /* modo súper: filas grandes, sin nada que distraiga */
-  body.modo-mandado .buy-tip,
-  body.modo-mandado .swap-open,
-  body.modo-mandado .shop-item .badges,
-  body.modo-mandado [data-super="ocultar"],
-  body.modo-mandado #tierBar,
-  body.modo-mandado #smartList,
-  body.modo-mandado #prepSteps,
-  body.modo-mandado #prepCard{display:none}
-  body.modo-mandado .shop-item{padding:6px 10px;margin-bottom:7px}
-  body.modo-mandado .shop-row{align-items:center;min-height:62px}
-  body.modo-mandado .nm b{font-size:15.5px}
-  body.modo-mandado .nm small{display:none}
-  body.modo-mandado .qty{font-size:15px}
-  body.modo-mandado .sc-chk{width:54px;height:54px}
-  body.modo-mandado .sc-box{width:32px;height:32px;border-radius:11px}
-  body.modo-mandado .fico{width:38px;height:38px}
+  body.modo-mandado[data-tab="mandado"] .buy-tip,
+  body.modo-mandado[data-tab="mandado"] .swap-open,
+  body.modo-mandado[data-tab="mandado"] .shop-item .badges,
+  body.modo-mandado[data-tab="mandado"] [data-super="ocultar"],
+  body.modo-mandado[data-tab="mandado"] #tierBar,
+  body.modo-mandado[data-tab="mandado"] #smartList,
+  body.modo-mandado[data-tab="mandado"] #prepSteps,
+  body.modo-mandado[data-tab="mandado"] #prepCard{display:none}
+  body.modo-mandado[data-tab="mandado"] .shop-item{padding:6px 10px;margin-bottom:7px}
+  body.modo-mandado[data-tab="mandado"] .shop-row{align-items:center;min-height:62px}
+  body.modo-mandado[data-tab="mandado"] .nm b{font-size:15.5px}
+  body.modo-mandado[data-tab="mandado"] .nm small{display:none}
+  body.modo-mandado[data-tab="mandado"] .qty{font-size:15px}
+  body.modo-mandado[data-tab="mandado"] .sc-chk{width:54px;height:54px}
+  body.modo-mandado[data-tab="mandado"] .sc-box{width:32px;height:32px;border-radius:11px}
+  body.modo-mandado[data-tab="mandado"] .fico{width:38px;height:38px}
 
   .shop-item{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px 13px;margin-bottom:9px;
     transition:border-color .2s}
@@ -743,9 +785,12 @@
   .smart-head .sv{font-size:11px;font-weight:800;color:var(--lime);white-space:nowrap;flex:none}
   .smart-head .caret{transition:transform .3s;color:var(--faint);flex:none}
   .smart-group.open .caret{transform:rotate(180deg)}
-  /* grid 0fr→1fr en vez de max-height: no recorta a 2600px ni anima el layout */
-  .smart-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s ease}
-  .smart-body>*{overflow:hidden;min-height:0}
+  /* Acordeón con grid 0fr→1fr. OJO: la técnica exige UN SOLO hijo. Con
+     varios, el 0fr sólo aplica a la primera fila y el resto se desborda
+     — eso era lo que se veía "entrecortado". */
+  .smart-body{display:grid;grid-template-rows:0fr;
+    transition:grid-template-rows .38s cubic-bezier(.32,.72,0,1)}
+  .smart-body>.sb-in{overflow:hidden;min-height:0}
   .smart-group.open .smart-body{grid-template-rows:1fr}
   .smart-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-top:8px}
   .smart-item .si-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
@@ -965,6 +1010,8 @@
   .hl-d{flex:none;width:56px;font-weight:800;color:var(--muted);font-size:11.5px}
   .hl-n{flex:1;min-width:0;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis}
   .hl-v{flex:none;font-family:"Space Grotesk",system-ui,sans-serif;font-weight:700;color:var(--em)}
+  .en-curso{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--amber)}
 
   /* reparto por categoría */
   .cat-list{margin-top:12px;display:flex;flex-direction:column;gap:10px}
@@ -1379,16 +1426,28 @@
       (por eso el pollo alcanza para 5 comidas y no para 7). Si cambias un alimento con el botón <b>“Cambiar por equivalencia”</b>, la cantidad ya viene ajustada para cubrir los mismos macros y tus platillos se actualizan solos.</div></details>
     <details class="mas-info" data-super="ocultar"><summary><span class="mi-i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></span>Más información</summary><div class="mi-body"><span class="hair-b">CABELLO</span> = aporta nutrientes capilares · <span class="prep-b listo">LISTO</span> = cero cocina · <span class="prep-b rapido">RÁPIDO</span> = menos de 8 min · <span class="prep-b cocina">COCINA</span> = requiere sartén u olla</div></details>
     <div id="shopList"></div>
+    <!-- Referencia: se consulta de vez en cuando, no cada semana. Vive en
+         hojas para que la pestaña sea sólo el mandado. -->
+    <div class="ref-accesos" data-super="ocultar">
+      <button class="ref-btn" data-ref="smart">
+        <span class="rb-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.2v.3h6v-.3c0-.8.4-1.6 1-2.2A6 6 0 0 0 12 2Z"/></svg></span>
+        <span class="rb-t"><b>Compra inteligente</b><small>28 formas de gastar menos y cocinar menos</small></span>
+        <span class="rb-c">›</span></button>
+      <button class="ref-btn" data-ref="prep">
+        <span class="rb-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v7a4 4 0 0 0 8 0V4"/><path d="M8 11v9"/><path d="M18 4v16"/><path d="M18 4c1.7 0 3 2.2 3 5s-1.3 5-3 5"/></svg></span>
+        <span class="rb-t"><b>Prep del domingo</b><small>35 min una vez por semana</small></span>
+        <span class="rb-c">›</span></button>
+    </div>
 
-    <div class="sec-title" data-super="ocultar"><h2>Compra inteligente</h2><span class="ln"></span><span class="chip">dinero · tiempo</span></div>
-    <div class="banner amber">
+    <!-- Contenido de referencia: vive aquí oculto para que el render de
+         siempre siga funcionando, y se MUEVE a la hoja al abrirla (así
+         conserva sus listeners en vez de clonarse). -->
+    <div id="refSmart" hidden><div class="banner amber">
       <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.2v.3h6v-.3c0-.8.4-1.6 1-2.2A6 6 0 0 0 12 2Z"/></svg></span>
       <div>Precios aproximados de Monterrey. Lo que importa es la <b>proporción</b>: cuánto ahorras y cuánto tiempo te quitas de encima. Ajústalos a lo que veas en tu súper.</div>
     </div>
-    <div id="smartList"></div>
-
-    <div class="sec-title" data-super="ocultar"><h2>Prep del domingo · 35 min</h2><span class="ln"></span><span class="chip">1 vez / semana</span></div>
-    <div class="card">
+    <div id="smartList"></div></div>
+    <div id="refPrep" hidden><div class="card">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
         <span style="font-size:22px">🍱</span>
         <div><b style="font-size:15px">Base de la semana</b>
@@ -1399,8 +1458,8 @@
         <b style="color:var(--em)">Refri:</b> 4–5 días · <b style="color:var(--em)">Congelador:</b> porciones de los días 6 y 7 ·
         <b style="color:var(--em)">Recalienta:</b> 2–3 min en micro con las verduras congeladas encima (se descongelan con el vapor).
       </div>
-    </div>
-  </section>
+    </div></div>
+</section>
 
   <!-- ============ TAB: RUTINA ============ -->
   <section class="tab" id="tab-rutina">
@@ -1578,12 +1637,18 @@
       <div class="stat-grid" id="dinStats"></div>
       <div class="card">
         <b style="font-size:14.5px">Gasto por semana</b>
-        <div class="subtle">Sólo cuenta lo que marcaste como surtido en el mandado.</div>
+        <div class="subtle">Cuenta todo lo que marcas, sin necesidad de cerrar la semana.</div>
         <div id="dinSemanas"></div>
       </div>
       <div class="card">
+        <b style="font-size:14.5px">Cómo van los precios</b>
+        <div class="subtle">Lo que has pagado por cada alimento, con su fecha. Se llena solo cada vez que registras una compra.</div>
+        <select id="dinPrecioSel" class="hist-select" aria-label="Alimento"></select>
+        <div id="dinPrecio"></div>
+      </div>
+      <div class="card">
         <b style="font-size:14.5px">En qué se va el dinero</b>
-        <div class="subtle">Reparto por categoría de tu último mandado cerrado.</div>
+        <div class="subtle">Reparto por categoría de tu mandado más reciente.</div>
         <div id="dinCategorias"></div>
       </div>
       <div class="card">
@@ -1595,7 +1660,7 @@
         <div id="dinMes"></div>
       </div>
       <div class="card">
-        <b style="font-size:14.5px">Mandados cerrados</b>
+        <b style="font-size:14.5px">Mandados por semana</b>
         <ul class="hist-list" id="dinLista"></ul>
       </div>
     </div>

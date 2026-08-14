@@ -708,7 +708,8 @@ function saneaEstado(){
   ["meals","water","swaps","mealOpt","lifts","liftHi","antojos","trained",
    "note","sets","varSel","warm","cardio","nutEdits",
    /* nuevos: compra semanal, historial de cargas y snacks registrados */
-   "compras","liftHist","snacks"].forEach(obj);
+   "compras","liftHist","snacks","precios"].forEach(obj);
+  Object.keys(S.precios).forEach(k=>{ if(!Array.isArray(S.precios[k])) delete S.precios[k]; });
   /* cada semana de compra: {items:{id:{e:0|1|2, $:num}}, cerrada:bool} */
   Object.keys(S.compras).forEach(k=>{
     const c = S.compras[k];
@@ -1548,7 +1549,8 @@ function openSheet(title, sub, html){
   document.body.style.overflow = "hidden";
 }
 function closeSheet(){
-  detalleCtx = null;
+  devuelveReferencia();
+  detalleCtx = null; compraCtx = null;
   sheetOv.classList.remove("show");
   document.body.style.overflow = "";
 }
@@ -2315,15 +2317,161 @@ function gastoItem(id, semana){
   const it = compraDe(semana).items[id];
   return (it && it.e===COMPRA_OK) ? (+it.$ || 0) : 0;
 }
-/* Ciclo de un solo control: pendiente → comprado → no había → pendiente */
+/* Ciclo de un solo control: pendiente → comprado → no había → pendiente.
+   Al pasar a "comprado" se abre el submenú para capturar lo REAL. */
 function ciclaItem(id){
   const c = compraDe(), it = shopById[id];
   if(!it) return;
   const actual = estadoItem(id);
   const siguiente = (actual + 1) % 3;
   if(siguiente === COMPRA_PEND) delete c.items[id];
-  else c.items[id] = { e: siguiente, $: siguiente===COMPRA_OK ? Math.round(shopItemCost(it)) : 0 };
+  else if(siguiente === COMPRA_NO) c.items[id] = { e: COMPRA_NO, $: 0 };
+  else c.items[id] = { e: COMPRA_OK, $: Math.round(shopItemCost(it)) };
   save();
+  return siguiente;
+}
+
+/* ==================================================================
+   SUBMENÚ DE COMPRA
+   En el súper nunca compras exactamente lo que pide el plan: el paquete
+   viene de 1 kg, la bolsa de 907 g, el pollo pesó 1.14 kg. Aquí se
+   captura lo que DE VERDAD llevaste y a qué precio, y de ahí sale el
+   gasto real y la tendencia de precios.
+
+   Prioridad: que se pueda cerrar en UN toque si todo salió como el plan.
+   ================================================================== */
+let compraCtx = null;
+
+/* último precio por unidad que registraste para este alimento */
+function ultimoPrecio(id, unidad){
+  const h = (S.precios && S.precios[id]) || [];
+  const igual = h.filter(x=>x.u === unidad);
+  const lista = igual.length ? igual : h;
+  return lista.length ? lista[lista.length-1].pu : null;
+}
+/* cantidad objetivo de la semana, en la unidad de compra elegida */
+function objetivoEn(it, n, unidad, factorU){
+  const ai = S.swaps[it.id];
+  const qty = it.total * factorOf(it.id, ai);      /* en unidad interna */
+  if(n.pz) return qty / factorU;                   /* piezas → cartones, etc. */
+  return (qty / 100) / factorU;                    /* 100 g → kilos, etc. */
+}
+function abrirCompra(id){
+  const it = shopById[id]; if(!it || !it.total) return;
+  const ai  = S.swaps[id];
+  const key = nutKey(id, ai);
+  const n   = nutOf(key);
+  const unidades = priceUnits(it, n);
+  const alt = selAlt(id);
+  const nombre = alt ? alt.n : it.name;
+  const prev = compraDe().items[id] || {};
+
+  /* unidad por defecto: la que usaste la última vez, si no la primera */
+  let ui = 0;
+  if(prev.u){ const k = unidades.findIndex(u=>u[0]===prev.u); if(k>=0) ui = k; }
+  else if(S.precios && S.precios[id] && S.precios[id].length){
+    const u = S.precios[id][S.precios[id].length-1].u;
+    const k = unidades.findIndex(x=>x[0]===u); if(k>=0) ui = k;
+  }
+
+  const obj = objetivoEn(it, n, unidades[ui][0], unidades[ui][1]);
+  const cant = prev.q !== undefined ? prev.q : +obj.toFixed(2);
+  const pu   = prev.pu !== undefined ? prev.pu
+             : (ultimoPrecio(id, unidades[ui][0]) ?? +((n.precio||0) * unidades[ui][1]).toFixed(2));
+
+  compraCtx = { id, key, unidades, n, it };
+
+  openSheet("¿Cuánto llevaste?", nombre, `
+    <div class="cp-obj">
+      <span>Tu plan pide</span>
+      <b id="cpObj">${fmtQty(it.total * factorOf(id, ai), (alt&&alt.unit)||it.unit)}</b>
+      <em>si llevaste otra cosa, ajústalo abajo</em>
+    </div>
+    <div class="price-form">
+      <label class="nf"><span>Unidad en que lo compras</span>
+        <select id="cpUnit">${unidades.map((u,i)=>`<option value="${i}"${i===ui?" selected":""}>${u[0]}</option>`).join("")}</select></label>
+      <div class="cp-fila">
+        <label class="nf"><span>Cuánto llevaste</span>
+          <input id="cpCant" type="number" inputmode="decimal" step="any" min="0" value="${cant}"></label>
+        <label class="nf"><span>Precio por unidad ($)</span>
+          <input id="cpPu" type="number" inputmode="decimal" step="any" min="0" value="${+(+pu).toFixed(2)}"></label>
+      </div>
+      <div class="cp-total">
+        <span id="cpDesglose">—</span>
+        <div class="pt-fig">Pagaste <b id="cpTotal">$0</b></div>
+      </div>
+      <div class="cp-aviso" id="cpAviso"></div>
+      <button class="cp-rapido" data-cpplan="1">Lo llevé tal cual el plan</button>
+      <div class="nut-btns">
+        <button class="nb-save" data-cpsave="1">Guardar con estos datos</button>
+        <button class="nb-del" data-cpno="1">No lo encontré</button>
+      </div>
+      <div class="nut-hint">El precio por unidad se guarda con la fecha: así la app va aprendiendo tus precios reales y puedes ver cómo suben o bajan en Historial → Dinero.</div>
+    </div>`);
+  actualizaCompra();
+  ["cpUnit","cpCant","cpPu"].forEach(k=>{
+    const el = document.getElementById(k);
+    if(el) el.addEventListener("input", ()=>{ if(k==="cpUnit") ajustaUnidad(); actualizaCompra(); });
+  });
+}
+/* al cambiar de unidad, la cantidad objetivo y el precio se recalculan */
+function ajustaUnidad(){
+  if(!compraCtx) return;
+  const { it, n, unidades } = compraCtx;
+  const ui = +document.getElementById("cpUnit").value;
+  const obj = objetivoEn(it, n, unidades[ui][0], unidades[ui][1]);
+  document.getElementById("cpCant").value = +obj.toFixed(2);
+  const pu = ultimoPrecio(it.id, unidades[ui][0]) ?? +((n.precio||0) * unidades[ui][1]).toFixed(2);
+  document.getElementById("cpPu").value = +(+pu).toFixed(2);
+}
+function actualizaCompra(){
+  if(!compraCtx) return;
+  const { it, n, unidades } = compraCtx;
+  const ui   = +document.getElementById("cpUnit").value;
+  const cant = +document.getElementById("cpCant").value || 0;
+  const pu   = +document.getElementById("cpPu").value || 0;
+  const total = cant * pu;
+  document.getElementById("cpTotal").textContent = fmt$(total);
+  document.getElementById("cpDesglose").textContent =
+    `${cant} × ${fmt$(pu)} por ${unidades[ui][0]}`;
+
+  /* aviso si te alejaste mucho del objetivo: no bloquea, sólo informa */
+  const obj = objetivoEn(it, n, unidades[ui][0], unidades[ui][1]);
+  const dif = obj ? (cant - obj) / obj : 0;
+  const av = document.getElementById("cpAviso");
+  if(Math.abs(dif) < 0.12) av.innerHTML = "";
+  else av.innerHTML = `<span class="${dif>0?'mas':'menos'}">${
+    dif>0 ? `Llevas ${Math.round(dif*100)} % más de lo que pide el plan — te va a sobrar.`
+          : `Llevas ${Math.round(-dif*100)} % menos — puede que no alcance la semana.`}</span>`;
+}
+function guardarCompra(){
+  if(!compraCtx) return;
+  const { id, unidades, n, it } = compraCtx;
+  const ui   = +document.getElementById("cpUnit").value;
+  const cant = +document.getElementById("cpCant").value || 0;
+  const pu   = +document.getElementById("cpPu").value || 0;
+  const unidad = unidades[ui][0], factorU = unidades[ui][1];
+
+  compraDe().items[id] = { e: COMPRA_OK, $: Math.round(cant*pu), q: cant, u: unidad, pu };
+
+  /* el precio real alimenta el estimado de las próximas semanas */
+  if(pu > 0){
+    const key = compraCtx.key;
+    if(!S.nutEdits[key]) S.nutEdits[key] = {};
+    S.nutEdits[key].precio = pu / factorU;
+    /* y se guarda con fecha para la tendencia */
+    if(!S.precios[id]) S.precios[id] = [];
+    const h = S.precios[id], ult = h[h.length-1];
+    if(ult && ult.d === dayKey && ult.u === unidad) ult.pu = pu;
+    else h.push({ d: dayKey, pu, u: unidad });
+    if(h.length > 200) h.splice(0, h.length-200);
+  }
+  save(); closeSheet(); renderShop(); renderHistorial();
+  avisar("carrito");
+  const r = resumenCompra();
+  if(r.pendientes === 0) setTimeout(()=>{
+    if(confirm(`Ya marcaste todo.\n\n${r.ok} productos · ${fmt$(r.gasto)}\n\n¿Cerrar el mandado de la semana?`)) cerrarMandado();
+  }, 350);
 }
 function resumenCompra(semana){
   const c = compraDe(semana);
@@ -2338,11 +2486,27 @@ function resumenCompra(semana){
            pendientes: conPrecio.length - ok - no, cerrada: !!c.cerrada };
 }
 /* semanas ya cerradas, de la más nueva a la más vieja */
+/* Todo lo que marcaste cuenta como gasto, esté "cerrada" la semana o no.
+   "Cerrar" sólo sirve para quitar la barra flotante y dar por terminado el
+   mandado; NO es un requisito para que aparezca en Dinero. Antes sí lo era,
+   y una semana sin cerrar se perdía para siempre. */
 function historialCompras(){
   return Object.keys(S.compras)
-    .filter(k=>S.compras[k] && S.compras[k].cerrada)
+    .filter(k=>{ const r = resumenCompra(k); return r.ok > 0; })
     .sort().reverse()
     .map(k=>Object.assign({semana:k}, resumenCompra(k)));
+}
+/* Al empezar una semana nueva, la anterior se cierra sola: si no, la barra
+   flotante seguiría ahí para siempre pidiendo un botón que ya no aplica. */
+function cierraSemanasViejas(){
+  let cambio = false;
+  Object.keys(S.compras).forEach(k=>{
+    const c = S.compras[k];
+    if(!c || c.cerrada || k >= thisWeek) return;
+    if(resumenCompra(k).ok > 0){ c.cerrada = true; c.auto = true; cambio = true; }
+    else delete S.compras[k];        /* semana sin nada marcado: no ensucia */
+  });
+  if(cambio) save();
 }
 function cerrarMandado(){
   const c = compraDe(), r = resumenCompra();
@@ -2384,6 +2548,10 @@ function renderShop(){
         const est = it.total ? estadoItem(it.id) : COMPRA_PEND;
         const clsE = est===COMPRA_OK ? " comprado" : est===COMPRA_NO ? " nohabia" : "";
         const gastado = est===COMPRA_OK ? gastoItem(it.id) : null;
+        /* si capturaste una cantidad distinta a la del plan, manda la real */
+        const reg = compraDe().items[it.id];
+        const real = (reg && reg.e===COMPRA_OK && reg.q!==undefined)
+          ? `${+(+reg.q).toFixed(2)} ${esc(reg.u)}` : null;
         return `<div class="shop-item${swapped?' swapped':''}${clsE}" data-id="${it.id}">
           <div class="shop-row" data-detalle="${it.id}" role="button" tabindex="0"
                aria-label="Ver detalle de ${esc(swapped?a.n:it.name)}">
@@ -2393,7 +2561,7 @@ function renderShop(){
             ${foodIcon(it, a)}
             <span class="nm"><b>${esc(swapped?a.n:it.name)}</b>
               ${swapped?`<small>equivalencia de ${esc(it.name)}</small>`:""}</span>
-            <span class="qty">${qty}${it.total?`<small class="q-pr${gastado!=null?' pagado':''}">${gastado!=null?fmt$(gastado):"≈ "+fmt$(shopItemCost(it))}</small>`:""}</span>
+            <span class="qty">${real || qty}${it.total?`<small class="q-pr${gastado!=null?' pagado':''}">${gastado!=null?fmt$(gastado):"≈ "+fmt$(shopItemCost(it))}</small>`:""}</span>
             <span class="row-mas" aria-hidden="true">›</span>
           </div>
         </div>`;
@@ -2407,7 +2575,10 @@ function renderShop(){
 function renderBarraMandado(){
   let bar = document.getElementById("mandadoBar");
   const r = resumenCompra();
-  const activa = (r.ok || r.no) && !r.cerrada;
+  /* La barra es de la pestaña Mandado y de nadie más. Antes se colgaba del
+     body y seguía ahí en Snacks, Rutina e Historial. */
+  const enMandado = document.body.dataset.tab === "mandado";
+  const activa = enMandado && (r.ok || r.no) && !r.cerrada;
   if(!activa){ if(bar) bar.remove(); document.body.classList.remove("con-barra"); return; }
   if(!bar){
     bar = document.createElement("div");
@@ -2515,6 +2686,41 @@ function abrirDetalle(id, gramos, unidadOv){
             alt ? "equivalencia · toca para ver o cambiar" : "información nutricional y de compra",
             detalleHtml(id, gramos, unidadOv));
 }
+/* ==================================================================
+   HOJAS DE REFERENCIA
+   "Compra inteligente" (28 consejos, ~750 palabras) y "Prep del domingo"
+   se leen de vez en cuando, no cada semana. Ocupaban media pestaña.
+   Ahora viven en hojas: el contenido se MUEVE (no se clona) para que
+   conserve sus listeners.
+   ================================================================== */
+let refAbierta = null;
+const REFS = {
+  smart: { id:"refSmart", t:"Compra inteligente",
+           s:"Precios de Monterrey · lo que importa es la proporción" },
+  prep:  { id:"refPrep",  t:"Prep del domingo",
+           s:"35 minutos, una vez por semana" }
+};
+function abrirReferencia(clave){
+  const def = REFS[clave]; if(!def) return;
+  const nodo = document.getElementById(def.id); if(!nodo) return;
+  openSheet(def.t, def.s, "");
+  nodo.hidden = false;
+  document.getElementById("sheetBody").appendChild(nodo);
+  refAbierta = def.id;
+}
+/* al cerrar, el contenido vuelve a su sitio oculto dentro de la pestaña */
+function devuelveReferencia(){
+  if(!refAbierta) return;
+  const nodo = document.getElementById(refAbierta);
+  const destino = document.getElementById("tab-mandado");
+  if(nodo && destino){ nodo.hidden = true; destino.appendChild(nodo); }
+  refAbierta = null;
+}
+document.addEventListener("click", e=>{
+  const b = e.target.closest("[data-ref]");
+  if(b) abrirReferencia(b.dataset.ref);
+});
+
 /* ---------- Submenú de precio (desde el mandado) ---------- */
 /* unidades disponibles según cómo se mide el alimento; k = cuántas
    "bases internas" (100 g / 100 ml / pieza) caben en esa unidad */
@@ -2593,25 +2799,26 @@ $("shopList").addEventListener("click",e=>{
   if(pb){ openPriceSheet(pb.dataset.price); return; }
   const open=e.target.closest("[data-open]");
   if(open){ openAltsSheet(open.dataset.open); return; }
-  /* El check siempre marca. La fila abre el detalle en modo normal y
-     marca en Modo súper, donde lo que quieres es velocidad, no información. */
+  /* El check siempre abre la captura de compra. La fila abre la ficha en
+     modo normal y también la captura en Modo súper: registrar lo real es
+     el punto, y en el súper es justo cuando lo sabes. La velocidad la da
+     el botón "Tal cual el plan", no saltarse el paso. */
   const chk = e.target.closest("[data-comprar]");
   const fila = e.target.closest("[data-detalle]");
   if(!chk && fila && !modoMandado){ abrirDetalle(fila.dataset.detalle); return; }
   const id = chk ? chk.dataset.comprar : (fila ? fila.dataset.detalle : null);
   if(id && shopById[id] && shopById[id].total){
-    ciclaItem(id);
-    renderShop();
     const est = estadoItem(id);
-    if(est===COMPRA_OK){
-      const el = document.querySelector(`.shop-item[data-id="${id}"] .sc-chk`);
-      if(el) celebra(el);
-      avisar("carrito");
-      const r = resumenCompra();
-      if(r.pendientes===0) setTimeout(()=>{
-        if(confirm(`Ya marcaste todo.\n\n${r.ok} productos · ${fmt$(r.gasto)}\n\n¿Cerrar el mandado de la semana?`)) cerrarMandado();
-      }, 350);
-    } else if(est===COMPRA_NO) showToast("Marcado como «no había»");
+    if(est === COMPRA_PEND){
+      /* pendiente → se abre el submenú para capturar cantidad y precio reales */
+      abrirCompra(id);
+      return;
+    }
+    /* ya estaba marcado: el toque avanza el ciclo sin preguntar nada */
+    const nuevo = ciclaItem(id);
+    renderShop();
+    if(nuevo === COMPRA_NO) showToast("Marcado como «no había»");
+    else showToast("Desmarcado");
   }
 });
 $("tierBar").addEventListener("click",e=>{
@@ -2691,6 +2898,21 @@ document.getElementById("cfgPanel").addEventListener("click",e=>{
 
 });
 document.getElementById("sheetBody").addEventListener("click",e=>{
+  const cp=e.target.closest("[data-cpplan]");
+  if(cp && compraCtx){
+    /* un toque: cantidad objetivo y el precio que ya trae precargado */
+    const { it, n, unidades } = compraCtx;
+    const ui = +document.getElementById("cpUnit").value;
+    document.getElementById("cpCant").value =
+      +objetivoEn(it, n, unidades[ui][0], unidades[ui][1]).toFixed(2);
+    guardarCompra(); return; }
+  const cs=e.target.closest("[data-cpsave]");
+  if(cs){ guardarCompra(); return; }
+  const cn=e.target.closest("[data-cpno]");
+  if(cn && compraCtx){
+    compraDe().items[compraCtx.id] = { e: COMPRA_NO, $: 0 };
+    save(); closeSheet(); renderShop(); renderHistorial();
+    showToast("Marcado como «no había»"); return; }
   const dp=e.target.closest("[data-dtprecio]");
   if(dp){ openPriceSheet(dp.dataset.dtprecio); return; }
   const ds=e.target.closest("[data-dtswap]");
@@ -2743,12 +2965,12 @@ $("smartList").innerHTML = COMPRA.map(g=>`
       <span class="sv">${esc(g.save)}</span>
       <svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
     </div>
-    <div class="smart-body">${g.items.map(it=>`
+    <div class="smart-body"><div class="sb-in">${g.items.map(it=>`
       <div class="smart-item">
         <div class="si-top"><b>${esc(it.n)}</b><span class="save">${esc(it.save)}</span></div>
         <p>${it.p}</p>
         <div class="metrics">${it.m.map(([c,t])=>`<span class="metric ${c}">${esc(t)}</span>`).join("")}</div>
-      </div>`).join("")}
+      </div>`).join("")}</div>
     </div>
   </div>`).join("");
 $("smartList").addEventListener("click",e=>{
@@ -3591,6 +3813,12 @@ function irAPestana(nombre, scroll){
   });
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.id==="tab-"+nombre));
   document.body.dataset.tab = nombre;
+  /* nada de una pestaña debe quedarse encendido en otra */
+  if(nombre !== "mandado" && modoMandado){
+    modoMandado = false;
+    document.body.classList.remove("modo-mandado");
+  }
+  renderBarraMandado();
   renderHdrExtra(); renderHdrMini();
   if(scroll!==false) window.scrollTo({top:0,behavior:"smooth"});
   return true;
@@ -3661,6 +3889,7 @@ function pantallaRescate(err){
 try{
   renderMeals(); renderShop(); renderTierBar(); renderUnitToggle(); renderGearSheet();
   renderWeekStrip(); renderRoutine(); renderTrained(); renderAhora();
+  cierraSemanasViejas();   /* la semana pasada se cierra sola */
   renderSnacks();
   renderBudget(); renderAntojos(); renderBody(); renderReportDue();
   renderRespaldoAviso();
@@ -3797,7 +4026,7 @@ function gastoPorCategoria(semana){
 }
 function gastoDelMes(ym){
   return Object.keys(S.compras)
-    .filter(k=>S.compras[k].cerrada && mesDe(k)===ym)
+    .filter(k=>mesDe(k)===ym)          /* también la semana en curso */
     .reduce((a,k)=>a+resumenCompra(k).gasto, 0);
 }
 function renderDinero(){
@@ -3817,6 +4046,33 @@ function renderDinero(){
     { alt:"Gasto de las últimas semanas",
       vacio:"Marca productos en el Mandado y cierra la semana para empezar tu historial." });
 
+  /* ---- tendencia de precios ---- */
+  const conHist = Object.keys(S.precios||{})
+    .filter(k=>Array.isArray(S.precios[k]) && S.precios[k].length)
+    .map(k=>({ id:k, n: shopById[k] ? shopById[k].name : k, n2: S.precios[k].length }))
+    .sort((a,b)=> b.n2-a.n2 || a.n.localeCompare(b.n));
+  const selP = $("dinPrecioSel");
+  if(!conHist.length){
+    selP.style.display = "none";
+    $("dinPrecio").innerHTML = `<div class="hist-vacio">Registra una compra en el Mandado y aquí verás cómo cambia el precio de cada alimento.</div>`;
+  }else{
+    selP.style.display = "";
+    const act = selP.value && conHist.some(x=>x.id===selP.value) ? selP.value : conHist[0].id;
+    selP.innerHTML = conHist.map(x=>`<option value="${esc(x.id)}"${x.id===act?" selected":""}>${esc(x.n)}</option>`).join("");
+    const h = S.precios[act].slice(-10);
+    const uni = h[h.length-1].u;
+    const mismos = h.filter(x=>x.u===uni);          /* comparar peras con peras */
+    const primero = mismos[0], ultimo = mismos[mismos.length-1];
+    const dif = (primero && ultimo && primero.pu) ? (ultimo.pu-primero.pu)/primero.pu*100 : 0;
+    $("dinPrecio").innerHTML =
+      barras(mismos.map(x=>({ t:fmtDateShort(x.d), v:x.pu, txt:fmt$(x.pu) })),
+             { color:"var(--amber)", alt:"Precio por "+uni }) +
+      `<div class="hist-pie">Precio por <b>${esc(uni)}</b>` +
+      (mismos.length>1
+        ? ` · ${dif>0?"subió":dif<0?"bajó":"sin cambio"} <b style="color:${dif>0?"var(--coral)":dif<0?"var(--lime)":"var(--muted)"}">${dif>0?"+":""}${Math.round(dif)} %</b> desde ${fmtDateShort(primero.d)}`
+        : ` · una sola captura por ahora`) + `</div>`;
+  }
+
   const refSemana = hist.length ? hist[0].semana : thisWeek;
   const cats = gastoPorCategoria(refSemana);
   const sumaCat = Object.values(cats).reduce((a,b)=>a+b,0);
@@ -3827,7 +4083,7 @@ function renderDinero(){
         <span class="cat-n" style="--cc:${tono(CATS[k].c)}">${CATS[k].t}</span>
         <span class="cat-bar"><i style="width:${pct}%;background:${tono(CATS[k].c,3)}"></i></span>
         <span class="cat-v">${fmt$(cats[k])}<em>${pct}%</em></span></div>`;
-    }).join("")}</div>` : `<div class="hist-vacio">Aún no hay un mandado cerrado.</div>`;
+    }).join("")}</div>` : `<div class="hist-vacio">Marca productos en el Mandado para ver en qué se te va.</div>`;
 
   const meta = +S.presupuestoMes || 0;
   if($("dinMeta") && document.activeElement !== $("dinMeta")) $("dinMeta").value = meta || "";
@@ -3843,9 +4099,10 @@ function renderDinero(){
 
   $("dinLista").innerHTML = hist.length ? hist.slice(0,12).map(h=>
     `<li><span class="hl-d">${fmtDateShort(h.semana)}</span>
-      <span class="hl-n">${h.ok} productos${h.no?` · ${h.no} sin encontrar`:""}</span>
+      <span class="hl-n">${h.ok} productos${h.no?` · ${h.no} sin encontrar`:""}${
+        h.semana===thisWeek && !h.cerrada?` <em class="en-curso">en curso</em>`:""}</span>
       <span class="hl-v">${fmt$(h.gasto)}</span></li>`).join("")
-    : `<li class="hist-vacio">Cierra tu primer mandado para verlo aquí.</li>`;
+    : `<li class="hist-vacio">Marca productos en el Mandado y aquí aparecerá tu gasto, sin hacer nada más.</li>`;
 }
 
 function renderHistorial(){
@@ -3868,6 +4125,7 @@ document.querySelector(".hist-tabs").addEventListener("click", e=>{
   irAVista(b.dataset.hv);
 });
 $("gymEjercicio").addEventListener("change", renderGym);
+$("dinPrecioSel").addEventListener("change", renderDinero);
 $("dinMeta").addEventListener("input", e=>{
   S.presupuestoMes = +e.target.value || 0;
   clearTimeout(window._presT);
