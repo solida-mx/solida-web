@@ -1871,7 +1871,7 @@ function renderHdrExtra(){
     const dif = Math.round((p-meta)*10)/10;
     el.innerHTML = caja(p+" kg","peso")+
                    caja(meta+" kg","meta")+
-                   caja((dif>0?"−":"+")+Math.abs(dif)+" kg","faltan");
+                   caja(Math.abs(dif)+" kg", dif>0?"por bajar":dif<0?"por subir":"en meta");
   } else if(tab==="config"){
     const d = diasSinRespaldo();
     el.innerHTML = caja(Object.keys(S.trained||{}).length,"entrenos")+
@@ -2571,7 +2571,7 @@ function renderRoutine(){
       </div>
       <div class="next-up${hiDone?' show':''}">▲ Próxima sesión ${bodyweight?"añade lastre hasta "+fmtW(roundP(w+inc)):"sube a "+fmtW(roundP(w+inc))}</div>`:""}
       <button class="var-btn" data-varsheet="${ex.id}">
-        🔀 <span>Cambiar variante del ejercicio</span><span class="vb-n">${ex.v.length}</span>
+        <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg> <span>Cambiar variante del ejercicio</span><span class="vb-n">${ex.v.length}</span>
       </button>
     </div>`;
   }).join("");
@@ -2826,9 +2826,10 @@ function goalBar(label, unit, base, cur, meta, color){
   const pct=Math.min(100, Math.round(adv/total*100));
   const left=Math.max(0, +(total-Math.min(adv,total)).toFixed(1));
   return `<div class="goal">
-    <div class="g-top"><span>${label}</span><b style="color:${color}">${pct}%</b></div>
-    <div class="g-bar"><i style="width:${pct}%;background:${color}"></i></div>
-    <small>Hoy: ${cur.toFixed(1)}${unit} · Meta: ${meta}${unit} · ${left>0?`Te faltan ${left}${unit}`:"¡Meta alcanzada! 🎉"}</small></div>`;
+    <div class="g-top"><span>${label}</span><b style="color:${pct>0?color:'var(--muted)'}">${
+      pct>0?pct+"%":"sin avance aún"}</b></div>
+    <div class="g-bar${pct===0?' cero':''}"><i style="width:${pct}%;background:${color}"></i></div>
+    <small>Hoy: ${cur.toFixed(1)}${unit} · Meta: ${meta}${unit} · ${left>0?`Te faltan ${left}${unit}`:"¡Meta alcanzada!"}</small></div>`;
 }
 function mealStreak(){
   const doneAll=k=>{const m=S.meals[k]; return !!m && m.length>0 && m.every(Boolean);};
@@ -2896,9 +2897,9 @@ function renderBody(){
   const sesSem=Object.keys(S.trained||{}).filter(k=>S.trained[k]===true && weekKey(fromKey(k))===thisWeek).length;
   const cardSem=Object.keys(S.cardio||{}).filter(k=>S.cardio[k]===true && weekKey(fromKey(k))===thisWeek).length;
   $("streakBox").innerHTML =
-    `<span>🔥 Comidas completas: <b style="color:var(--em)">${streak} día${streak===1?"":"s"} seguido${streak===1?"":"s"}</b></span>`+
-    `<span>🏋️ Sesiones esta semana: <b style="color:var(--sky)">${sesSem}</b></span>`+
-    `<span>🏃 Cardios: <b style="color:var(--violet)">${cardSem}</b></span>`;
+    `<span><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2c1.5 3.5-1 5-1 7a3 3 0 0 0 6 0c0-1-.3-2-.8-2.8C18.7 8 20 10.7 20 13a8 8 0 1 1-16 0C4 8.5 8.5 6 12 2Z"/></svg> Comidas completas: <b style="color:var(--em)">${streak} día${streak===1?"":"s"} seguido${streak===1?"":"s"}</b></span>`+
+    `<span><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5 17.5 17.5"/><path d="m21 21-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/></svg> Sesiones esta semana: <b style="color:var(--sky)">${sesSem}</b></span>`+
+    `<span><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14" cy="4.5" r="2"/><path d="m9 20 2.5-5.5L9 12l1-5 4 2.5 3 .5"/><path d="m10 7-3 1.5L5.5 12"/><path d="m14 14.5 2 2 1.5 3.5"/></svg> Cardios: <b style="color:var(--violet)">${cardSem}</b></span>`;
 
   $("bodyList").innerHTML = H.slice().reverse().slice(0,10).map(p=>{
     const isBase = S.body.findIndex(x=>x.d===p.d)===-1;
@@ -3186,6 +3187,19 @@ try{
   console.error("Mi Plan · fallo al arrancar", err);
   pantallaRescate(err);
 }
+
+/* ---------- Quitar la pantalla de apertura ----------
+   La animación CSS ya la oculta sola aunque este código no llegue a
+   correr (fill:forwards + visibility:hidden), así que un error nunca
+   deja la app tapada. Aquí sólo la sacamos del DOM. */
+(function(){
+  const sp = document.getElementById("splash");
+  if(!sp) return;
+  if(document.documentElement.classList.contains("sin-splash")){ sp.remove(); return; }
+  const quitar = ()=>{ sp.setAttribute("aria-hidden","true"); sp.remove(); };
+  sp.addEventListener("animationend", ev=>{ if(ev.animationName==="spSalida") quitar(); });
+  setTimeout(quitar, 2200);            /* red de seguridad */
+})();
 
 /* ---------- PWA: instalable y funciona sin conexión ---------- */
 if("serviceWorker" in navigator){

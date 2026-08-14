@@ -40,6 +40,7 @@
     --lime:#7ee081;
     --on-em:#04231e;
     --nav-bg:#0a1830;
+    --lienzo:#16305c;--lienzo-b:#2a4a7d;--lienzo-ph:#7d9bc9;
     --hdr:linear-gradient(160deg,#1b396b 0%,#0c1f40 55%,#081427 100%);
     --hdr-ink:#bfeee6;
     --sombra:0 10px 30px rgba(0,0,0,.35);
@@ -61,6 +62,7 @@
     --lime:#2b7a3d;
     --on-em:#ffffff;
     --nav-bg:#ffffff;
+    --lienzo:#1b3866;--lienzo-b:#2f5691;--lienzo-ph:#8fabd6;
     --hdr:linear-gradient(160deg,#1b396b 0%,#25528f 55%,#2f6bb0 100%);
     --hdr-ink:#d6f5ee;
     --sombra:0 8px 24px rgba(20,40,80,.10);
@@ -75,6 +77,58 @@
   h1,h2,h3,.disp{font-family:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:-.01em}
   button{font-family:inherit}
   a{color:var(--em)}
+
+  /* ===================================================================
+     PANTALLA DE APERTURA (splash)
+     Sólo se ve cuando la app arranca de cero, no al cambiar de pestaña.
+     Se quita sola aunque el JS falle (ver el respaldo por animación).
+     =================================================================== */
+  .splash{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:0;
+    background:var(--hdr);
+    animation:spSalida .38s ease .78s forwards}
+  .splash.fuera{animation:spSalida .35s ease forwards}
+  @keyframes spSalida{to{opacity:0;visibility:hidden;transform:scale(1.04)}}
+  .splash::before{content:"";position:absolute;width:420px;height:420px;border-radius:50%;
+    background:radial-gradient(circle,rgba(42,157,142,.32),transparent 66%);
+    animation:spHalo 1.4s ease-out}
+  @keyframes spHalo{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+
+  .sp-logo{position:relative;width:78px;height:78px;filter:drop-shadow(0 10px 26px rgba(0,0,0,.4))}
+  .sp-logo svg{width:100%;height:100%;overflow:visible}
+  /* las 3 barras del logo entran una por una, de abajo hacia arriba */
+  .sp-r{transform-origin:center;opacity:0;animation:spBarra .5s cubic-bezier(.2,.9,.3,1.3) forwards}
+  .sp-r1{fill:#2a9d8e;animation-delay:.30s}
+  .sp-r2{fill:#eef7f6;animation-delay:.15s}
+  .sp-r3{fill:#2a9d8e;animation-delay:0s}
+  @keyframes spBarra{
+    0%  {opacity:0;transform:translateX(-14px) scaleX(.35)}
+    60% {opacity:1;transform:translateX(2px)  scaleX(1.06)}
+    100%{opacity:1;transform:none}
+  }
+  .sp-nm{position:relative;margin-top:18px;font-family:"Space Grotesk",system-ui,sans-serif;
+    font-size:23px;font-weight:700;letter-spacing:.20em;color:#fff;
+    opacity:0;animation:spTexto .5s ease .48s forwards}
+  .sp-sub{position:relative;margin-top:4px;font-size:10.5px;font-weight:800;letter-spacing:.20em;
+    text-transform:uppercase;color:var(--hdr-ink);
+    opacity:0;animation:spTexto .5s ease .60s forwards}
+  @keyframes spTexto{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+  .sp-bar{position:relative;margin-top:24px;width:104px;height:3px;border-radius:99px;
+    background:rgba(255,255,255,.18);overflow:hidden;
+    opacity:0;animation:spTexto .4s ease .68s forwards}
+  .sp-bar i{display:block;height:100%;width:0;border-radius:99px;background:#5fe0cc;
+    animation:spCarga .75s cubic-bezier(.4,0,.2,1) .70s forwards}
+  @keyframes spCarga{to{width:100%}}
+
+  /* respeta "sin animaciones": se muestra un instante y se va, sin movimiento */
+  html.noanim .splash,
+  html.noanim .splash *{animation-duration:.01s!important;animation-delay:0s!important}
+  @media (prefers-reduced-motion:reduce){
+    .splash{animation:spSalida .2s ease .3s forwards}
+    .splash *{animation-duration:.01s!important;animation-delay:0s!important}
+  }
+  /* si ya se abrió hace poco, no la repetimos */
+  html.sin-splash .splash{display:none}
 
   /* ---------- HEADER ----------
      Se queda pegado arriba y se ENCOGE al bajar. Antes ocupaba 440 px de
@@ -139,6 +193,8 @@
   body[data-tab="rutina"] .hdr-extra,
   body[data-tab="progreso"] .hdr-extra,
   body[data-tab="config"] .hdr-extra{display:flex}
+  body.hdr-min .macro-strip,
+  body.hdr-min[data-tab] .hdr-extra{display:none}
   .hdr-extra{position:relative;display:none;gap:8px;margin-top:14px}
   .hdr-extra .he{flex:1;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.17);
     border-radius:13px;padding:9px 8px;text-align:center}
@@ -210,8 +266,10 @@
   .banner b{color:#fff}
 
   /* icono/foto de alimento — más grande y protagonista */
+  /* lienzo oscuro en LOS DOS temas: las ilustraciones son de trazo claro */
   .fico{position:relative;width:46px;height:46px;flex:none;border-radius:13px;overflow:hidden;
-    background:color-mix(in srgb, var(--ink) 6%, transparent);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+    background:var(--lienzo);border:1px solid var(--lienzo-b);
+    display:flex;align-items:center;justify-content:center}
   .fico img{width:100%;height:100%;object-fit:cover;display:block}
   .fico .fe{display:none;font-size:26px;line-height:1}
   .fico.noimg img{display:none}
@@ -219,7 +277,8 @@
 
   /* foto de ejercicio */
   .ex-photo{position:relative;width:58px;height:58px;flex:none;border-radius:14px;overflow:hidden;
-    background:var(--card-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--faint)}
+    background:var(--lienzo);border:1px solid var(--lienzo-b);display:flex;align-items:center;
+    justify-content:center;color:var(--lienzo-ph)}
   .ex-photo img{width:100%;height:100%;object-fit:cover;display:block}
   .ex-photo .ph{display:none}
   .ex-photo.noimg img{display:none}
@@ -233,6 +292,7 @@
     padding:9px 2px 11px;position:relative}
   .ctabs button i{font-style:normal;font-size:19px;display:block;line-height:0}
   .ctabs .ci{width:21px;height:21px;display:block}
+  .si{width:15px;height:15px;flex:none;opacity:.9}
   .ctabs button.on{color:var(--em)}
   .ctabs button.on::after{content:"";position:absolute;left:18%;right:18%;bottom:-1.5px;height:3px;border-radius:3px;background:var(--em)}
   .img-th.sm{width:36px;height:36px;font-size:17px}
@@ -378,8 +438,8 @@
   .img-flt::placeholder{color:var(--faint)}
   .img-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid rgba(36,65,111,.5)}
   .img-row:last-child{border-bottom:none}
-  .img-th{width:46px;height:46px;flex:none;border-radius:12px;overflow:hidden;background:var(--card-2);
-    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px}
+  .img-th{width:46px;height:46px;flex:none;border-radius:12px;overflow:hidden;background:var(--lienzo);
+    border:1px solid var(--lienzo-b);display:flex;align-items:center;justify-content:center;font-size:22px}
   .img-th img{width:100%;height:100%;object-fit:cover;display:block}
   .img-nm{flex:1;min-width:0;font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.3}
   .img-nm small{display:block;font-size:9.5px;color:var(--em);font-weight:800;letter-spacing:.05em;margin-top:2px}
@@ -672,27 +732,38 @@
   .log-btn:active{transform:scale(.93)}
 
   /* ---------- PROGRESO ---------- */
-  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px;align-items:stretch}
+  .stat{display:flex;flex-direction:column;justify-content:center;gap:3px;min-height:74px;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 7px;text-align:center}
   .stat b{display:block;font-family:"Space Grotesk";font-size:18px;font-weight:700;color:var(--sc,var(--em))}
   .stat span{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:800}
   .goal{margin-top:12px}
   .goal .g-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:800}
   .goal .g-top b{font-family:"Space Grotesk";font-size:15px}
-  .goal .g-bar{height:9px;border-radius:99px;background:color-mix(in srgb, var(--ink) 7%, transparent);border:1px solid var(--line);overflow:hidden;margin:6px 0 4px}
-  .goal .g-bar i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+  .goal .g-bar{position:relative;height:10px;border-radius:99px;
+    background:color-mix(in srgb, var(--ink) 9%, transparent);
+    border:1px solid var(--line-str);overflow:hidden;margin:6px 0 4px}
+  .goal .g-bar i{display:block;height:100%;min-width:10px;border-radius:99px;transition:width .5s ease}
+  .goal .g-bar.cero i{min-width:0}
+  /* marca de "aquí empezaste" para que el 0 % no parezca un error */
+  .goal .g-bar::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:var(--line-str);border-radius:99px}
   .goal small{font-size:11px;color:var(--muted);font-weight:600}
   .streak-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
-  .streak-row span{font-size:11.5px;font-weight:800;background:color-mix(in srgb, var(--ink) 5%, transparent);border:1px solid var(--line);
+  .streak-row span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;
+    background:color-mix(in srgb, var(--ink) 5%, transparent);border:1px solid var(--line);
     border-radius:999px;padding:6px 12px}
   .pace{margin-top:8px;font-size:11.5px;font-weight:700;color:var(--muted);text-align:center;
     background:color-mix(in srgb, var(--ink) 4%, transparent);border:1px dashed var(--line);border-radius:9px;padding:7px 10px}
   .pace b{color:var(--em)}
-  .ind-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
-  .ind{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 11px;position:relative;overflow:hidden}
+  .ind-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px;align-items:stretch}
+  .ind{display:flex;flex-direction:column;min-height:96px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:12px 11px;position:relative;overflow:hidden}
   .ind::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ic)}
-  .ind-lbl{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-  .ind-val{display:block;font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:23px;color:var(--ink);margin:5px 0 4px}
+  .ind-lbl{font-size:9.8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+    line-height:1.25;min-height:2.5em;display:block}
+  .ind-val{display:block;font-family:"Space Grotesk",system-ui,sans-serif;font-weight:800;font-size:23px;
+    color:var(--ink);margin:auto 0 4px;line-height:1.1}
   .ind-val i{font-size:12px;font-weight:600;color:var(--muted);font-style:normal;margin-left:2px}
   .ind-tr{font-size:11px;font-weight:800}
   .ind-tr.good{color:var(--lime)} .ind-tr.bad{color:var(--coral)} .ind-tr.flat{color:var(--muted)}
@@ -903,6 +974,7 @@
   }
   /* ── Visor de imagen a pantalla completa ─────────────────────── */
   .ex-photo img,.fico img,.img-th img,#rpImg{cursor:zoom-in}
+  #lightbox img{background:var(--lienzo);border-radius:16px}
   #lightbox{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;
     background:rgba(8,20,39,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
     cursor:zoom-out;padding:24px}
@@ -918,6 +990,43 @@
 </style>
 </head>
 <body>
+
+<!-- ===================================================================
+     PANTALLA DE APERTURA
+     Va ANTES de todo y se pinta con CSS puro: si esperara a app.js se
+     vería el parpadeo que precisamente viene a tapar. El logo se dibuja
+     solo (las 3 barras de Sólida) y se va cuando la app está lista.
+     =================================================================== -->
+<div class="splash" id="splash" role="status" aria-label="Abriendo Mi Plan">
+  <div class="sp-logo">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <rect class="sp-r sp-r1" x="13" y="9"    width="22" height="8" rx="4"/>
+      <rect class="sp-r sp-r2" x="10" y="20.5" width="28" height="8" rx="4"/>
+      <rect class="sp-r sp-r3" x="6"  y="32"   width="36" height="8" rx="4"/>
+    </svg>
+  </div>
+  <div class="sp-nm">MI PLAN</div>
+  <div class="sp-sub">Sólida Aplicaciones</div>
+  <div class="sp-bar"><i></i></div>
+</div>
+<script>
+/* Decidir ANTES de pintar si toca mostrarla, para que no parpadee.
+   Sólo en arranque en frío: al recargar por cambio de día o por importar
+   un respaldo ya estamos en la misma sesión y no se repite. */
+(function(){
+  try{
+    var t = (JSON.parse(localStorage.getItem("mi_plan_salvador_v1")||"{}").ui||{}).tema || "auto";
+    var claro = t==="claro" || (t==="auto" && matchMedia("(prefers-color-scheme: light)").matches);
+    document.documentElement.setAttribute("data-tema", claro ? "claro" : "oscuro");
+  }catch(e){}
+  try{
+    if(sessionStorage.getItem("mi_plan_abierta"))
+      document.documentElement.classList.add("sin-splash");
+    else sessionStorage.setItem("mi_plan_abierta","1");
+  }catch(e){ /* modo privado: que se vea, no pasa nada */ }
+})();
+</script>
+
 
 <header>
   <div class="brandline">
@@ -1113,7 +1222,7 @@
 
   <!-- ============ TAB: PROGRESO ============ -->
   <section class="tab" id="tab-progreso">
-    <div class="sec-title"><h2>Tu progreso</h2><span class="ln"></span><span class="chip">se guarda aquí</span></div>
+    <div class="sec-title"><h2>Tu progreso</h2><span class="ln"></span><span class="chip">en este teléfono</span></div>
     <div class="stat-grid">
       <div class="stat" style="--sc:#2fb5a3"><b id="stMeals">0/5</b><span>comidas hoy</span></div>
       <div class="stat" style="--sc:#f2b544"><b id="stBudget">0%</b><span>antojos usados</span></div>
