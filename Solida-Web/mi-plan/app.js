@@ -5510,30 +5510,47 @@ function proximaFecha(dia, desde){
 }
 const diasHasta = k => k ? daysBetween(dayKey, k) : null;
 
-/* interés al saldo de hoy: saldo × tasa/365 × días */
+/* Interés al saldo de hoy: saldo × tasa/365 × días.
+   Con IVA cuando el estado de cuenta lo cobra: en México el interés de
+   tarjeta lleva 16 % encima, así que una tasa de 60.49 % se comporta como
+   70.17 % efectivo. Ignorarlo subestimaba el costo real en un 16 %. */
 function interesDe(deuda, dias){
-  return numero(deuda.saldo) * numero(deuda.tasaAnual) / 365 * (dias || 30);
+  const base = numero(deuda.saldo) * numero(deuda.tasaAnual) / 365 * (dias || 30);
+  return deuda.ivaSobreInteres === true ? base * 1.16 : base;
+}
+/* tasa que de verdad te cuesta, IVA incluido */
+function tasaEfectiva(deuda){
+  const t = numero(deuda.tasaAnual);
+  return deuda.ivaSobreInteres === true ? t * 1.16 : t;
 }
 
 /* Datos confirmados del análisis de tus estados de cuenta. Lo que el
    propio análisis dejó "por averiguar" NO se inventa: va a pendientes. */
 const DEUDAS_SEMILLA = [
+  /* Estado de cuenta Costco de agosto 2026. El revolvente sale de restarle
+     al pago-para-no-generar-intereses ($13,441.41) los dos pagos de meses
+     que ese importe ya incluye. */
   { id:"costco", nombre:"Costco revolvente", emisor:"Banamex", tipo:"revolvente",
-    saldo:6357, tasaAnual:0.6058, diaCorte:13, diaVencimiento:3, pagoMinimo:1510 },
+    saldo:10914.29, tasaAnual:0.6049, ivaSobreInteres:true,
+    diaCorte:13, diaVencimiento:3, pagoSinIntereses:13441.41 },
   { id:"diferido", nombre:"Diferimiento de saldo", emisor:"Banamex", tipo:"diferido",
-    saldo:2695, tasaAnual:0.52, diaCorte:13, diaVencimiento:3 },
+    saldo:1835.06, tasaAnual:0.52, ivaSobreInteres:true,
+    diaCorte:13, diaVencimiento:3, mesesRestantes:2 },
   { id:"station24", nombre:"Station 24 · a meses", emisor:"Banamex", tipo:"msi",
-    saldo:3332, tasaAnual:0, diaCorte:13, diaVencimiento:3, mesesRestantes:1 },
+    saldo:1666.34, tasaAnual:0, ivaSobreInteres:false,
+    diaCorte:13, diaVencimiento:3, mesesRestantes:1 },
+  /* La Joy no generó intereses este periodo porque pagaste completo el
+     anterior. Su tasa es la MÁS ALTA de las dos: 62.98 %. */
   { id:"joy", nombre:"Tarjeta Joy", emisor:"Joy", tipo:"revolvente",
-    saldo:3862, tasaAnual:0, diaVencimiento:25, pagoMinimo:370 },
+    saldo:3862.35, tasaAnual:0.6298, ivaSobreInteres:true,
+    diaVencimiento:25, pagoMinimo:370, pagoSinIntereses:3862.35 },
   { id:"auto", nombre:"Crédito del auto", emisor:"—", tipo:"automotriz",
-    saldo:8650, tasaAnual:0.119, diaVencimiento:31 }
+    saldo:8650, tasaAnual:0.119, ivaSobreInteres:false, diaVencimiento:31 }
 ];
 const PENDIENTES_SEMILLA = [
-  "Saldo revolvente EXACTO de la Costco: saldo total − $3,332 del Station 24 − $2,695 del diferimiento.",
-  "De qué son los $894 de comisiones de la Joy en 12 meses (la Joy no tiene anualidad).",
-  "Si el interés de tu estado de cuenta viene con IVA o no.",
-  "Tasa real de la tarjeta Joy: aquí está en 0 % porque no la tengo confirmada."
+  "Pago mínimo de la Costco: no viene en lo que revisé. Búscalo en el estado de cuenta.",
+  "Los $894 de comisiones de la Joy son anualidad o administración: confirma si se puede quitar.",
+  "Fecha exacta de vencimiento de la Costco (aquí quedó el día 3)."
 ];
 
 function cargaDeudasSemilla(){
@@ -5546,6 +5563,102 @@ function cargaDeudasSemilla(){
   });
   saneaFin(S); save(); renderFinanzas();
   showToast("Tarjetas cargadas · revisa y ajusta los saldos");
+}
+
+/* Editar una deuda a mano: era sólo informativa y no había forma de
+   actualizar saldos ni tasas cuando llega el estado de cuenta. */
+function abrirDeuda(id){
+  const fn = fin();
+  const d = id ? fn.deudas.find(x=>x.id === id) : null;
+  const tipos = [["revolvente","Revolvente (tarjeta)"],["msi","Meses sin intereses"],
+                 ["diferido","Diferimiento a meses"],["fijo","Crédito fijo"],
+                 ["automotriz","Crédito automotriz"]];
+  openSheet(d ? "Editar deuda" : "Nueva deuda", d ? esc(d.nombre) : "Tarjeta o crédito", `
+    <div class="alta-form">
+      <label class="nf"><span>Nombre</span>
+        <input id="dNombre" type="text" maxlength="60" value="${d?esc(d.nombre):""}" placeholder="Tarjeta, crédito…"></label>
+      <div class="fila">
+        <label class="nf"><span>Quién la emite</span>
+          <input id="dEmisor" type="text" maxlength="40" value="${d?esc(d.emisor):""}" placeholder="Banco"></label>
+        <label class="nf"><span>Tipo</span>
+          <select id="dTipo">${tipos.map(t=>
+            `<option value="${t[0]}"${d&&d.tipo===t[0]?" selected":""}>${t[1]}</option>`).join("")}</select></label>
+      </div>
+      <div class="fila">
+        <label class="nf"><span>Saldo actual</span>
+          <input id="dSaldo" type="number" inputmode="decimal" step="any" min="0" value="${d?numero(d.saldo):""}"></label>
+        <label class="nf"><span>Tasa anual (%)</span>
+          <input id="dTasa" type="number" inputmode="decimal" step="any" min="0" max="500"
+                 value="${d?+(numero(d.tasaAnual)*100).toFixed(2):""}" placeholder="60.49"></label>
+      </div>
+      <label class="nf wide chk"><input type="checkbox" id="dIva" ${d&&d.ivaSobreInteres===true?"checked":""}>
+        <span>El estado de cuenta cobra IVA sobre los intereses
+          <small class="ui-d">En México casi siempre sí, y sube el costo real un 16 %. Míralo en el renglón "IVA por intereses".</small></span></label>
+      <div class="fila">
+        <label class="nf"><span>Día de corte</span>
+          <input id="dCorte" type="number" inputmode="numeric" min="1" max="31" value="${d&&d.diaCorte?d.diaCorte:""}"></label>
+        <label class="nf"><span>Día que vence</span>
+          <input id="dVence" type="number" inputmode="numeric" min="1" max="31" value="${d&&d.diaVencimiento?d.diaVencimiento:""}"></label>
+      </div>
+      <div class="fila">
+        <label class="nf"><span>Pago mínimo</span>
+          <input id="dMin" type="number" inputmode="decimal" step="any" min="0" value="${d&&numero(d.pagoMinimo)?numero(d.pagoMinimo):""}"></label>
+        <label class="nf"><span>Pago sin intereses</span>
+          <input id="dPngi" type="number" inputmode="decimal" step="any" min="0" value="${d&&numero(d.pagoSinIntereses)?numero(d.pagoSinIntereses):""}"></label>
+      </div>
+      <label class="nf"><span>Pagos que faltan (si va a meses)</span>
+        <input id="dMeses" type="number" inputmode="numeric" min="0" max="120" value="${d&&d.mesesRestantes!==null&&d.mesesRestantes!==undefined?d.mesesRestantes:""}" placeholder="deja vacío si es revolvente"></label>
+      <label class="nf wide chk"><input type="checkbox" id="dCong" ${d&&d.congelada?"checked":""}>
+        <span>Congelada<small class="ui-d">Te aviso si registras un cargo con ella.</small></span></label>
+      <div class="ases-btns">
+        <button id="dGuardar">Guardar</button>
+        ${d?`<button class="sec" id="dBorrar">Eliminar</button>`:""}
+      </div>
+      <div class="nut-hint" id="dEfecto"></div>
+    </div>`);
+  const pinta = ()=>{
+    const caja = $("dEfecto"); if(!caja) return;
+    const saldo = numero($("dSaldo").value), tasa = numero($("dTasa").value)/100;
+    const iva = !!$("dIva").checked;
+    if(!(saldo > 0) || !(tasa > 0)){ caja.textContent = "Con saldo y tasa te digo cuánto te cuesta al mes."; return; }
+    const mes = saldo * tasa / 365 * 30 * (iva ? 1.16 : 1);
+    caja.textContent = `A ese saldo te cuesta ${fmt$(mes)} al mes` +
+      (iva ? ` · tasa efectiva ${(tasa*116).toFixed(2)} % con IVA.` : ".");
+  };
+  ["dSaldo","dTasa"].forEach(k=>{ const e = $(k); if(e) e.addEventListener("input", pinta); });
+  const iv = $("dIva"); if(iv) iv.addEventListener("change", pinta);
+  pinta();
+
+  const g = $("dGuardar");
+  if(g) g.onclick = ()=>{
+    const nom = String($("dNombre").value||"").trim().slice(0,60);
+    if(!nom){ showToast("Ponle nombre a la deuda"); return; }
+    const meses = String($("dMeses").value||"").trim();
+    const dato = {
+      id: d ? d.id : "de"+Date.now().toString(36),
+      nombre: nom,
+      emisor: String($("dEmisor").value||"").trim().slice(0,40),
+      tipo: $("dTipo").value,
+      saldo: Math.max(0, numero($("dSaldo").value)),
+      tasaAnual: Math.max(0, numero($("dTasa").value) / 100),
+      ivaSobreInteres: !!$("dIva").checked,
+      diaCorte: numero($("dCorte").value) || null,
+      diaVencimiento: numero($("dVence").value) || null,
+      pagoMinimo: Math.max(0, numero($("dMin").value)),
+      pagoSinIntereses: Math.max(0, numero($("dPngi").value)),
+      mesesRestantes: meses === "" ? null : Math.max(0, Math.round(numero(meses))),
+      congelada: !!$("dCong").checked
+    };
+    if(d) Object.assign(d, dato); else fn.deudas.push(dato);
+    saneaFin(S); save(); closeSheet(); renderFinanzas();
+    showToast(d ? "Deuda actualizada ✓" : "Deuda agregada ✓");
+  };
+  const bo = $("dBorrar");
+  if(bo) bo.onclick = ()=>{
+    if(!confirm(`¿Eliminar "${d.nombre}"? Se va del cálculo de intereses.`)) return;
+    fn.deudas = fn.deudas.filter(x=>x.id !== d.id);
+    save(); closeSheet(); renderFinanzas(); showToast("Deuda eliminada");
+  };
 }
 
 function renderDeudas(){
@@ -5573,10 +5686,12 @@ function renderDeudas(){
     const dv = diasHasta(vence), dc = diasHasta(corte);
     const msi = x.tipo === "msi" && numero(x.tasaAnual) === 0;
     const int = interesDe(x, 30);
-    return `<div class="deuda${msi?" msi":""}">
+    return `<div class="deuda${msi?" msi":""}" data-deedit="${esc(x.id)}" role="button" tabindex="0">
       <div class="de-top">
         <span class="de-n"><b>${esc(x.nombre)}</b>
-          <small>${esc(x.emisor||"")}${x.tasaAnual?` · ${(numero(x.tasaAnual)*100).toFixed(2)} % anual`:" · 0 % real"}</small></span>
+          <small>${esc(x.emisor||"")}${x.tasaAnual
+            ? ` · ${(numero(x.tasaAnual)*100).toFixed(2)} %${x.ivaSobreInteres===true?` (${(tasaEfectiva(x)*100).toFixed(2)} % con IVA)`:""}`
+            : " · 0 % real"}</small></span>
         <span class="de-s">${fmt$(numero(x.saldo))}</span>
       </div>
       <div class="de-fechas">
@@ -5601,6 +5716,12 @@ function renderDeudas(){
         ése es el orden de avalancha.</p>
     </div>
     <div class="deudas">${filas}</div>
+    <div class="ases-btns" style="margin-bottom:12px">
+      <button data-denueva="1">＋ Agregar deuda</button>
+      <button class="sec" data-desemilla="1">Recargar las del análisis</button>
+    </div>
+    <p class="ui-nota" style="margin-bottom:12px">Toca cualquier tarjeta para
+      actualizar su saldo, su tasa o sus fechas cuando llegue tu estado de cuenta.</p>
     ${pend.length ? `<div class="ases"><span class="ases-eyebrow">Por averiguar</span>
       <p class="ases-sub">Un asesor honesto lleva lista de lo que todavía no sabe.
         Estos datos cambian los cálculos:</p>
@@ -5616,6 +5737,10 @@ function renderDeudas(){
     if(nm){ abrirMovimiento(nm.dataset.movnuevo); return; }
     const ap = e.target.closest("[data-apedit]");
     if(ap){ abrirApartado(ap.dataset.apedit); return; }
+    const de = e.target.closest("[data-deedit]");
+    if(de){ abrirDeuda(de.dataset.deedit); return; }
+    if(e.target.closest("[data-denueva]")){ abrirDeuda(null); return; }
+    if(e.target.closest("[data-desemilla]")){ cargaDeudasSemilla(); return; }
     const du = e.target.closest("[data-deshacermov]");
     if(du){ deshaceUltimoMov(); return; }
   });
