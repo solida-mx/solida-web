@@ -102,7 +102,11 @@ function saneaFin(St){
       if(!c || typeof c !== "object" || Array.isArray(c)) return null;
       const salt = _finTxt(c.salt, 128), hash = _finTxt(c.hash, 128);
       if(!salt || !hash) return null;
-      return { v: Math.round(_finNum(c.v, 1)) || 1, salt, iter: _finIter(c.iter), hash };
+      const out = { v: Math.round(_finNum(c.v, 1)) || 1, salt, iter: _finIter(c.iter), hash };
+      /* referencia a la llave de huella que guarda el teléfono (no es biometría) */
+      const bio = _finTxt(c.bio, 400);
+      if(bio && /^[A-Za-z0-9+/=]+$/.test(bio)) out.bio = bio;
+      return out;
     })(),
 
     /* --- ingresos --- */

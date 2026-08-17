@@ -5135,21 +5135,89 @@ function renderCandado(err){
   caja.hidden = !cerrado;
   if(cuerpo) cuerpo.hidden = cerrado;
   if(ases)   ases.hidden   = cerrado;
+  const panel = $("finPanel"), tabs = $("finTabs");
+  if(panel) panel.hidden = cerrado;
+  if(tabs)  tabs.hidden  = cerrado;
+  document.body.classList.toggle("fin-cerrado", cerrado);
   if(!cerrado){ caja.innerHTML = ""; return; }
+
+  const bio = !!(fin().candado && fin().candado.bio);
   caja.innerHTML = `
-    <div class="cd-ic" aria-hidden="true">🔒</div>
-    <b>Tu dinero está protegido</b>
-    <p class="cd-sub">Escribe tu PIN para ver ingresos, deudas y gastos.
-      El resto de la app funciona sin PIN.</p>
-    <div class="cd-fila">
-      <input id="pinEntra" type="password" inputmode="numeric" autocomplete="off"
-             maxlength="8" aria-label="PIN" placeholder="••••">
-      <button id="pinAbrir" class="log-btn" style="min-width:96px">Abrir</button>
-    </div>
-    ${err ? `<div class="cd-err">${esc(err)}</div>` : ""}`;
-  const inp = $("pinEntra"), btn = $("pinAbrir");
+    <div class="sesion">
+      <div class="sesion-marca" aria-hidden="true">
+        <span class="sm-barra b1"></span><span class="sm-barra b2"></span><span class="sm-barra b3"></span>
+      </div>
+      <div class="sesion-t">
+        <span class="se-eyebrow">Sólida · Mi Plan</span>
+        <b>Tus finanzas</b>
+        <small>Esta sección está protegida. Nada de esto sale de tu teléfono.</small>
+      </div>
+      ${bio ? `<button class="se-bio" id="pinBio">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4.5c-3 0-5.5 1.6-5.5 5v3c0 1.3-.3 2.6-.9 3.7"/><path d="M12 8c-1.4 0-2.5.9-2.5 2.5v3c0 2-.4 3.9-1.2 5.6"/><path d="M12 11.5v3c0 2.6-.6 5.1-1.7 7.4"/><path d="M14.5 10.5v3c0 3-.5 5.9-1.6 8.6"/><path d="M17.5 12c0 3.4-.6 6.7-1.8 9.8"/><path d="M4 8.2A9 9 0 0 1 20 8.2"/></svg>
+        <span>Entrar con huella o rostro</span></button>` : ""}
+      <div class="se-fila">
+        <input id="pinEntra" type="password" inputmode="numeric" autocomplete="off"
+               maxlength="8" aria-label="PIN" placeholder="••••">
+        <button id="pinAbrir">Entrar</button>
+      </div>
+      ${err ? `<div class="se-err">${esc(err)}</div>` : ""}
+      <p class="se-pie">Si olvidas tu PIN no hay forma de recuperarlo:
+        no existe ningún servidor con tus datos.</p>
+    </div>`;
+  const inp = $("pinEntra"), btn = $("pinAbrir"), bb = $("pinBio");
   if(btn) btn.onclick = intentaAbrirDinero;
   if(inp) inp.addEventListener("keydown", e=>{ if(e.key==="Enter") intentaAbrirDinero(); });
+  if(bb)  bb.onclick = entraConBiometria;
+  /* si ya hay huella registrada, se ofrece sola al entrar */
+  if(bio && !_bioIntentado){ _bioIntentado = true; setTimeout(entraConBiometria, 350); }
+}
+
+/* ---------- huella / rostro (WebAuthn, del propio teléfono) ----------
+   No se guarda ninguna biometría: el teléfono guarda la llave y sólo nos
+   dice "sí, es él". Si algo falla, siempre queda el PIN. */
+var _bioIntentado = false;
+function hayBiometria(){
+  return !!(window.PublicKeyCredential && navigator.credentials &&
+            location.protocol === "https:" || location.hostname === "localhost");
+}
+async function registraBiometria(){
+  if(!window.PublicKeyCredential){ showToast("Este teléfono no ofrece huella para apps web"); return false; }
+  try{
+    const reto = crypto.getRandomValues(new Uint8Array(32));
+    const id   = crypto.getRandomValues(new Uint8Array(16));
+    const cred = await navigator.credentials.create({ publicKey:{
+      challenge: reto,
+      rp: { name: "Mi Plan" },
+      user: { id, name: "salvador", displayName: "Mi Plan" },
+      pubKeyCredParams: [{type:"public-key", alg:-7}, {type:"public-key", alg:-257}],
+      authenticatorSelection: { authenticatorAttachment:"platform", userVerification:"required" },
+      timeout: 45000, attestation: "none" }});
+    if(!cred) return false;
+    const c = fin().candado;
+    if(!c){ showToast("Primero pon un PIN"); return false; }
+    c.bio = _finB64Local(cred.rawId);
+    save();
+    showToast("🔓 Huella activada ✓");
+    return true;
+  }catch(e){ showToast("No se pudo activar la huella"); return false; }
+}
+function _finB64Local(buf){
+  const b = new Uint8Array(buf); let t = "";
+  for(let i=0;i<b.length;i++) t += String.fromCharCode(b[i]);
+  return btoa(t);
+}
+async function entraConBiometria(){
+  const c = fin().candado;
+  if(!c || !c.bio) return;
+  try{
+    const cruda = Uint8Array.from(atob(c.bio), x=>x.charCodeAt(0));
+    const r = await navigator.credentials.get({ publicKey:{
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials: [{ type:"public-key", id: cruda, transports:["internal"] }],
+      userVerification: "required", timeout: 45000 }});
+    if(!r) return;
+    dineroAbierto = true; renderFinanzas(); sonar("comida");
+  }catch(e){ /* si falla, el PIN sigue ahí */ }
 }
 
 async function intentaAbrirDinero(){
@@ -5160,8 +5228,10 @@ async function intentaAbrirDinero(){
   const bien = await verificaPin(pin, fin().candado);
   /* al abrir hay que volver a pintar el resumen: mientras estaba cerrado se
      vació a propósito para no dejar cifras en el DOM */
-  if(bien){ dineroAbierto = true; renderCandado(); renderAsesor(); renderDinero();
-            sonar("comida"); return; }
+  /* BUG: faltaba renderDeudas(). Al abrir con el PIN se repintaba el resumen
+     y el mandado, pero las deudas —lo más importante del módulo— se quedaban
+     vacías porque sólo las pinta renderFinanzas(). */
+  if(bien){ dineroAbierto = true; renderFinanzas(); sonar("comida"); return; }
   renderCandado("Ese PIN no es correcto. Vuelve a intentar.");
 }
 
@@ -5180,9 +5250,16 @@ function abrirPinSheet(){
         <button id="pinGuardar">${tiene ? "Cambiar PIN" : "Activar candado"}</button>
         ${tiene ? `<button class="sec" id="pinQuitar">Quitar candado</button>` : ""}
       </div>
+      ${tiene ? `<div class="ases-btns"><button class="sec" id="pinBioReg">
+        ${(fin().candado && fin().candado.bio) ? "Volver a registrar huella o rostro" : "Agregar huella o rostro"}
+      </button></div>
+      <div class="nut-hint">La huella la guarda tu teléfono, no la app: aquí sólo se
+        guarda una referencia. El PIN siempre sigue funcionando como respaldo.</div>` : ""}
     </div>`);
   const g = $("pinGuardar"); if(g) g.onclick = guardarPin;
   const q = $("pinQuitar");  if(q) q.onclick = quitarPin;
+  const rb = $("pinBioReg");
+  if(rb) rb.onclick = async ()=>{ if(await registraBiometria()) closeSheet(); };
 }
 
 async function guardarPin(){
@@ -5197,14 +5274,14 @@ async function guardarPin(){
             if(btn){ btn.disabled=false; btn.textContent="Activar candado"; } return; }
   fin().candado = reg;
   dineroAbierto = true;                       /* no te encierres al configurarlo */
-  save(); closeSheet(); renderAsesor(); renderCandado();
+  save(); closeSheet(); renderFinanzas();
   showToast("🔒 Candado activado ✓");
 }
 
 function quitarPin(){
   if(!confirm("¿Quitar el candado? Cualquiera que tome tu teléfono podrá ver tus deudas y saldos.")) return;
   fin().candado = null;
-  save(); closeSheet(); renderAsesor(); renderCandado();
+  save(); closeSheet(); renderFinanzas();
   showToast("Candado quitado");
 }
 
@@ -5478,9 +5555,95 @@ function renderDeudas(){
       <ul class="pend-lista">${pend.slice(0,6).map(x=>`<li>${esc(x.texto)}</li>`).join("")}</ul></div>` : ""}`;
 }
 
+/* ---------- sub-pestañas de Finanzas ---------- */
+var finSub = "resumen";
+function irAFin(v){
+  const ok = ["resumen","deudas","movs","mandado"];
+  finSub = ok.includes(v) ? v : "resumen";
+  document.querySelectorAll("#finTabs [data-fsub]").forEach(b=>{
+    const on = b.dataset.fsub === finSub;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  document.querySelectorAll("#finPanel .sub").forEach(x=>
+    x.classList.toggle("activa", x.id === "fsub-" + finSub));
+  renderFinanzas();
+}
+(function(){
+  const t = document.getElementById("finTabs");
+  if(t) t.addEventListener("click", e=>{
+    const b = e.target.closest("[data-fsub]"); if(!b) return;
+    irAFin(b.dataset.fsub);
+  });
+})();
+
+/* ---------- Movimientos: lo último que hiciste, como en el banco ----------
+   Junta en una sola línea de tiempo lo que registras con el asistente, lo
+   que se marca en el mandado y lo que el asesor cambió. Antes un gasto
+   dictado se guardaba pero no había dónde verlo. */
+function movimientosUnificados(){
+  const out = [];
+  fin().movimientos.forEach(m=>{
+    out.push({ d:m.fecha, ts: fromKey(m.fecha).getTime(), tipo:m.tipo,
+               titulo: m.categoria ? m.categoria : (m.tipo === "ingreso" ? "Ingreso" : "Gasto"),
+               sub: m.nota || (m.planeado ? "planeado" : "registrado con el asistente"),
+               monto: m.tipo === "ingreso" ? numero(m.monto) : -numero(m.monto), origen:"fin" });
+  });
+  Object.keys(S.compras || {}).forEach(sem=>{
+    const r = resumenCompra(sem);
+    if(r.gasto > 0) out.push({ d:sem, ts: fromKey(sem).getTime(), tipo:"gasto",
+      titulo:"Mandado de la semana",
+      sub: `${r.ok} producto${r.ok===1?"":"s"}${(S.compras[sem].tienda)?" · "+S.compras[sem].tienda:""}`,
+      monto: -r.gasto, origen:"mandado" });
+  });
+  return out.sort((a,b)=> b.ts - a.ts || 0);
+}
+
+function renderMovimientos(){
+  const caja = $("finMovs"); if(!caja) return;
+  if(dineroCerrado()){ caja.innerHTML = ""; return; }
+  const movs = movimientosUnificados();
+  const bit = Array.isArray(S.bitacora) ? S.bitacora.slice(0, 8) : [];
+
+  if(!movs.length){
+    caja.innerHTML = `<div class="ases">
+      <span class="ases-eyebrow">Movimientos</span>
+      <h3>Todavía no hay nada registrado</h3>
+      <p class="ases-sub">Dile al asistente «gasté 300 en salidas» y aparecerá aquí
+        en cuanto lo confirmes. También aparece cada mandado que marques.</p></div>`;
+    return;
+  }
+
+  const mesActual = mesDe(dayKey);
+  const gastoMes = movs.filter(m=>mesDe(m.d) === mesActual && m.monto < 0)
+                       .reduce((t,m)=>t + Math.abs(m.monto), 0);
+  let ultimoMes = null;
+  const filas = movs.slice(0, 60).map(m=>{
+    const ym = mesDe(m.d);
+    const enc = ym !== ultimoMes ? `<div class="mv-mes">${esc(nombreMes(ym))}</div>` : "";
+    ultimoMes = ym;
+    const signo = m.monto >= 0 ? "+" : "−";
+    return enc + `<div class="mv">
+      <span class="mv-ic ${m.origen === "mandado" ? "carro" : m.monto >= 0 ? "in" : "out"}"></span>
+      <span class="mv-t"><b>${esc(m.titulo)}</b><small>${esc(m.sub)} · ${esc(fmtDateShort(m.d))}</small></span>
+      <span class="mv-$ ${m.monto >= 0 ? "in" : ""}">${signo}${fmt$(Math.abs(m.monto)).replace("$","$")}</span>
+    </div>`;
+  }).join("");
+
+  caja.innerHTML = `
+    <div class="mv-tot"><span>Salidas de ${esc(nombreMes(mesActual))}</span><b>${fmt$(gastoMes)}</b></div>
+    <div class="mv-lista">${filas}</div>
+    ${bit.length ? `<details class="mas-info"><summary><span class="mi-i">📝</span>Qué cambió el asistente</summary><div class="mi-body">
+      <ul class="pend-lista">${bit.map(x=>`<li>${esc(x.resumen)}</li>`).join("")}</ul></div></details>` : ""}`;
+}
+
 function renderFinanzas(){
   if(!document.getElementById("finPanel")) return;
-  renderCandado(); renderAsesor(); renderDeudas(); renderDinero();
+  renderCandado();
+  const t = document.getElementById("finTabs");
+  if(t) t.hidden = dineroCerrado();
+  if(dineroCerrado()){ renderAsesor(); renderDeudas(); renderMovimientos(); renderDinero(); return; }
+  renderAsesor(); renderDeudas(); renderMovimientos(); renderDinero();
 }
 function irAVista(v){
   if(v !== "cuerpo" && v !== "gym") v = "cuerpo";   /* dinero ya no vive aquí */
@@ -5510,7 +5673,7 @@ irAVista("cuerpo");
 var subHoy = "comidas";
 function irASub(v){
   subHoy = (v === "snacks") ? "snacks" : "comidas";
-  document.querySelectorAll(".sub-tabs [data-sub]").forEach(b=>{
+  document.querySelectorAll("#tab-hoy .sub-tabs [data-sub]").forEach(b=>{
     const on = b.dataset.sub === subHoy;
     b.classList.toggle("on", on);
     b.setAttribute("aria-selected", on ? "true" : "false");
