@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════╗
-║   MI PLAN v6.1 — aplicación completa (Salvador)               ║
+║   MI PLAN v6.2 — aplicación completa (Salvador)               ║
 ║   Sólida Aplicaciones · azul marino + verde azulado           ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -9,6 +9,88 @@ Publicada como proyecto propio en Cloudflare Pages
 PARA ACTUALIZARLA: Cloudflare → Workers y Pages → tu proyecto
 mi-plan → "Crear nueva implementación" → arrastra esta carpeta
 completa → Implementar. Listo en 1 minuto.
+
+┌──────────────────────────────────────────────────────────┐
+│  LO NUEVO DE LA v6.2 — ASESOR FINANCIERO (FASE 0)         │
+└──────────────────────────────────────────────────────────┘
+  ARCHIVO NUEVO: finanzas.js
+    El motor de dinero. Funciones PURAS, sin DOM y sin
+    localStorage: aqui viven TODOS los calculos financieros.
+    Se carga ANTES de app.js. Si lo mueves, actualiza tambien
+    la lista SHELL de sw.js y el <script> de index.html.
+
+  REGLA DEL MODULO (no la rompas en fases siguientes):
+    la capa de conversacion con IA NUNCA hace una operacion
+    aritmetica. Traduce la pregunta a una consulta, el motor
+    la calcula, y la IA solo redacta el resultado. Con tasas
+    del 60 % anual, un calculo inventado cuesta dinero real.
+
+  * ESQUEMA S.fin — generico, arranca vacio. Sirve para
+    cualquier persona, no solo para Salvador:
+      perfil (moneda, colchon minimo, horizonte)
+      candado / ingresos / apartados / deudas
+      movimientos / reglas (como DATOS) / pendientes
+      historial (presupuestos, recalibraciones, consejos)
+    Todo pasa por saneaFin(): tipos forzados, textos topados,
+    tasas recortadas a 0-500 %, dias de corte validados 1-31,
+    y reconstruccion campo por campo (nada de Object.assign
+    con datos ajenos, que contamina el prototipo).
+
+  * CALENDARIO REAL DE PAGOS — un sueldo semanal NO es
+    sueldo x 4.33. La app genera las fechas reales del mes:
+    agosto 2026 trae 5 sabados, septiembre solo 4. Presupuesta
+    con la BASE conservadora (4 pagos) y marca el 5o como
+    ingreso EXTRAORDINARIO: va a deuda cara o al colchon,
+    nunca a gasto corriente.
+
+  * HISTORIAL -> DINERO ahora abre con la tarjeta del asesor:
+    tu ingreso real del mes, cuantos pagos caen, y un
+    desplegable "de donde salio?" con la operacion completa.
+    Ningun numero pide un acto de fe.
+    Si tu ingreso es irregular lo dice en vez de pintar $0.
+
+  * ALTA INICIAL en un toque: de donde viene tu dinero, cada
+    cuando, cuanto, moneda y colchon minimo. Nada mas.
+
+  * CANDADO SOLO EN DINERO: PIN de 4 a 8 digitos. El PIN no se
+    guarda: se guarda su derivacion PBKDF2-SHA256 con 310 000
+    iteraciones y salt aleatorio. Con el candado puesto las
+    cifras NO se pintan (no quedan ni en el DOM). Dieta,
+    rutina y antojos siguen abriendo directo, sin friccion.
+    Si olvidas el PIN no hay recuperacion: no existe servidor.
+
+  * RESPALDO CIFRADO: AES-GCM de 256 bits, clave derivada con
+    PBKDF2 (310 000 iteraciones, salt e IV aleatorios por
+    archivo). La primera vez que exportas con datos de dinero
+    dentro, la app pide una frase. El archivo sigue siendo un
+    HTML que puedes guardar en Drive o mandar por WhatsApp,
+    pero ya no muestra saldos ni deudas — ni el conteo de tus
+    datos, que tambien es informacion. Un archivo alterado no
+    descifra: GCM detecta la manipulacion.
+    Los respaldos viejos sin cifrar se siguen leyendo igual.
+
+  * BUG SERIO CORREGIDO (venia de antes): al importar un
+    respaldo, el guardado automatico de `pagehide` escribia la
+    memoria vieja encima de lo restaurado justo antes de
+    recargar. La importacion se deshacia sola, en silencio.
+    Ahora, una vez comprometida la restauracion, ya nada
+    guarda encima.
+
+  * NO ES ASESORIA FINANCIERA PROFESIONAL. El modulo organiza
+    y proyecta tu propio dinero; no recomienda productos ni
+    inversiones, y nunca pide credenciales bancarias.
+
+  PRUEBAS DE ESTA VERSION (230 comprobaciones, todas en verde)
+    test-fin.js         84  motor: esquema, saneado, calendario,
+                            cifrado y PIN
+    test-fin-ui.js      50  navegador real: alta, resumen,
+                            candado y respaldo de ida y vuelta
+    test-motor.js       13  motor nutricional (sin regresiones)
+    verifica.js         19  recorrido funcional
+    verifica-nuevo.js   55  recorrido funcional ampliado
+    sw-test.js           9  service worker
+    audita-contraste.js  0 fallas WCAG AA - 11 pantallas x 2 temas
+    exploits.js          0 hallazgos - 17 intentos de XSS reales
 
 ┌──────────────────────────────────────────────────────────┐
 │  LO NUEVO DE LA v2                                        │

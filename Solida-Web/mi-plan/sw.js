@@ -8,13 +8,13 @@
                   actualización borraba la biblioteca de imágenes y
                   volvías al gimnasio sin fotos. */
 const APP         = "mi-plan";
-const VERSION     = "mi-plan-v6.1.0";
+const VERSION     = "mi-plan-v6.4.0";
 /* Prefijados con el nombre de la app: CacheStorage es POR ORIGEN, no por
    scope. Purgar por "shell-" borraba la caché de las apps hermanas del
    mismo dominio, y "img-v1" era un nombre genérico que compartían. */
 const SHELL_CACHE = APP + ":shell-" + VERSION;
 const IMG_CACHE   = APP + ":img-v1";
-const SHELL = ["./", "index.html", "app.js", "manifest.json",
+const SHELL = ["./", "index.html", "finanzas.js", "app.js", "manifest.json",
                "img/icon-192.png", "img/icon-512.png",
                "img/icon-512-maskable.png", "img/icon-180.png"];
 
@@ -134,7 +134,7 @@ self.addEventListener("fetch", e => {
      entraba a nuestra caché de shell */
   const dentro = url.pathname.startsWith(new URL(self.registration.scope).pathname);
   const esShell = dentro && (req.mode === "navigate" ||
-                  /(^|\/)(app\.js|index\.html|manifest\.json)$/.test(url.pathname));
+                  /(^|\/)(app\.js|finanzas\.js|index\.html|manifest\.json)$/.test(url.pathname));
 
   if(esShell){
     e.respondWith((async () => {
@@ -147,7 +147,7 @@ self.addEventListener("fetch", e => {
         /* cada recurso del shell sólo se cachea si el tipo cuadra: un 200 con
            HTML en /app.js dejaba la app en blanco de forma persistente */
         const esperado = req.mode === "navigate" || /index\.html$/.test(url.pathname) ? "text/html"
-                       : /app\.js$/.test(url.pathname)        ? "javascript"
+                       : /(app|finanzas)\.js$/.test(url.pathname) ? "javascript"
                        : /manifest\.json$/.test(url.pathname) ? "json" : null;
         const sirve = r.status === 200 && r.type !== "opaqueredirect" && !r.redirected &&
                       (!esperado || ct.includes(esperado));

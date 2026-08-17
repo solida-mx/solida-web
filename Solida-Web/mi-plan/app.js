@@ -146,24 +146,75 @@ applyPersona();
      · el switch físico de silencio LO APAGA — por eso el fin del
        descanso siempre va acompañado de vibración, nunca sonido solo
    ================================================================== */
-let _audio = null, _audioListo = false;
+/* ==================================================================
+   AUDIO — resistente a interrupciones
+   ------------------------------------------------------------------
+   Bug que traía: con música puesta, cerrar y abrir la app dejaba los
+   sonidos muertos para siempre. Cuatro causas a la vez:
+     1) el desbloqueo se registraba con {once:true} y se marcaba hecho
+        PARA SIEMPRE, así que tras una interrupción nunca se rearmaba;
+     2) ctxAudio() devolvía el contexto en caché aunque estuviera
+        cerrado o muerto;
+     3) sólo se atendía el estado "suspended", pero cuando otra app
+        toma la sesión de audio Safari deja el contexto en
+        "interrupted" — estado que nadie miraba;
+     4) las notas se programaban ANTES de que resolviera resume(),
+        que es asíncrono, así que el primer sonido se perdía.
+   ================================================================== */
+let _audio = null;
 function audioOn(){ return (S.ui||{}).sonido !== false; }
+/* volumen 0..1; sólo vibrar = sonido apagado pero avisos con vibración */
+function volumenActual(){
+  const v = Number((S.ui||{}).volumen);
+  if(!Number.isFinite(v)) return 0.85;              /* por omisión */
+  return Math.min(1, Math.max(0, v));
+}
+function soloVibrar(){ return (S.ui||{}).soloVibrar === true; }
+
 function ctxAudio(){
+  /* un contexto cerrado ya no sirve para nada: se tira y se hace otro */
+  if(_audio && _audio.state === "closed") _audio = null;
   if(_audio) return _audio;
   const AC = window.AudioContext || window.webkitAudioContext;
   if(!AC) return null;
-  try{ _audio = new AC(); }catch(e){ return null; }
+  try{ _audio = new AC(); }catch(e){ _audio = null; return null; }
   return _audio;
 }
-/* el primer toque de la sesión desbloquea el audio, sin que se note */
-function desbloqueaAudio(){
-  if(_audioListo) return;
-  const c = ctxAudio(); if(!c) return;
-  if(c.state === "suspended") c.resume().catch(()=>{});
-  _audioListo = true;
+
+/* Devuelve un contexto EN MARCHA, o null. Espera el resume, y si el
+   contexto quedó inservible lo reemplaza por uno nuevo. */
+async function audioListo(){
+  let c = ctxAudio();
+  if(!c) return null;
+  if(c.state === "running") return c;
+  try{ await c.resume(); }catch(e){}
+  if(c.state === "running") return c;
+  /* seguía sin arrancar (interrupted / closed): contexto nuevo y otra vez */
+  try{ await c.close(); }catch(e){}
+  _audio = null;
+  c = ctxAudio();
+  if(!c) return null;
+  if(c.state !== "running"){ try{ await c.resume(); }catch(e){} }
+  return c.state === "running" ? c : null;
 }
+
+/* El desbloqueo se REARMA: cada vez que el contexto deja de estar en
+   marcha, el siguiente toque lo vuelve a despertar. */
+function desbloqueaAudio(){ audioListo(); }
 ["pointerdown","touchstart","keydown"].forEach(ev=>
-  document.addEventListener(ev, desbloqueaAudio, {once:true, passive:true}));
+  document.addEventListener(ev, ()=>{
+    const c = _audio;
+    if(!c || c.state !== "running") desbloqueaAudio();
+  }, {passive:true}));
+
+/* Al volver a la app, reanudar sin esperar a que algo tenga que sonar:
+   así el primer aviso del descanso ya llega vivo. */
+document.addEventListener("visibilitychange", ()=>{
+  if(!document.hidden && _audio && _audio.state !== "running") desbloqueaAudio();
+});
+window.addEventListener("focus", ()=>{
+  if(_audio && _audio.state !== "running") desbloqueaAudio();
+});
 
 /* una nota: onda suave con envolvente, para que no suene a pitido barato */
 function _nota(c, freq, t0, dur, vol, tipo){
@@ -186,19 +237,23 @@ const SONIDOS = {
   descanso:  { notas:[[523.3,0,.16],[659.3,.15,.16],[784,.30,.16],
                       [1046.5,.45,.34],[1046.5,.85,.30]], vol:.16 }
 };
-function sonar(nombre){
-  if(!audioOn()) return;
+/* async a propósito: las notas se programan DESPUÉS de que el contexto
+   está realmente corriendo, no antes. */
+async function sonar(nombre){
+  if(!audioOn() || soloVibrar()) return;
+  const vol = volumenActual();
+  if(vol <= 0) return;
   const def = SONIDOS[nombre]; if(!def) return;
-  const c = ctxAudio(); if(!c) return;
-  if(c.state === "suspended"){ c.resume().catch(()=>{}); }
+  const c = await audioListo(); if(!c) return;
   const t0 = c.currentTime + 0.01;
-  try{ def.notas.forEach(([f, off, dur]) => _nota(c, f, t0+off, dur, def.vol, def.tipo)); }
+  try{ def.notas.forEach(([f, off, dur]) => _nota(c, f, t0+off, dur, def.vol * vol, def.tipo)); }
   catch(e){ /* si el navegador no deja, seguimos sin sonido */ }
 }
-/* sonido + vibración juntos: en el gimnasio la vibración es lo confiable */
-function avisar(nombre, ms){
-  sonar(nombre);
+/* sonido + vibración juntos: en el gimnasio la vibración es lo confiable.
+   Con "sólo vibrar" activo, esto sigue avisando aunque no suene nada. */
+async function avisar(nombre, ms){
   try{ if(navigator.vibrate) navigator.vibrate(ms || 12); }catch(e){}
+  await sonar(nombre);
 }
 
 /* Banner rojo fijo para avisos que NO se pueden perder (a diferencia del toast) */
@@ -221,8 +276,14 @@ function alertaGrave(titulo, texto, accion){
 /* Guardado. Si falla la cuota avisamos SIEMPRE y seguimos intentando:
    apagarlo en silencio era la forma de perder una semana entera de progreso. */
 let guardadoFallando = false;
+/* Al restaurar un respaldo se escribe el estado nuevo en localStorage y se
+   recarga 900 ms después. En ese hueco, cualquier save() —y el de `pagehide`
+   dispara SIEMPRE al recargar— escribía la S vieja que sigue en memoria
+   encima de lo restaurado: la importación se deshacía sola, en silencio.
+   Con esto, una vez comprometida la restauración ya nada guarda encima. */
+let restaurando = false;
 function save(){
-  if(!canStore) return;
+  if(!canStore || restaurando) return;
   try{
     localStorage.setItem(LS_KEY, JSON.stringify(S));
     if(guardadoFallando){                        /* se recuperó: quitamos el aviso */
@@ -1579,15 +1640,36 @@ function closeSheet(){
 }
 document.getElementById("sheetClose").onclick = closeSheet;
 sheetOv.addEventListener("click", e=>{ if(e.target===sheetOv) closeSheet(); });
+/* el número se actualiza mientras arrastras; el sonido de prueba sólo al soltar
+   (con "input" sonaría 20 veces seguidas y sería insoportable) */
+document.getElementById("cfgPanel").addEventListener("input", e=>{
+  const rg = e.target.closest('[data-uirange="volumen"]');
+  if(!rg) return;
+  const out = document.getElementById("volVal");
+  if(out) out.textContent = Math.round(numero(rg.value)) + " %";
+});
 document.getElementById("cfgPanel").addEventListener("change", e=>{
   const ui = e.target.closest("input[type=checkbox][data-ui]");
   if(ui){ if(!S.ui) S.ui={};
     /* la lista blanca de antes dejaba fuera cualquier interruptor nuevo */
-    const permitidos = ["fotosAlimentos","fotosEjercicios","anim","sonido"];
+    const permitidos = ["fotosAlimentos","fotosEjercicios","anim","sonido","soloVibrar"];
     if(permitidos.includes(ui.dataset.ui)) S.ui[ui.dataset.ui] = ui.checked;
     save(); applyUI(); renderMeals(); renderShop(); renderRoutine();
     if(ui.dataset.ui==="sonido" && ui.checked){ desbloqueaAudio(); sonar("comida"); }
+    if(ui.dataset.ui==="soloVibrar") avisar("serie", 60);
     showToast(ui.checked?"Activado ✓":"Desactivado ✓"); return; }
+  /* deslizador de volumen: se aplica en vivo y suena al soltar */
+  const rg = e.target.closest("[data-uirange]");
+  if(rg){
+    if(rg.dataset.uirange === "volumen"){
+      if(!S.ui) S.ui = {};
+      S.ui.volumen = Math.min(1, Math.max(0, numero(rg.value) / 100));
+      const out = document.getElementById("volVal");
+      if(out) out.textContent = Math.round(S.ui.volumen*100) + " %";
+      save(); desbloqueaAudio(); sonar("comida");
+    }
+    return;
+  }
   const bk = e.target.closest("[data-bkimport]");
   if(bk && bk.files && bk.files[0]){ importBackup(bk.files[0]); return; }
   const inp = e.target.closest("[data-imgkey]");
@@ -1605,7 +1687,10 @@ function buildBackupHtml(data){
   const d = new Date();
   const fecha = DAYS[d.getDay()]+" "+d.getDate()+" de "+MONTHS_FULL[d.getMonth()]+" "+d.getFullYear()+
                 ", "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
-  const st = [
+  /* Un respaldo cifrado no presume nada: ni saldos ni conteos. Cuántas
+     mediciones o cuántas deudas traes también es información sobre ti. */
+  const cifrado = !!(data && data.cifrado);
+  const st = cifrado ? [] : [
     [ (S.body||[]).length, "mediciones corporales" ],
     [ Object.keys(S.lifts||{}).length, "pesos de ejercicios" ],
     [ Object.keys(S.trained||{}).length, "días entrenados" ],
@@ -1622,21 +1707,29 @@ function buildBackupHtml(data){
 <div style="max-width:420px;width:100%;background:#12274a;border:1px solid #24416f;border-radius:22px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5)">
   <div style="padding:26px 22px 20px;text-align:center;background:linear-gradient(160deg,#1b396b,#0c1f40)">
     ${logo}
-    <div style="font-size:11px;font-weight:800;letter-spacing:.18em;color:#59cfe0;margin-top:12px">RESPALDO COMPLETO</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.18em;color:#59cfe0;margin-top:12px">${cifrado?"RESPALDO CIFRADO":"RESPALDO COMPLETO"}</div>
     <div style="font-size:24px;font-weight:800;margin-top:4px">Mi Plan</div>
     <div style="font-size:12.5px;color:#9db3d2;margin-top:5px">${fecha}</div>
   </div>
-  <div style="padding:18px 22px 6px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+  ${cifrado ? `<div style="margin:20px 22px 6px;padding:20px 16px;background:rgba(89,207,224,.07);border:1px solid rgba(89,207,224,.3);border-radius:16px;text-align:center">
+    <div style="font-size:30px;line-height:1">🔒</div>
+    <div style="font-size:15px;font-weight:800;margin-top:8px">Contenido cifrado</div>
+    <div style="font-size:12.5px;color:#9db3d2;line-height:1.6;margin-top:6px">
+      Este archivo trae tus datos cifrados con AES-GCM de 256 bits.
+      Sin tu frase de respaldo no se pueden leer, ni por ti ni por nadie más.
+    </div></div>`
+  : `<div style="padding:18px 22px 6px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
     ${st.map(x=>`<div style="background:rgba(232,246,246,.04);border:1px solid #24416f;border-radius:14px;padding:12px 10px;text-align:center">
       <div style="font-size:22px;font-weight:800;color:#2fb5a3">${x[0]}</div>
       <div style="font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#9db3d2;margin-top:2px">${x[1]}</div>
     </div>`).join("")}
-  </div>
+  </div>`}
   <div style="margin:14px 22px;padding:13px 15px;background:rgba(47,181,163,.08);border:1px solid rgba(47,181,163,.3);border-radius:14px;font-size:12.5px;line-height:1.6;color:#c9dcda">
-    <b style="color:#2fb5a3">Para restaurar:</b> abre la app Mi Plan → pestaña <b>Ajustes</b> → 🎯 → <b>Importar respaldo</b> → elige este archivo. Todo regresa tal cual: progreso, ajustes, alimentos e imágenes.
+    <b style="color:#2fb5a3">Para restaurar:</b> abre la app Mi Plan → pestaña <b>Ajustes</b> → 🎯 → <b>Importar respaldo</b> → elige este archivo${cifrado?" y escribe tu frase de respaldo":""}. Todo regresa tal cual: progreso, ajustes, alimentos e imágenes.
   </div>
   <div style="padding:0 22px 22px;text-align:center;font-size:10px;color:#6d83a6;font-weight:700">
     Guarda este archivo en tu nube (Drive, iCloud) · No lo edites: tus datos viajan dentro de él<br>
+    ${cifrado?`<span style="color:#ff8b80">Si olvidas tu frase, este archivo se vuelve inservible: no hay servidor que la recupere</span><br>`:""}
     <span style="letter-spacing:.14em">SÓLIDA APLICACIONES</span>
   </div>
 </div>
@@ -1731,6 +1824,48 @@ function saneaImportado(St){
     St.antojos[w] = St.antojos[w].filter(x=>x && typeof x==="object")
       .map(x=>({ id:texto(x.id,40), n:texto(x.n,80), kcal:n(x.kcal), d:fecha(x.d)||undefined, ts:n(x.ts) }));
   });
+
+  /* unidades propias por alimento: {n:"lata", f:4.25} */
+  if(St.unidades && typeof St.unidades === "object" && !Array.isArray(St.unidades)){
+    Object.keys(St.unidades).forEach(id=>{
+      if(!Array.isArray(St.unidades[id])){ delete St.unidades[id]; return; }
+      St.unidades[id] = St.unidades[id]
+        .filter(u => u && typeof u === "object")
+        .map(u => ({ n: texto(u.n, 24).trim(), f: n(u.f) }))
+        .filter(u => u.n && u.f > 0 && Number.isFinite(u.f))
+        .slice(0, 12);
+      if(!St.unidades[id].length) delete St.unidades[id];
+    });
+  } else if(St.unidades !== undefined) St.unidades = {};
+
+  /* tiendas donde compras: sólo textos cortos */
+  if(St.tiendas !== undefined){
+    St.tiendas = Array.isArray(St.tiendas)
+      ? St.tiendas.filter(t => typeof t === "string").map(t => texto(t, 40).trim())
+                  .filter(Boolean).slice(0, 8)
+      : [];
+  }
+
+  /* preferencias de interfaz: lista blanca estricta. Un respaldo ajeno no
+     puede meter llaves nuevas ni valores de otro tipo. */
+  if(St.ui && typeof St.ui === "object" && !Array.isArray(St.ui)){
+    const u = St.ui, limpio = {};
+    if(["auto","claro","oscuro"].includes(u.tema))      limpio.tema = u.tema;
+    if(["chico","normal","grande"].includes(u.texto))   limpio.texto = u.texto;
+    if(["lista","contraer","foco"].includes(u.vistaRutina)) limpio.vistaRutina = u.vistaRutina;
+    ["fotosAlimentos","fotosEjercicios","anim","sonido","soloVibrar"].forEach(k=>{
+      if(u[k] !== undefined) limpio[k] = !!u[k];
+    });
+    if(u.volumen !== undefined){
+      const v = n(u.volumen, 0.85);
+      limpio.volumen = Math.min(1, Math.max(0, v));
+    }
+    St.ui = limpio;
+  } else if(St.ui !== undefined) St.ui = {};
+
+  /* módulo financiero: el saneado vive en finanzas.js, junto al motor.
+     Reconstruye S.fin campo por campo contra lista blanca. */
+  if(typeof saneaFin === "function") saneaFin(St);
 }
 
 function parseBackup(text){
@@ -1743,10 +1878,17 @@ function parseBackup(text){
   try{
     const d = JSON.parse(raw);
     if(!d || d.app!=="mi-plan") return null;
+    /* Respaldo cifrado: aquí no hay nada que sanear todavía. Se devuelve el
+       sobre y quien importa pide la frase; abreSobreRespaldo() hace el
+       saneado en cuanto el contenido se vuelve legible. */
+    if(d.cifrado === true){
+      if(!d.sobre || typeof d.sobre !== "object" || Array.isArray(d.sobre)) return null;
+      return { app:"mi-plan", v:3, cifrado:true, fecha:d.fecha, sobre:d.sobre };
+    }
     /* S tiene que ser un objeto de verdad: antes pasaba un string o un array
        y la app quedaba en blanco al recargar, sin forma de volver a Ajustes. */
     if(!d.S || typeof d.S!=="object" || Array.isArray(d.S)) return null;
-    if(typeof d.v === "number" && d.v > 2) return null;   /* respaldo de una versión futura */
+    if(typeof d.v === "number" && d.v > 3) return null;   /* respaldo de una versión futura */
     saneaImportado(d.S);      /* defensa en profundidad: el contenido también */
     /* las imágenes sólo pueden ser data:image — si no, cualquiera podría
        inyectar HTML dentro de la app mandándote un respaldo por WhatsApp */
@@ -1760,6 +1902,37 @@ function parseBackup(text){
     return d;
   }catch(e){ return null; }
 }
+/* las imágenes sólo pueden ser data:image — misma regla dentro y fuera del sobre */
+function limpiaCIMG(obj){
+  if(!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+  const out = {};
+  Object.keys(obj).forEach(k=>{
+    if(ES_IMAGEN(obj[k])) out[String(k).slice(0,120)] = obj[k];
+  });
+  return out;
+}
+
+/* ---------- respaldo cifrado (AES-GCM · la frase sólo la tienes tú) ----------
+   El respaldo salía en texto plano. Con deudas, saldos y tasas dentro, quien
+   abriera el archivo en Drive o WhatsApp veía todo. Ahora el contenido va
+   cifrado y el archivo sigue siendo un HTML que se puede guardar donde sea. */
+async function sobreDeRespaldo(frase){
+  const sobre = await cifraRespaldo({ S, CIMG }, frase);
+  if(!sobre) return null;
+  return { app:"mi-plan", v:3, cifrado:true, fecha:new Date().toISOString(), sobre };
+}
+
+/* devuelve el mismo formato que parseBackup para un respaldo normal, así el
+   resto del flujo de importación es idéntico. null = frase equivocada. */
+async function abreSobreRespaldo(pkg, frase){
+  if(!pkg || pkg.cifrado !== true || !pkg.sobre) return null;
+  const dentro = await descifraRespaldo(pkg.sobre, frase);
+  if(!dentro || typeof dentro !== "object") return null;
+  if(!dentro.S || typeof dentro.S !== "object" || Array.isArray(dentro.S)) return null;
+  saneaImportado(dentro.S);          /* el contenido del sobre también es dato no confiable */
+  return { app:"mi-plan", v:3, fecha:pkg.fecha, S:dentro.S, CIMG:limpiaCIMG(dentro.CIMG) };
+}
+
 /* nombre con hora, para que dos respaldos del mismo día no se pisen */
 function nombreRespaldo(){
   const n = new Date(), z = v => String(v).padStart(2,"0");
@@ -1768,8 +1941,62 @@ function nombreRespaldo(){
 }
 function marcaRespaldo(){ S.lastBackup = Date.now(); save(); renderRespaldoAviso(); }
 
-async function exportBackup(){
-  const data = { app:"mi-plan", v:2, fecha:new Date().toISOString(), S, CIMG };
+/* ¿ya hay algo financiero que valga la pena proteger? */
+function hayDatosDeDinero(){
+  const f = fin();
+  return !!(f.ingresos.length || f.deudas.length || f.apartados.length || f.movimientos.length);
+}
+
+/* Puerta de entrada del respaldo: decide si toca cifrar antes de generar nada.
+   Con datos de dinero dentro, un archivo en texto plano en WhatsApp o Drive
+   es una fuga esperando ocurrir, así que la primera vez se pregunta. */
+function exportBackup(){
+  const pref = fin().perfil.cifrarRespaldo;
+  if(pref === true || (pref === null && hayDatosDeDinero())){ abrirFraseSheet(); return; }
+  entregaRespaldo(null);
+}
+
+function abrirFraseSheet(){
+  openSheet("Frase de respaldo", "Para cifrar el archivo", `
+    <div class="alta-form">
+      <label class="nf"><span>Tu frase (mínimo 8 caracteres)</span>
+        <input id="frA" type="password" autocomplete="off" maxlength="120"></label>
+      <label class="nf"><span>Repítela</span>
+        <input id="frB" type="password" autocomplete="off" maxlength="120">
+        <small>Con esta frase se cifra el archivo. No se guarda en ningún lado:
+          si la olvidas, ese respaldo queda inservible. Usa algo que recuerdes
+          y anótalo donde guardas tus contraseñas.</small></label>
+      <div class="ases-btns">
+        <button id="frGuardar">Cifrar y exportar</button>
+        <button class="sec" id="frSin">Esta vez sin cifrar</button>
+      </div>
+    </div>`);
+  const g = $("frGuardar");
+  if(g) g.onclick = async ()=>{
+    const a = String(($("frA")||{}).value || ""), b = String(($("frB")||{}).value || "");
+    if(a.length < 8){ showToast("La frase necesita al menos 8 caracteres"); return; }
+    if(a !== b){ showToast("Las dos frases no coinciden"); return; }
+    g.disabled = true; g.textContent = "Cifrando…";
+    fin().perfil.cifrarRespaldo = true; save();
+    closeSheet(); await entregaRespaldo(a);
+  };
+  const s = $("frSin");
+  if(s) s.onclick = async ()=>{
+    if(!confirm("Sin cifrar, cualquiera que abra el archivo verá tus ingresos, deudas y saldos.\n\n¿Exportar así?")) return;
+    fin().perfil.cifrarRespaldo = false; save();
+    closeSheet(); await entregaRespaldo(null);
+  };
+}
+
+async function entregaRespaldo(frase){
+  let data;
+  if(frase){
+    data = await sobreDeRespaldo(frase);
+    if(!data){ alertaGrave("No se pudo cifrar",
+      "Este navegador no dejó cifrar el respaldo. Tus datos siguen intactos.", null); return; }
+  }else{
+    data = { app:"mi-plan", v:2, fecha:new Date().toISOString(), S, CIMG };
+  }
   const blob = new Blob([buildBackupHtml(data)], {type:"text/html"});
   const nombre = nombreRespaldo();
   /* En iPhone la descarga se pierde en Archivos. La hoja de compartir deja
@@ -1789,7 +2016,8 @@ async function exportBackup(){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
   marcaRespaldo();
-  showToast("⬇️ Respaldo descargado · ábrelo para verlo bonito");
+  showToast(frase ? "⬇️ Respaldo cifrado descargado ✓"
+                  : "⬇️ Respaldo descargado · ábrelo para verlo bonito");
 }
 
 /* resumen legible de un respaldo, para poder comparar antes de sobrescribir */
@@ -1805,7 +2033,41 @@ function importBackup(file){
   rd.onload = ()=>{
     const d = parseBackup(rd.result);
     if(!d){ showToast("Ese archivo no parece un respaldo de Mi Plan 😕"); return; }
+    if(d.cifrado){ pideFraseImport(d); return; }
+    aplicaRespaldo(d);
+  };
+  rd.readAsText(file);
+}
 
+/* respaldo cifrado: sin la frase no hay nada que hacer, ni siquiera saber
+   qué trae dentro */
+function pideFraseImport(pkg){
+  openSheet("Respaldo cifrado", "Escribe tu frase de respaldo", `
+    <div class="alta-form">
+      <label class="nf"><span>Frase de respaldo</span>
+        <input id="imFrase" type="password" autocomplete="off" maxlength="120">
+        <small>Es la frase que escribiste cuando exportaste este archivo.
+          No hay forma de recuperarla ni de abrirlo sin ella.</small></label>
+      <div class="ases-btns"><button id="imAbrir">Abrir respaldo</button></div>
+      <div class="cd-err" id="imErr"></div>
+    </div>`);
+  const b = $("imAbrir");
+  if(b) b.onclick = async ()=>{
+    const frase = String(($("imFrase")||{}).value || "");
+    b.disabled = true; b.textContent = "Descifrando…";
+    const d = await abreSobreRespaldo(pkg, frase);
+    if(!d){
+      b.disabled = false; b.textContent = "Abrir respaldo";
+      if($("imErr")) $("imErr").textContent = "Esa frase no abre este archivo.";
+      return;
+    }
+    closeSheet();
+    aplicaRespaldo(d);
+  };
+}
+
+function aplicaRespaldo(d){
+  {
     /* comparar contra lo que hay hoy y PEDIR CONFIRMACIÓN: un dedazo en la
        lista de archivos no puede borrar meses de progreso. */
     const f = d.fecha ? new Date(d.fecha) : null;
@@ -1821,6 +2083,8 @@ function importBackup(file){
     try{
       /* red de seguridad: copia de lo actual ANTES de tocar nada */
       try{ localStorage.setItem(PRE_KEY, localStorage.getItem(LS_KEY) || ""); }catch(e){}
+      /* a partir de aquí, la memoria está desfasada: nadie más puede guardar */
+      restaurando = true;
       localStorage.setItem(LS_KEY, JSON.stringify(d.S));
       if(d.CIMG){
         try{ localStorage.setItem(IMG_KEY, JSON.stringify(d.CIMG)); }
@@ -1829,12 +2093,12 @@ function importBackup(file){
       showToast("⬆️ Respaldo restaurado · recargando…");
       setTimeout(()=>location.reload(), 900);
     }catch(e){
+      restaurando = false;                 /* falló: la memoria vuelve a ser la verdad */
       alertaGrave("No se pudo restaurar",
         "No hay espacio suficiente en este navegador. Tu progreso anterior sigue intacto.", null);
       try{ const prev = localStorage.getItem(PRE_KEY); if(prev) localStorage.setItem(LS_KEY, prev); }catch(e2){}
     }
-  };
-  rd.readAsText(file);
+  }
 }
 
 /* ---------- Tuerca: Imágenes · Nutrición · Ajustes ---------- */
@@ -1996,11 +2260,25 @@ function disenoHtml(){
       ${seg("tema","Tema",[["auto","Automático"],["claro","Claro"],["oscuro","Oscuro"]], u.tema||"auto")}
       <div class="ui-nota">Automático sigue el modo de tu teléfono. El claro se lee mejor a pleno sol.</div>
       ${seg("texto","Tamaño del texto",[["chico","Chico"],["normal","Normal"],["grande","Grande"]], u.texto||"normal")}
+      ${seg("vistaRutina","Vista de la rutina",
+            [["lista","Lista"],["contraer","Auto-contraer"],["foco","Foco"]], vistaRutina())}
+      <div class="ui-nota"><b>Lista:</b> todos los ejercicios abiertos, como siempre.
+        <b>Auto-contraer:</b> el ejercicio que terminas se recoge solo y la app te lleva
+        al siguiente. <b>Foco:</b> una tarjeta por pantalla, se desliza con el dedo —
+        pensado para el gimnasio, con las manos ocupadas.</div>
       ${chk("fotosAlimentos","Imágenes de alimentos","En comidas y mandado", CONFIG.usarFotos)}
       ${chk("fotosEjercicios","Fotos de ejercicios","En la rutina y sus variantes", CONFIG.fotosEjercicios)}
       ${chk("anim","Animaciones","Timer, confeti y transiciones. Apágalas si tu teléfono va lento", u.anim!==false)}
       ${chk("sonido","Sonidos","Al marcar comidas, series y productos, y al terminar el descanso", u.sonido!==false)}
-      <div class="ui-nota">En iPhone el switch de silencio apaga el sonido de las apps web. Por eso el fin del descanso siempre vibra además de sonar.</div>
+      <div class="nf wide"><span>Volumen</span>
+        <div class="ui-rango">
+          <input type="range" min="0" max="100" step="5" data-uirange="volumen"
+                 value="${Math.round(volumenActual()*100)}" aria-label="Volumen de los sonidos">
+          <output id="volVal">${Math.round(volumenActual()*100)} %</output>
+        </div>
+        <small class="ui-d">Suena una nota de prueba al soltarlo.</small></div>
+      ${chk("soloVibrar","Sólo vibrar","Nada de sonido, pero los avisos siguen vibrando. Útil con audífonos puestos.", u.soloVibrar===true)}
+      <div class="ui-nota">En iPhone el switch de silencio apaga el sonido de las apps web. Por eso el fin del descanso siempre vibra además de sonar. Si otra app te toma el audio (música, una llamada), la app lo recupera sola al volver.</div>
     </div>
     <div class="img-note">Los cambios se aplican al instante y se recuerdan en este dispositivo. Nada de aquí afecta tu dieta ni tu rutina: solo cómo se ve la app.</div>`;
 }
@@ -2493,7 +2771,7 @@ function abrirCompra(id){
   const pu   = prev.pu !== undefined ? prev.pu
              : (ultimoPrecio(id, unidades[ui][0]) ?? +((n.precio||0) * unidades[ui][1]).toFixed(2));
 
-  compraCtx = { id, key, unidades, n, it };
+  compraCtx = { id, key, unidades, n, it, ui, nuevaUnidad:false };
 
   openSheet("¿Cuánto llevaste?", nombre, `
     <div class="cp-obj">
@@ -2502,71 +2780,167 @@ function abrirCompra(id){
       <em>si llevaste otra cosa, ajústalo abajo</em>
     </div>
     <div class="price-form">
-      <label class="nf"><span>Unidad en que lo compras</span>
-        <select id="cpUnit">${unidades.map((u,i)=>`<option value="${i}"${i===ui?" selected":""}>${u[0]}</option>`).join("")}</select></label>
+      <div class="nf"><span>Unidad en que lo compraste</span>
+        <div class="uni-chips" id="cpUnis"></div>
+        <div class="uni-nueva" id="cpNueva" hidden>
+          <div class="cp-fila">
+            <label class="nf"><span>Cómo le dices</span>
+              <input id="unNombre" type="text" maxlength="24" placeholder="lata, paquete, manojo…"></label>
+            <label class="nf"><span>Equivale a</span>
+              <input id="unCuanto" type="number" inputmode="decimal" step="any" min="0" placeholder="425"></label>
+            <label class="nf" id="unMedidaBox"><span>&nbsp;</span>
+              <select id="unMedida">${(n.pz
+                ? [["pz","piezas"]]
+                : it.unit==="ml" ? [["ml","ml"],["l","litros"]] : [["g","gramos"],["kg","kilos"]])
+                .map(m=>`<option value="${m[0]}">${m[1]}</option>`).join("")}</select></label>
+          </div>
+          <button class="cp-rapido" id="unGuardar">Guardar esta unidad</button>
+          <div class="nut-hint">Se guarda para este alimento: la próxima vez ya te aparece como opción y no la vuelves a escribir.</div>
+        </div>
+      </div>
       <div class="cp-fila">
         <label class="nf"><span>Cuánto llevaste</span>
           <input id="cpCant" type="number" inputmode="decimal" step="any" min="0" value="${numero(cant)}"></label>
-        <label class="nf"><span>Precio por unidad ($)</span>
+        <label class="nf"><span>Precio por <b id="cpUniTxt">unidad</b></span>
           <input id="cpPu" type="number" inputmode="decimal" step="any" min="0" value="${+(+pu).toFixed(2)}"></label>
+        <label class="nf"><span>o total pagado</span>
+          <input id="cpTot" type="number" inputmode="decimal" step="any" min="0"></label>
       </div>
       <div class="cp-total">
         <span id="cpDesglose">—</span>
         <div class="pt-fig">Pagaste <b id="cpTotal">$0</b></div>
       </div>
       <div class="cp-aviso" id="cpAviso"></div>
+      <div class="nf"><span>Dónde compraste</span>
+        <div class="uni-chips" id="cpTiendas"></div>
+        <small class="ui-d">Se guarda para todo el mandado de esta semana, no producto por producto.</small></div>
       <button class="cp-rapido" data-cpplan="1">Lo llevé tal cual el plan</button>
       <div class="nut-btns">
         <button class="nb-save" data-cpsave="1">Guardar con estos datos</button>
         <button class="nb-del" data-cpno="1">No lo encontré</button>
       </div>
-      <div class="nut-hint">El precio por unidad se guarda con la fecha: así la app va aprendiendo tus precios reales y puedes ver cómo suben o bajan en Historial → Dinero.</div>
+      <div class="nut-hint">El precio se guarda con su fecha y su unidad: así la app aprende tus precios reales y puedes ver cómo suben o bajan en Historial → Dinero.</div>
     </div>`);
+  pintaChipsUnidad();
+  pintaChipsTienda();
   actualizaCompra();
-  ["cpUnit","cpCant","cpPu"].forEach(k=>{
+  ["cpCant","cpPu"].forEach(k=>{
     const el = document.getElementById(k);
-    if(el) el.addEventListener("input", ()=>{ if(k==="cpUnit") ajustaUnidad(); actualizaCompra(); });
+    if(el) el.addEventListener("input", ()=>actualizaCompra());
   });
+  /* escribir el total recalcula el precio por unidad: en la tienda ves el
+     ticket, no el precio por kilo. Se acabó la aritmética mental. */
+  const tot = document.getElementById("cpTot");
+  if(tot) tot.addEventListener("input", ()=>{
+    const cant = numero(document.getElementById("cpCant").value);
+    const t = numero(tot.value);
+    if(cant > 0 && t >= 0) document.getElementById("cpPu").value = +(t/cant).toFixed(2);
+    actualizaCompra(true);
+  });
+  const gu = document.getElementById("unGuardar");
+  if(gu) gu.onclick = guardaUnidadNueva;
 }
-/* al cambiar de unidad, la cantidad objetivo y el precio se recalculan */
-function ajustaUnidad(){
+
+function pintaChipsUnidad(){
   if(!compraCtx) return;
-  const { it, n, unidades } = compraCtx;
-  const ui = +document.getElementById("cpUnit").value;
-  const obj = objetivoEn(it, n, unidades[ui][0], unidades[ui][1]);
-  document.getElementById("cpCant").value = +obj.toFixed(2);
-  const pu = ultimoPrecio(it.id, unidades[ui][0]) ?? +((n.precio||0) * unidades[ui][1]).toFixed(2);
-  document.getElementById("cpPu").value = +(+pu).toFixed(2);
+  const caja = document.getElementById("cpUnis"); if(!caja) return;
+  const { unidades, ui } = compraCtx;
+  caja.innerHTML = unidades.map((u,i)=>
+    `<button type="button" class="uni-chip${i===ui?" on":""}" data-uni="${i}">${esc(u[0])}</button>`).join("") +
+    `<button type="button" class="uni-chip nueva" data-uninueva="1">＋ Otra…</button>`;
+  const t = document.getElementById("cpUniTxt");
+  if(t) t.textContent = unidades[ui] ? unidades[ui][0] : "unidad";
 }
-function actualizaCompra(){
+
+function pintaChipsTienda(){
+  const caja = document.getElementById("cpTiendas"); if(!caja) return;
+  const actual = compraDe().tienda || "";
+  caja.innerHTML = tiendasUsadas().map(t=>
+    `<button type="button" class="uni-chip${t===actual?" on":""}" data-tienda="${esc(t)}">${esc(t)}</button>`).join("") +
+    `<button type="button" class="uni-chip nueva" data-tiendanueva="1">＋ Otra…</button>`;
+}
+
+/* Cambiar de unidad CONVIERTE la cantidad escrita en vez de borrarla.
+   Antes te reemplazaba lo que tecleaste por el objetivo del plan. */
+function eligeUnidad(i){
   if(!compraCtx) return;
-  const { it, n, unidades } = compraCtx;
-  const ui   = +document.getElementById("cpUnit").value;
-  const cant = +document.getElementById("cpCant").value || 0;
-  const pu   = +document.getElementById("cpPu").value || 0;
+  const { unidades, ui, it } = compraCtx;
+  if(i === ui || !unidades[i]) return;
+  const antes = { n:unidades[ui][0], f:unidades[ui][1] };
+  const ahora = { n:unidades[i][0],  f:unidades[i][1] };
+  const cantEl = document.getElementById("cpCant"), puEl = document.getElementById("cpPu");
+  const totAntes = numero(cantEl.value) * numero(puEl.value);
+  const nuevaCant = convierteCantidad(numero(cantEl.value), antes, ahora);
+  compraCtx.ui = i;
+  cantEl.value = nuevaCant;
+  /* el total pagado no cambia porque cambies de unidad: sólo su reparto */
+  if(nuevaCant > 0 && totAntes > 0) puEl.value = +(totAntes / nuevaCant).toFixed(2);
+  else {
+    const ult = ultimoPrecio(it.id, ahora.n);
+    if(ult != null) puEl.value = +(+ult).toFixed(2);
+  }
+  pintaChipsUnidad();
+  actualizaCompra();
+}
+
+function guardaUnidadNueva(){
+  if(!compraCtx) return;
+  const nom = document.getElementById("unNombre").value;
+  const cua = document.getElementById("unCuanto").value;
+  const med = document.getElementById("unMedida").value;
+  if(!guardaUnidad(compraCtx.id, nom, cua, med)){
+    showToast("Ponle nombre y cuánto equivale"); return;
+  }
+  const it = compraCtx.it, n = compraCtx.n;
+  compraCtx.unidades = priceUnits(it, n);
+  const i = compraCtx.unidades.findIndex(u=>u[0].toLowerCase() === String(nom).trim().toLowerCase().slice(0,24));
+  document.getElementById("cpNueva").hidden = true;
+  pintaChipsUnidad();
+  if(i >= 0) eligeUnidad(i);
+  showToast("📏 Unidad guardada ✓");
+}
+function actualizaCompra(vieneDelTotal){
+  if(!compraCtx) return;
+  const { it, n, unidades, ui } = compraCtx;
+  const uni  = unidades[ui] || ["unidad", 1];
+  const cant = numero(document.getElementById("cpCant").value);
+  const pu   = numero(document.getElementById("cpPu").value);
   const total = cant * pu;
   document.getElementById("cpTotal").textContent = fmt$(total);
   document.getElementById("cpDesglose").textContent =
-    `${cant} × ${fmt$(pu)} por ${unidades[ui][0]}`;
+    `${numeroTxt(cant,3)} × ${fmt$(pu)} por ${uni[0]}`;
+  /* el campo de total se rellena solo, salvo mientras lo estás escribiendo */
+  const totEl = document.getElementById("cpTot");
+  if(totEl && !vieneDelTotal && document.activeElement !== totEl)
+    totEl.value = total ? +total.toFixed(2) : "";
+
+  const av = document.getElementById("cpAviso");
+  const partes = [];
 
   /* aviso si te alejaste mucho del objetivo: no bloquea, sólo informa */
-  const obj = objetivoEn(it, n, unidades[ui][0], unidades[ui][1]);
+  const obj = objetivoEn(it, n, uni[0], uni[1]);
   const dif = obj ? (cant - obj) / obj : 0;
-  const av = document.getElementById("cpAviso");
-  if(Math.abs(dif) < 0.12) av.innerHTML = "";
-  else av.innerHTML = `<span class="${dif>0?'mas':'menos'}">${
+  if(Math.abs(dif) >= 0.12) partes.push(`<span class="${dif>0?'mas':'menos'}">${
     dif>0 ? `Llevas ${Math.round(dif*100)} % más de lo que pide el plan — te va a sobrar.`
-          : `Llevas ${Math.round(-dif*100)} % menos — puede que no alcance la semana.`}</span>`;
+          : `Llevas ${Math.round(-dif*100)} % menos — puede que no alcance la semana.`}</span>`);
+
+  /* precio fuera de tu propio rango: sólo aviso, el estimado no se toca */
+  const at = precioAtipico(it.id, uni[0], pu);
+  if(at) partes.push(`<span class="${at.pct>0?'mas':'menos'}">${
+    at.pct>0 ? `Ese precio está ${at.pct} % arriba de tu mediana (${fmt$(at.mediana)} por ${esc(uni[0])}). ¿Seguro?`
+             : `Está ${-at.pct} % abajo de tu mediana (${fmt$(at.mediana)}). Si no es oferta, revisa el dedazo.`}</span>`);
+
+  av.innerHTML = partes.join("");
 }
 function guardarCompra(){
   if(!compraCtx) return;
-  const { id, unidades, n, it } = compraCtx;
-  const ui   = +document.getElementById("cpUnit").value;
-  const cant = +document.getElementById("cpCant").value || 0;
-  const pu   = +document.getElementById("cpPu").value || 0;
+  const { id, unidades, n, it, ui } = compraCtx;
+  const cant = numero(document.getElementById("cpCant").value);
+  const pu   = numero(document.getElementById("cpPu").value);
   const unidad = unidades[ui][0], factorU = unidades[ui][1];
 
-  compraDe().items[id] = { e: COMPRA_OK, $: Math.round(cant*pu), q: cant, u: unidad, pu };
+  /* con centavos: redondear a pesos enteros desviaba la suma de la semana */
+  compraDe().items[id] = { e: COMPRA_OK, $: +(cant*pu).toFixed(2), q: cant, u: unidad, pu };
 
   /* el precio real alimenta el estimado de las próximas semanas */
   if(pu > 0){
@@ -2838,16 +3212,130 @@ document.addEventListener("click", e=>{
 /* ---------- Submenú de precio (desde el mandado) ---------- */
 /* unidades disponibles según cómo se mide el alimento; k = cuántas
    "bases internas" (100 g / 100 ml / pieza) caben en esa unidad */
-function priceUnits(it, n){
+/* ==================================================================
+   UNIDADES DE COMPRA
+   ------------------------------------------------------------------
+   Antes esto devolvía una lista fija y corta: para casi todos los
+   alimentos por pieza había UNA sola opción, así que el selector
+   no se podía cambiar y las cantidades registradas eran "cercanas
+   pero falsas". Ahora la lista base se puede ampliar con unidades
+   propias por alimento ("lata" = 425 g), que se guardan y vuelven
+   a aparecer como opción la próxima vez.
+
+   El factor `f` está en UNIDAD INTERNA: 100 g / 100 ml para lo que
+   se pesa (kilo = 10) y piezas para lo que se cuenta.
+   Los nombres se guardan SIN escapar: el escape va al pintar.
+   ================================================================== */
+function unidadesBase(it, n){
   if(n.pz){
-    const u=[[ esc(n.pzTxt||"pieza"), 1 ]];
-    if(it.id==="huevos") u.push(["cartón (30 pzas)", 30]);
-    if(it.id==="tortillas") u.push(["kilo (≈30 pzas)", 30]);
-    if(it.id==="galletas") u.push(["caja (6 paquetes)", 6]);
+    const u = [{ n: n.pzTxt || "pieza", f: 1 }];
+    if(it.id==="huevos")    u.push({n:"cartón (30 pzas)", f:30});
+    if(it.id==="tortillas") u.push({n:"kilo (≈30 pzas)",  f:30});
+    if(it.id==="galletas")  u.push({n:"caja (6 paquetes)",f:6});
+    u.push({ n:"docena", f:12 });
     return u;
   }
-  if(it.unit==="ml") return [["litro",10],["100 ml",1]];
-  return [["kilo",10],["100 g",1],["250 g",2.5],["bolsa de 500 g",5]];
+  if(it.unit==="ml") return [{n:"litro",f:10},{n:"100 ml",f:1},{n:"botella de 600 ml",f:6}];
+  return [{n:"kilo",f:10},{n:"100 g",f:1},{n:"250 g",f:2.5},{n:"bolsa de 500 g",f:5}];
+}
+
+/* base + las tuyas, sin repetir nombres */
+function unidadesDe(id){
+  const it = shopById[id]; if(!it) return [];
+  const n = nutOf(nutKey(id, S.swaps[id]));
+  const base = unidadesBase(it, n);
+  const propias = (S.unidades && Array.isArray(S.unidades[id])) ? S.unidades[id] : [];
+  const vistas = new Set(base.map(u=>u.n.toLowerCase()));
+  const out = base.slice();
+  propias.forEach(u=>{
+    if(!u || typeof u.n !== "string") return;
+    const k = u.n.toLowerCase();
+    if(vistas.has(k)) return;
+    vistas.add(k); out.push({ n:u.n, f:numero(u.f) });
+  });
+  return out.filter(u=>u.n && Number.isFinite(u.f) && u.f > 0);
+}
+
+/* Guarda "una lata son 425 g" como factor reutilizable.
+   medida: "g" | "ml" | "kg" | "l" | "pz" */
+function guardaUnidad(id, nombre, cuanto, medida){
+  const it = shopById[id]; if(!it) return false;
+  const txt = String(nombre == null ? "" : nombre).trim().slice(0, 24);
+  if(!txt) return false;
+  const c = numero(cuanto);
+  if(!(c > 0)) return false;
+  const n = nutOf(nutKey(id, S.swaps[id]));
+  let f;
+  if(n.pz)                       f = c;              /* piezas por paquete */
+  else if(medida === "kg" || medida === "l") f = c * 10;   /* 1 kg = 10 × 100 g */
+  else                           f = c / 100;        /* gramos o ml → 100 g/ml */
+  if(!(f > 0) || !Number.isFinite(f)) return false;
+  if(!S.unidades || typeof S.unidades !== "object") S.unidades = {};
+  if(!Array.isArray(S.unidades[id])) S.unidades[id] = [];
+  const lista = S.unidades[id];
+  const i = lista.findIndex(u => u && String(u.n).toLowerCase() === txt.toLowerCase());
+  if(i >= 0) lista[i] = { n:txt, f };
+  else lista.push({ n:txt, f });
+  if(lista.length > 12) lista.splice(0, lista.length-12);
+  save();
+  return true;
+}
+
+/* Cambiar de unidad CONVIERTE lo que ya escribiste. Antes lo borraba y
+   lo reemplazaba por el objetivo del plan: si tecleabas la cantidad real
+   y luego cambiabas de unidad, perdías el dato. */
+function convierteCantidad(cant, desde, hacia){
+  const c = numero(cant);
+  const fa = desde && numero(desde.f), fb = hacia && numero(hacia.f);
+  if(!(fa > 0) || !(fb > 0)) return c;
+  return +(c * fa / fb).toFixed(4);
+}
+
+/* mediana del precio por unidad de las últimas capturas, comparando
+   sólo contra la MISMA unidad (peras con peras) */
+function medianaPrecio(id, unidad, cuantas){
+  const h = (S.precios && Array.isArray(S.precios[id])) ? S.precios[id] : [];
+  const v = h.filter(x=>x && x.u === unidad && numero(x.pu) > 0)
+             .slice(-(cuantas || 8)).map(x=>numero(x.pu)).sort((a,b)=>a-b);
+  if(!v.length) return null;
+  const m = Math.floor(v.length/2);
+  return v.length % 2 ? v[m] : (v[m-1] + v[m]) / 2;
+}
+
+/* Aviso, NO corrección: el estimado sigue usando la última compra, como
+   pediste. Esto sólo te enseña cuándo esa última compra se salió del
+   rango, para que decidas tú. */
+function precioAtipico(id, unidad, pu, umbral){
+  const med = medianaPrecio(id, unidad);
+  const p = numero(pu);
+  const h = (S.precios && Array.isArray(S.precios[id])) ? S.precios[id] : [];
+  const cuentan = h.filter(x=>x && x.u === unidad && numero(x.pu) > 0).length;
+  if(!med || p <= 0 || cuentan < 3) return null;      /* sin historia, sin opinión */
+  const pct = (p - med) / med * 100;
+  const lim = umbral === undefined ? 25 : umbral;
+  if(Math.abs(pct) < lim) return null;
+  return { pct: Math.round(pct), mediana: med, muestras: cuentan };
+}
+
+const TIENDAS_DEF = ["Supermercado","Tiendita","Mercado","Mayoreo"];
+function tiendasUsadas(){
+  const t = Array.isArray(S.tiendas) ? S.tiendas.filter(x=>typeof x==="string" && x.trim()) : [];
+  const vistas = new Set(t.map(x=>x.toLowerCase()));
+  return t.concat(TIENDAS_DEF.filter(d=>!vistas.has(d.toLowerCase()))).slice(0, 8);
+}
+function recuerdaTienda(nombre){
+  const t = String(nombre||"").trim().slice(0,40);
+  if(!t) return;
+  if(!Array.isArray(S.tiendas)) S.tiendas = [];
+  const i = S.tiendas.findIndex(x=>String(x).toLowerCase()===t.toLowerCase());
+  if(i >= 0) S.tiendas.splice(i,1);
+  S.tiendas.unshift(t);                       /* la más reciente, primero */
+  if(S.tiendas.length > 8) S.tiendas.length = 8;
+}
+
+/* compatibilidad: el resto del código sigue pidiendo pares [nombre, factor] */
+function priceUnits(it, n){
+  return unidadesDe(it.id).map(u=>[u.n, u.f]);
 }
 let priceCtx = null; /* {id, key, qty, units} */
 function openPriceSheet(id){
@@ -2947,7 +3435,10 @@ document.getElementById("cfgPanel").addEventListener("click",e=>{
   if(un){ S.unidad=un.dataset.unit; save(); renderUnitToggle(); renderRoutine(); renderGearSheet();
     showToast("Pesos en "+(S.unidad==="lb"?"libras":"kilogramos")+" ✓"); return; }
   const seg=e.target.closest(".ui-seg [data-ui]");
-  if(seg){ if(!S.ui) S.ui={}; S.ui[seg.dataset.ui]=seg.dataset.v; save(); applyUI(); renderGearSheet(); return; }
+  if(seg){ if(!S.ui) S.ui={}; S.ui[seg.dataset.ui]=seg.dataset.v; save(); applyUI();
+    /* cambiar la vista de la rutina tiene que repintarla, no sólo Ajustes */
+    if(seg.dataset.ui==="vistaRutina"){ exAbiertos.clear(); renderRoutine(); }
+    renderGearSheet(); return; }
   const idel=e.target.closest("[data-imgdel]");
   if(idel){ delete CIMG[idel.dataset.imgdel]; saveImgs(); refreshAfterImg();
     showToast("Imagen original restaurada ✓"); return; }
@@ -3012,11 +3503,27 @@ document.getElementById("cfgPanel").addEventListener("click",e=>{
 
 });
 document.getElementById("sheetBody").addEventListener("click",e=>{
+  /* --- unidades: chips, y la de "otra…" --- */
+  const uc = e.target.closest("[data-uni]");
+  if(uc){ eligeUnidad(+uc.dataset.uni); return; }
+  const un = e.target.closest("[data-uninueva]");
+  if(un){ const c = document.getElementById("cpNueva");
+    if(c){ c.hidden = !c.hidden; if(!c.hidden) document.getElementById("unNombre").focus(); }
+    return; }
+  /* --- tienda del mandado: se elige una vez y aplica a toda la semana --- */
+  const tc = e.target.closest("[data-tienda]");
+  if(tc){ compraDe().tienda = tc.dataset.tienda; recuerdaTienda(tc.dataset.tienda);
+          save(); pintaChipsTienda(); return; }
+  const tn = e.target.closest("[data-tiendanueva]");
+  if(tn){ const nom = prompt("¿Dónde compraste?");
+    if(nom && nom.trim()){ compraDe().tienda = nom.trim().slice(0,40);
+      recuerdaTienda(compraDe().tienda); save(); pintaChipsTienda(); }
+    return; }
+
   const cp=e.target.closest("[data-cpplan]");
   if(cp && compraCtx){
     /* un toque: cantidad objetivo y el precio que ya trae precargado */
-    const { it, n, unidades } = compraCtx;
-    const ui = +document.getElementById("cpUnit").value;
+    const { it, n, unidades, ui } = compraCtx;
     document.getElementById("cpCant").value =
       +objetivoEn(it, n, unidades[ui][0], unidades[ui][1]).toFixed(2);
     guardarCompra(); return; }
@@ -3258,6 +3765,147 @@ function renderFase(){
 }
 
 /* --- Render de la rutina del día seleccionado --- */
+/* ==================================================================
+   RUTINA — tres vistas sobre la MISMA tarjeta
+     lista     todo abierto, como siempre
+     contraer  el ejercicio terminado se recoge solo (por omisión)
+     foco      una tarjeta por pantalla, deslizable con el dedo
+   La tarjeta se genera una sola vez aquí para que las tres vistas
+   no se desincronicen nunca.
+   ================================================================== */
+function vistaRutina(){
+  const v = (S.ui||{}).vistaRutina;
+  return ["lista","contraer","foco"].includes(v) ? v : "contraer";
+}
+/* ejercicios que TÚ volviste a abrir aunque estén terminados.
+   var, no let: renderRoutine() está definida antes de esta línea. */
+var exAbiertos = new Set();
+
+function exTarjetaHtml(ex, isDeload){
+    const v=getVar(ex);
+    const w=getW(ex), showW = isDeload ? roundP(w*0.62) : w;
+    const inc = ex.grp==="inf"?5:2.5;
+    const hiDone = S.liftHi[liftKey(ex)]===thisWeek;
+    const bodyweight = !!v.bw;
+    const done = setsDone(viewKey, ex.id);
+    const rest = restFor(ex);
+    const sqs = Array.from({length:ex.s},(_,i)=>
+      `<button class="set-sq${i<done?' on':''}" data-sq="${ex.id}" data-k="${i}" data-rest="${rest}" data-total="${ex.s}" data-name="${esc(v.n)}" aria-label="Serie ${i+1}" aria-pressed="${i<done}">${i<done?'✓':i+1}</button>`).join("");
+    return `<div class="ex${done>=ex.s?' ex-complete':''}" data-ex="${esc(ex.id)}">
+      <div class="ex-top">
+        ${exPhoto(v)}
+        <span class="nm"><b>${esc(v.n)}</b>
+          <small>${ex.s}×${ex.r} · descanso ${fmtRest(rest)}${v.u?" · "+esc(v.u):""}</small>
+          <span class="act"><span class="a-lbl">Activación</span><span class="a-bar"><i style="width:${v.act}%"></i></span><span class="a-num">${v.act}</span></span>
+        </span>
+      </div>
+      <div class="ex-wrow">
+        <button data-w="-" aria-label="Bajar peso">−</button>
+        <span class="wv"><input class="wv-in" data-exw="${esc(ex.id)}" type="number" inputmode="decimal" min="0" max="600" step="any" value="${+toUnit(w).toFixed(1)}" aria-label="Peso"><small>Peso · ${bodyweight?"lastre":unitLabel()}</small></span>
+        <button data-w="+" aria-label="Subir peso">+</button>
+      </div>
+      ${isDeload?`<div class="deload-line">🧘 <b>Hoy levantas ${bodyweight?"solo tu peso corporal":fmtW(showW)}</b>${bodyweight?", sin lastre, con una serie menos y lejos del fallo":" · 62 % de tu peso de trabajo ("+fmtW(w)+"), sin llegar al fallo"}. El campo de arriba es tu <b>peso normal</b>: edítalo cuando quieras.</div>`:""}
+      <div class="set-lbl">Series · toca un cuadro al terminar cada una</div>
+      <div class="set-grid">${sqs}</div>
+      ${!isDeload?`
+      <div class="ex-done${hiDone?' on':''}" data-hi="${esc(ex.id)}">
+        <span class="box">${hiDone?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
+        <span>Completé todas las series en el rango alto</span>
+      </div>
+      <div class="next-up${hiDone?' show':''}">▲ Próxima sesión ${bodyweight?"añade lastre hasta "+fmtW(roundP(w+inc)):"sube a "+fmtW(roundP(w+inc))}</div>`:""}
+      <button class="var-btn" data-varsheet="${ex.id}">
+        <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg> <span>Cambiar variante del ejercicio</span><span class="vb-n">${ex.v.length}</span>
+      </button>
+    </div>`;
+}
+
+/* fila compacta del ejercicio ya terminado */
+function exCompactaHtml(ex){
+  const v = getVar(ex);
+  const w = getW(ex);
+  const bodyweight = !!v.bw;
+  return `<div class="ex ex-compacta" data-ex="${esc(ex.id)}" data-reabrir="${esc(ex.id)}"
+               role="button" tabindex="0" aria-label="Reabrir ${esc(v.n)}">
+    <span class="exc-ok" aria-hidden="true">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
+    <span class="exc-nm"><b>${esc(v.n)}</b>
+      <small>${ex.s}×${ex.r}${bodyweight?"":" · "+fmtW(w)}</small></span>
+    <span class="exc-abrir" aria-hidden="true">Ver</span>
+  </div>`;
+}
+
+function pintaEjercicios(list, isDeload){
+  const modo = vistaRutina();
+
+  if(modo === "foco"){
+    const puntos = list.map((ex,i)=>{
+      const listo = setsDone(viewKey, ex.id) >= ex.s;
+      return `<button class="fp${listo?" ok":""}" data-foco="${i}" aria-label="Ir a ${esc(getVar(ex).n)}"></button>`;
+    }).join("");
+    const cards = list.map((ex,i)=>
+      `<section class="foco-card" data-fi="${i}" aria-label="Ejercicio ${i+1} de ${list.length}">
+         <div class="foco-num">${i+1} de ${list.length}</div>
+         ${exTarjetaHtml(ex, isDeload)}
+       </section>`).join("");
+    return `<div class="foco">
+      <div class="foco-puntos" role="tablist">${puntos}</div>
+      <div class="foco-pista" id="focoPista">${cards}</div>
+      <div class="foco-flechas">
+        <button data-focoir="-1" aria-label="Ejercicio anterior">‹</button>
+        <button data-focoir="1" aria-label="Ejercicio siguiente">›</button>
+      </div>
+    </div>`;
+  }
+
+  return list.map(ex=>{
+    const listo = setsDone(viewKey, ex.id) >= ex.s;
+    if(modo === "contraer" && listo && !exAbiertos.has(ex.id)) return exCompactaHtml(ex);
+    return exTarjetaHtml(ex, isDeload);
+  }).join("");
+}
+
+/* Tras completar un ejercicio, llevarte al siguiente pendiente: en el
+   gimnasio eso es lo que de verdad ahorra toques. */
+function avanzaAlPendiente(exIdTerminado){
+  const b = bloqueDe(viewKey);
+  if(!b || b.t !== "entreno") return;
+  const list = RUTINA[b.id] || [];
+  const i = list.findIndex(x=>x.id === exIdTerminado);
+  const sig = list.slice(i+1).find(x=>setsDone(viewKey, x.id) < x.s);
+  if(!sig) return;
+  if(vistaRutina() === "foco"){
+    const k = list.findIndex(x=>x.id === sig.id);
+    setTimeout(()=>vaAFoco(k), 260);
+    return;
+  }
+  setTimeout(()=>{
+    const el = document.querySelector(`.ex[data-ex="${CSS.escape(sig.id)}"]`);
+    if(el) el.scrollIntoView({behavior: (S.ui||{}).anim===false ? "auto" : "smooth", block:"center"});
+  }, 260);
+}
+
+function focoActual(){
+  const pista = document.getElementById("focoPista");
+  if(!pista) return 0;
+  const card = pista.querySelector(".foco-card");
+  if(!card) return 0;
+  return Math.round(pista.scrollLeft / card.offsetWidth);
+}
+function vaAFoco(i){
+  const pista = document.getElementById("focoPista");
+  if(!pista) return;
+  const cards = pista.querySelectorAll(".foco-card");
+  const k = Math.max(0, Math.min(cards.length-1, i));
+  if(!cards[k]) return;
+  pista.scrollTo({ left: k * cards[0].offsetWidth,
+                   behavior: (S.ui||{}).anim===false ? "auto" : "smooth" });
+  marcaPunto(k);
+}
+function marcaPunto(k){
+  document.querySelectorAll(".foco-puntos .fp").forEach((p,i)=>
+    p.classList.toggle("aqui", i === k));
+}
+
 function renderRoutine(){
   const b = bloqueDe(viewKey);
   const f = faseDe(viewKey), isDeload = f.idx===3;
@@ -3303,43 +3951,7 @@ function renderRoutine(){
     <span class="b-c">${wOn?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span></div>`;
 
   const list = RUTINA[b.id];
-  $("exList").innerHTML = list.map(ex=>{
-    const v=getVar(ex);
-    const w=getW(ex), showW = isDeload ? roundP(w*0.62) : w;
-    const inc = ex.grp==="inf"?5:2.5;
-    const hiDone = S.liftHi[liftKey(ex)]===thisWeek;
-    const bodyweight = !!v.bw;
-    const done = setsDone(viewKey, ex.id);
-    const rest = restFor(ex);
-    const sqs = Array.from({length:ex.s},(_,i)=>
-      `<button class="set-sq${i<done?' on':''}" data-sq="${ex.id}" data-k="${i}" data-rest="${rest}" data-total="${ex.s}" data-name="${esc(v.n)}" aria-label="Serie ${i+1}" aria-pressed="${i<done}">${i<done?'✓':i+1}</button>`).join("");
-    return `<div class="ex${done>=ex.s?' ex-complete':''}" data-ex="${esc(ex.id)}">
-      <div class="ex-top">
-        ${exPhoto(v)}
-        <span class="nm"><b>${esc(v.n)}</b>
-          <small>${ex.s}×${ex.r} · descanso ${fmtRest(rest)}${v.u?" · "+esc(v.u):""}</small>
-          <span class="act"><span class="a-lbl">Activación</span><span class="a-bar"><i style="width:${v.act}%"></i></span><span class="a-num">${v.act}</span></span>
-        </span>
-      </div>
-      <div class="ex-wrow">
-        <button data-w="-" aria-label="Bajar peso">−</button>
-        <span class="wv"><input class="wv-in" data-exw="${esc(ex.id)}" type="number" inputmode="decimal" min="0" max="600" step="any" value="${+toUnit(w).toFixed(1)}" aria-label="Peso"><small>Peso · ${bodyweight?"lastre":unitLabel()}</small></span>
-        <button data-w="+" aria-label="Subir peso">+</button>
-      </div>
-      ${isDeload?`<div class="deload-line">🧘 <b>Hoy levantas ${bodyweight?"solo tu peso corporal":fmtW(showW)}</b>${bodyweight?", sin lastre, con una serie menos y lejos del fallo":" · 62 % de tu peso de trabajo ("+fmtW(w)+"), sin llegar al fallo"}. El campo de arriba es tu <b>peso normal</b>: edítalo cuando quieras.</div>`:""}
-      <div class="set-lbl">Series · toca un cuadro al terminar cada una</div>
-      <div class="set-grid">${sqs}</div>
-      ${!isDeload?`
-      <div class="ex-done${hiDone?' on':''}" data-hi="${esc(ex.id)}">
-        <span class="box">${hiDone?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
-        <span>Completé todas las series en el rango alto</span>
-      </div>
-      <div class="next-up${hiDone?' show':''}">▲ Próxima sesión ${bodyweight?"añade lastre hasta "+fmtW(roundP(w+inc)):"sube a "+fmtW(roundP(w+inc))}</div>`:""}
-      <button class="var-btn" data-varsheet="${ex.id}">
-        <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg> <span>Cambiar variante del ejercicio</span><span class="vb-n">${ex.v.length}</span>
-      </button>
-    </div>`;
-  }).join("");
+  $("exList").innerHTML = pintaEjercicios(list, isDeload);
 
   const cOn = S.cardio[viewKey]===true;
   $("cardioBox").innerHTML = `<div class="block${cOn?' on':''}" data-blk="cardio" style="--bc:rgba(89,207,224,.32);--bc2:var(--sky);--bbg2:var(--sky-soft)">
@@ -3408,11 +4020,26 @@ $("exList").addEventListener("click",e=>{
     const cur=S.sets[viewKey][exId]||0;
     /* tocar el último cuadro marcado lo desmarca; tocar cualquier otro marca hasta ahí */
     const target = (k+1===cur) ? k : k+1;
-    S.sets[viewKey][exId]=target; save(); renderRoutine(); renderHdrExtra();
+    S.sets[viewKey][exId]=target;
+    /* si lo estás reabriendo para quitar una serie, que no se te vuelva a
+       cerrar en la cara */
+    if(target < total) exAbiertos.add(exId); else exAbiertos.delete(exId);
+    const posFoco = vistaRutina()==="foco" ? focoActual() : -1;
+    save(); renderRoutine(); renderHdrExtra();
+    if(posFoco >= 0) vaAFoco(posFoco);
     if(target>cur && target<total){ startRest(rest,name); avisar("serie"); }
-    else if(target>=total){ stopRest(); avisar("ejercicio", [30,50,60]); showToast("Ejercicio completo ✓"); }
+    else if(target>=total){ stopRest(); avisar("ejercicio", [30,50,60]);
+      showToast("Ejercicio completo ✓"); avanzaAlPendiente(exId); }
     else stopRest();
     return; }
+  /* volver a abrir un ejercicio contraído */
+  const rb=e.target.closest("[data-reabrir]");
+  if(rb){ exAbiertos.add(rb.dataset.reabrir); renderRoutine(); return; }
+  /* vista Foco: puntos y flechas */
+  const fp=e.target.closest("[data-foco]");
+  if(fp){ vaAFoco(+fp.dataset.foco); return; }
+  const fi=e.target.closest("[data-focoir]");
+  if(fi){ vaAFoco(focoActual() + (+fi.dataset.focoir)); return; }
 
   const wb=e.target.closest("[data-w]");
   if(wb){ const exId=wb.closest(".ex").dataset.ex; const ex=list.find(x=>x.id===exId);
@@ -4145,6 +4772,13 @@ function gastoDelMes(ym){
 }
 function renderDinero(){
   if(!$("dinStats")) return;
+  /* Con el candado puesto no basta esconder el contenedor: las cifras no se
+     pintan, para que no queden en el DOM de una pantalla bloqueada. */
+  if(dineroCerrado()){
+    ["dinStats","dinSemanas","dinPrecio","dinCategorias","dinMes","dinLista"]
+      .forEach(k=>{ if($(k)) $(k).innerHTML = ""; });
+    return;
+  }
   const hist = historialCompras();
   const st = (v,l,c)=>`<div class="stat" style="--sc:${c}"><b>${v}</b><span>${l}</span></div>`;
   const totales = hist.map(h=>h.gasto);
@@ -4219,10 +4853,260 @@ function renderDinero(){
     : `<li class="hist-vacio">Marca productos en el Mandado y aquí aparecerá tu gasto, sin hacer nada más.</li>`;
 }
 
+/* ==================================================================
+   ASESOR FINANCIERO — capa de interfaz (FASE 0)
+   Los cálculos NO viven aquí: están en finanzas.js. Esta capa sólo
+   pinta lo que el motor devuelve, y siempre con la operación a la
+   vista para que ningún número pida un acto de fe.
+   ================================================================== */
+
+/* S.fin lo crea saneaFin() al arrancar; esto es la red por si acaso */
+function fin(){
+  if(!S.fin || typeof S.fin !== "object"){ S.fin = finDef(); }
+  return S.fin;
+}
+
+/* Abierto sólo durante esta sesión: al recargar vuelve a pedir el PIN.
+   Nunca se persiste, para que un respaldo robado no venga desbloqueado. */
+/* `var` a propósito: renderDinero() está definida ANTES de esta línea y una
+   `let` la dejaría en zona muerta si algo la llama durante el arranque
+   (ya pasó con histVista). Con var arranca en undefined, que es falsy. */
+var dineroAbierto = false;
+const NOMBRE_DIA = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+
+function dineroCerrado(){
+  const c = fin().candado;
+  return !!(c && c.hash) && !dineroAbierto;
+}
+
+/* ---------- candado ---------- */
+function renderCandado(err){
+  const caja = $("dinCandado"), cuerpo = $("dinCuerpo"), ases = $("dinAsesor");
+  if(!caja) return;
+  const cerrado = dineroCerrado();
+  caja.hidden = !cerrado;
+  if(cuerpo) cuerpo.hidden = cerrado;
+  if(ases)   ases.hidden   = cerrado;
+  if(!cerrado){ caja.innerHTML = ""; return; }
+  caja.innerHTML = `
+    <div class="cd-ic" aria-hidden="true">🔒</div>
+    <b>Tu dinero está protegido</b>
+    <p class="cd-sub">Escribe tu PIN para ver ingresos, deudas y gastos.
+      El resto de la app funciona sin PIN.</p>
+    <div class="cd-fila">
+      <input id="pinEntra" type="password" inputmode="numeric" autocomplete="off"
+             maxlength="8" aria-label="PIN" placeholder="••••">
+      <button id="pinAbrir" class="log-btn" style="min-width:96px">Abrir</button>
+    </div>
+    ${err ? `<div class="cd-err">${esc(err)}</div>` : ""}`;
+  const inp = $("pinEntra"), btn = $("pinAbrir");
+  if(btn) btn.onclick = intentaAbrirDinero;
+  if(inp) inp.addEventListener("keydown", e=>{ if(e.key==="Enter") intentaAbrirDinero(); });
+}
+
+async function intentaAbrirDinero(){
+  const inp = $("pinEntra"), btn = $("pinAbrir");
+  if(!inp) return;
+  const pin = String(inp.value || "");
+  if(btn){ btn.disabled = true; btn.textContent = "…"; }
+  const bien = await verificaPin(pin, fin().candado);
+  /* al abrir hay que volver a pintar el resumen: mientras estaba cerrado se
+     vació a propósito para no dejar cifras en el DOM */
+  if(bien){ dineroAbierto = true; renderCandado(); renderAsesor(); renderDinero();
+            sonar("comida"); return; }
+  renderCandado("Ese PIN no es correcto. Vuelve a intentar.");
+}
+
+function abrirPinSheet(){
+  const tiene = !!(fin().candado && fin().candado.hash);
+  openSheet(tiene ? "Cambiar el PIN" : "Proteger con PIN",
+            "Sólo para la sección de Dinero", `
+    <div class="alta-form">
+      <label class="nf"><span>PIN nuevo (4 a 8 dígitos)</span>
+        <input id="pinA" type="password" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+      <label class="nf"><span>Repítelo</span>
+        <input id="pinB" type="password" inputmode="numeric" autocomplete="off" maxlength="8">
+        <small>No se guarda el PIN, sólo una huella suya. Si lo olvidas no hay
+          forma de recuperarlo: no existe ningún servidor con tus datos.</small></label>
+      <div class="ases-btns">
+        <button id="pinGuardar">${tiene ? "Cambiar PIN" : "Activar candado"}</button>
+        ${tiene ? `<button class="sec" id="pinQuitar">Quitar candado</button>` : ""}
+      </div>
+    </div>`);
+  const g = $("pinGuardar"); if(g) g.onclick = guardarPin;
+  const q = $("pinQuitar");  if(q) q.onclick = quitarPin;
+}
+
+async function guardarPin(){
+  const a = $("pinA"), b = $("pinB"), btn = $("pinGuardar");
+  if(!a || !b) return;
+  const p1 = String(a.value||""), p2 = String(b.value||"");
+  if(!/^\d{4,8}$/.test(p1)){ showToast("El PIN son de 4 a 8 dígitos"); return; }
+  if(p1 !== p2){ showToast("Los dos PIN no coinciden"); return; }
+  if(btn){ btn.disabled = true; btn.textContent = "Cifrando…"; }
+  const reg = await creaPin(p1);
+  if(!reg){ showToast("Ese PIN no sirve, usa 4 a 8 dígitos");
+            if(btn){ btn.disabled=false; btn.textContent="Activar candado"; } return; }
+  fin().candado = reg;
+  dineroAbierto = true;                       /* no te encierres al configurarlo */
+  save(); closeSheet(); renderAsesor(); renderCandado();
+  showToast("🔒 Candado activado ✓");
+}
+
+function quitarPin(){
+  if(!confirm("¿Quitar el candado? Cualquiera que tome tu teléfono podrá ver tus deudas y saldos.")) return;
+  fin().candado = null;
+  save(); closeSheet(); renderAsesor(); renderCandado();
+  showToast("Candado quitado");
+}
+
+/* ---------- alta inicial (genérica: sirve para cualquier persona) ---------- */
+const MONEDAS = [["MXN","Peso mexicano"],["USD","Dólar"],["EUR","Euro"],
+                 ["COP","Peso colombiano"],["ARS","Peso argentino"],
+                 ["CLP","Peso chileno"],["PEN","Sol"],["BRL","Real"]];
+
+function abrirAlta(){
+  const f = fin(), ing = f.ingresos[0] || {};
+  const frec = ing.frecuencia || "semanal";
+  openSheet("¿Cómo entra tu dinero?", "Se puede cambiar después", `
+    <div class="alta-form">
+      <label class="nf"><span>De dónde viene</span>
+        <input id="altaNombre" type="text" maxlength="80" placeholder="Sueldo"
+               value="${esc(ing.nombre || "")}"></label>
+      <label class="nf"><span>Cada cuándo te pagan</span>
+        <select id="altaFrec">
+          ${[["semanal","Cada semana"],["quincenal","Cada quincena"],
+             ["mensual","Una vez al mes"],["irregular","Sin fecha fija"]]
+            .map(o=>`<option value="${o[0]}"${o[0]===frec?" selected":""}>${o[1]}</option>`).join("")}
+        </select></label>
+      <div class="fila">
+        <label class="nf"><span>Cuánto por pago</span>
+          <input id="altaMonto" type="number" inputmode="decimal" step="any" min="0"
+                 placeholder="0" value="${ing.monto ? numero(ing.monto) : ""}"></label>
+        <label class="nf" id="altaDiaSemBox"><span>Qué día</span>
+          <select id="altaDiaSem">${NOMBRE_DIA.map((d,i)=>
+            `<option value="${i}"${i===(ing.diaSemana===null||ing.diaSemana===undefined?6:ing.diaSemana)?" selected":""}>${d}</option>`).join("")}</select></label>
+        <label class="nf" id="altaDiaMesBox" hidden><span>Qué día del mes</span>
+          <input id="altaDiaMes" type="number" inputmode="numeric" min="1" max="31"
+                 value="${ing.diaMes || 15}"></label>
+      </div>
+      <label class="nf"><span>Moneda</span>
+        <select id="altaMoneda">${MONEDAS.map(m=>
+          `<option value="${m[0]}"${m[0]===f.perfil.moneda?" selected":""}>${m[0]} · ${m[1]}</option>`).join("")}</select></label>
+      <label class="nf"><span>Colchón mínimo en la cuenta</span>
+        <input id="altaColchon" type="number" inputmode="decimal" step="any" min="0"
+               placeholder="0" value="${f.perfil.colchonMinimo || ""}">
+        <small>Lo que nunca quieres que baje tu saldo. Si no sabes, deja 0 y lo
+          ajustamos después: el asesor no gastará por debajo de esta línea.</small></label>
+      <div class="ases-btns">
+        <button id="altaGuardar">Guardar</button>
+      </div>
+      <div class="nut-hint">Con esto ya puedo calcular tu ingreso real por mes.
+        Un sueldo semanal no son cuatro pagos y un tercio: hay meses de cuatro y
+        meses de cinco, y eso cambia todo.</div>
+    </div>`);
+  const sel = $("altaFrec");
+  const pinta = ()=>{
+    const v = sel.value;
+    const bs = $("altaDiaSemBox"), bm = $("altaDiaMesBox"), bt = $("altaMonto");
+    if(bs) bs.hidden = v !== "semanal";
+    if(bm) bm.hidden = !(v === "quincenal" || v === "mensual");
+    if(bt) bt.closest(".nf").hidden = false;
+  };
+  if(sel){ sel.onchange = pinta; pinta(); }
+  const g = $("altaGuardar"); if(g) g.onclick = guardarAlta;
+}
+
+function guardarAlta(){
+  const f = fin();
+  const frec   = $("altaFrec").value;
+  const monto  = numero($("altaMonto").value);
+  const nombre = String($("altaNombre").value || "").trim() || "Ingreso";
+  if(frec !== "irregular" && monto <= 0){ showToast("Pon cuánto te pagan por pago"); return; }
+
+  const ing = { id: f.ingresos[0] ? f.ingresos[0].id : "ing"+Date.now().toString(36),
+                nombre, tipo:"recurrente", monto, frecuencia:frec, activo:true,
+                diaSemana:null, diaMes:null, diaMes2:null };
+  if(frec === "semanal")   ing.diaSemana = numero($("altaDiaSem").value);
+  if(frec === "quincenal"){ ing.diaMes = numero($("altaDiaMes").value) || 15; ing.diaMes2 = 0; }
+  if(frec === "mensual")    ing.diaMes = numero($("altaDiaMes").value) || 1;
+
+  f.ingresos = [ing];
+  f.perfil.moneda = $("altaMoneda").value;
+  f.perfil.colchonMinimo = Math.max(0, numero($("altaColchon").value));
+  f.perfil.altaHecha = true;
+  saneaFin(S);                       /* que pase por el mismo filtro que un respaldo */
+  save(); closeSheet(); renderAsesor();
+  showToast("💰 Listo · ya puedo calcular tu mes");
+}
+
+/* ---------- resumen del asesor ---------- */
+function renderAsesor(){
+  const caja = $("dinAsesor");
+  if(!caja) return;
+  if(dineroCerrado()){ caja.innerHTML = ""; return; }
+  const f = fin();
+
+  if(!f.perfil.altaHecha){
+    caja.innerHTML = `
+      <div class="ases">
+        <span class="ases-eyebrow">Asesor financiero</span>
+        <h3>Todavía no sé cómo entra tu dinero</h3>
+        <p class="ases-sub">Con tu ingreso y cada cuándo te pagan puedo calcular tu
+          mes real, avisarte de los meses que traen un pago extra y decirte cuánto
+          puedes gastar sin romper nada.</p>
+        <div class="ases-btns"><button id="dinAltaBtn">Configurar mi dinero</button></div>
+      </div>`;
+    const b = $("dinAltaBtn"); if(b) b.onclick = abrirAlta;
+    return;
+  }
+
+  const hoy = new Date(), anio = hoy.getFullYear(), mes = hoy.getMonth()+1;
+  const total  = ingresoDelMes(f, anio, mes);
+  const base   = ingresoDelMes(f, anio, mes, {base:true});
+  const extra  = total - base;
+  const ing    = f.ingresos[0] || {};
+  const veces  = pagosEnMes(ing, anio, mes);
+  const fechas = fechasDePago(ing, anio, mes);
+  const nMes   = MONTHS_FULL[mes-1];
+  const tiene  = !!(f.candado && f.candado.hash);
+
+  /* Sin fecha fija no hay calendario que proyectar. Pintar $0 sería mentir con
+     cara de dato: mejor decir qué falta. (Un freelance vive así.) */
+  const sinFecha = ing.frecuencia === "irregular" || !fechas.length;
+
+  caja.innerHTML = `
+    <div class="ases" id="dinResumen">
+      <span class="ases-eyebrow">Asesor financiero</span>
+      <h3>${sinFecha ? "Tu ingreso no tiene fecha fija" : "Tu " + esc(nMes) + " real"}</h3>
+      <p class="ases-sub">${sinFecha
+        ? "Con un ingreso irregular no puedo proyectar el mes por calendario. En cuanto registres lo que va entrando, el asesor trabaja sobre lo real en vez de sobre un supuesto."
+        : "Calculado con el calendario, no con un promedio."}</p>
+      ${sinFecha ? "" : `<div class="ases-cifra">
+        <b>${fmt$(total)}</b>
+        <span>${veces} pago${veces===1?"":"s"} de ${esc(ing.nombre||"tu ingreso")} en ${esc(nMes)}</span>
+      </div>`}
+      ${extra > 0 ? `<div class="ases-nota"><b>Este mes trae un pago extra de ${fmt$(extra)}.</b>
+        Presupuesta con ${fmt$(base)} y trata ese sobrante como ingreso
+        extraordinario: a deuda cara o al colchón, nunca a gasto corriente.</div>` : ""}
+      ${sinFecha ? "" : `<details class="ases-cuentas"><summary></summary>
+        <code>${esc(veces + " pagos × " + fmt$(numero(ing.monto)) + " = " + fmt$(total))}
+${esc("base conservadora (" + pagosBase(ing) + " pagos) = " + fmt$(base))}
+${esc("fechas: " + fechas.join(", "))}</code>
+      </details>`}
+      <div class="ases-btns">
+        <button class="sec" id="dinAltaBtn">Cambiar mi ingreso</button>
+        <button class="sec" id="dinPinBtn">${tiene ? "Cambiar PIN" : "Proteger con PIN"}</button>
+      </div>
+    </div>`;
+  const b = $("dinAltaBtn"); if(b) b.onclick = abrirAlta;
+  const c = $("dinPinBtn");  if(c) c.onclick = abrirPinSheet;
+}
+
 function renderHistorial(){
   if(!document.getElementById("hv-cuerpo")) return;
   if(histVista==="gym") renderGym();
-  else if(histVista==="dinero") renderDinero();
+  else if(histVista==="dinero"){ renderCandado(); renderAsesor(); renderDinero(); }
 }
 function irAVista(v){
   histVista = v;
