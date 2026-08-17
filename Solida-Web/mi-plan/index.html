@@ -231,6 +231,7 @@
      los macros de la dieta no pintan nada en Rutina, Progreso ni Ajustes */
   body[data-tab="rutina"] .macro-strip,
   body[data-tab="progreso"] .macro-strip,
+  body[data-tab="finanzas"] .macro-strip,
   body[data-tab="config"] .macro-strip{display:none}
   /* al cambiar de pestaña sí queremos una transición suave */
   body:not(.scrolleando) .hello,
@@ -243,6 +244,7 @@
                transform .34s cubic-bezier(.32,.72,0,1)}
   body[data-tab="rutina"] .hdr-extra,
   body[data-tab="progreso"] .hdr-extra,
+  body[data-tab="finanzas"] .hdr-extra,
   body[data-tab="config"] .hdr-extra{display:flex}
   .hdr-extra{position:relative;display:none;gap:8px;margin-top:14px}
   .hdr-extra .he{flex:1;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.17);
@@ -1192,6 +1194,60 @@
   .foco-card .ex{margin-bottom:0}
   .foco-num{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
     color:var(--muted);margin:0 0 7px 2px}
+  /* En Foco la pantalla no se desliza: la pista mide exactamente el hueco
+     que queda (--foco-h la calcula el JS) y cada tarjeta se reparte dentro. */
+  /* En Foco la pantalla no se desliza: fuera todo lo que ya vive dentro del
+     carrusel (calentamiento y cardio) o que no se usa entre serie y serie. */
+  body.rutina-foco #semInfo,
+  body.rutina-foco #warmBox,
+  body.rutina-foco #cardioBox,
+  body.rutina-foco #pendCardio,
+  body.rutina-foco #trainedBox,
+  body.rutina-foco #deloadBanner,
+  body.rutina-foco .routine-head{display:none}
+  body.rutina-foco #tab-rutina{padding-bottom:0;overflow:hidden}
+  body.rutina-foco .day-strip{margin-bottom:10px}
+  /* resumen compacto del día, ya que la tarjeta grande se oculta */
+  .foco-cumpl{display:flex;align-items:center;gap:9px;margin:0 0 9px;
+    font-size:12px;font-weight:800;color:var(--muted)}
+  .foco-cumpl b{font-family:"Space Grotesk",system-ui,sans-serif;font-size:15px;color:var(--em)}
+  .foco-cumpl span{flex:1;text-align:right;font-weight:700;font-size:11.5px}
+  /* PENDIENTE: la pantalla fija de Foco. La versión con altura calculada
+     desbordaba el contenido sobre la tira de días, así que se deja el
+     desplazamiento normal hasta resolverlo bien. Lo demás de Foco (carrusel
+     con calentamiento y cardio, botón de info, tarjeta densa) sí está. */
+  body.rutina-foco .foco-pista{height:auto}
+  .foco-card{display:flex;flex-direction:column}
+  /* flex-start, no center: centrar hacía que el contenido alto se desbordara
+     hacia ARRIBA y quedara encima de la tira de días */
+  .foco-cuerpo{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start}
+  .foco-card .ex{margin-bottom:0;display:flex;flex-direction:column;gap:2px}
+  .ex-foco .ex-top{align-items:center;gap:11px}
+  .ex-foco .nm b{font-size:16px;line-height:1.25}
+  .ex-info{width:42px;height:42px;flex:none;border-radius:50%;cursor:pointer;
+    background:var(--velo);border:1px solid var(--line-str);color:var(--em);
+    font-family:"Space Grotesk",system-ui,serif;font-size:19px;font-weight:800;font-style:italic}
+  .ex-info:active{transform:scale(.92)}
+  .ex-foco .ex-wrow{margin-top:8px}
+  .ex-foco .wv-in{font-size:26px}
+  .ex-foco .set-grid{gap:9px}
+  .ex-foco .set-sq{min-height:50px;font-size:17px}
+  .ex-foco .set-lbl{margin-top:9px;font-size:10px}
+  .blk-foco{margin:0}
+  /* ficha del ejercicio */
+  .fx{display:flex;flex-direction:column;gap:12px}
+  .fx-act{display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:800;color:var(--muted)}
+  .fx-act .a-bar{flex:1}
+  .fx-act b{color:var(--em)}
+  .fx-nota{margin:0;font-size:13.5px;line-height:1.6;color:var(--ink);opacity:.9}
+  .fx-peso{font-size:13.5px;font-weight:700;color:var(--muted)}
+  .fx-peso b{color:var(--em);font-family:"Space Grotesk",system-ui,sans-serif;font-size:17px}
+  /* botón de unidad dentro del control de peso */
+  .wv-u{margin-top:2px;background:none;border:0;cursor:pointer;color:var(--muted);
+    font-family:inherit;font-size:10.5px;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;padding:4px 8px;border-radius:8px;min-height:28px}
+  .wv-u:active{background:var(--velo)}
+
   .foco-flechas{display:flex;justify-content:space-between;gap:10px;margin-top:12px}
   .foco-flechas button{flex:1;min-height:52px;border-radius:14px;cursor:pointer;
     background:var(--card);border:1px solid var(--line-str);color:var(--em);
@@ -1335,7 +1391,80 @@
   .rp-hint{font-size:11.5px;color:var(--faint);text-align:center;margin-top:2px;line-height:1.5}
 
   /* ---------- ciclo / semana ---------- */
-  .cycle-cal{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+
+
+
+  /* ---------- deudas ---------- */
+  .deudas{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+  .deuda{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px}
+  .deuda.msi{border-color:color-mix(in srgb, var(--lime) 40%, var(--line))}
+  .de-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .de-n{min-width:0}
+  .de-n b{display:block;font-size:14.5px;font-weight:800;line-height:1.3}
+  .de-n small{display:block;font-size:11.5px;color:var(--muted);font-weight:700;margin-top:2px}
+  .de-s{flex:none;font-family:"Space Grotesk",system-ui,sans-serif;font-size:18px;
+    font-weight:800;color:var(--ink)}
+  .de-fechas{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+  .de-fechas span{flex:1 1 auto;min-width:88px;background:var(--velo);border:1px solid var(--line);
+    border-radius:10px;padding:7px 9px;font-size:12px;font-weight:800;color:var(--ink)}
+  .de-fechas i{display:block;font-style:normal;font-size:9.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .de-aviso{margin:11px 0 0;font-size:12.5px;line-height:1.55;font-weight:600;
+    padding:10px 12px;border-radius:11px;background:var(--amber-soft);
+    border-left:3px solid var(--amber);color:var(--ink)}
+  .de-aviso.ok{background:var(--lime-soft);border-left-color:var(--lime)}
+  .de-aviso.rojo{background:var(--coral-soft);border-left-color:var(--coral)}
+  .pend-lista{margin:10px 0 0;padding-left:18px}
+  .pend-lista li{font-size:12.5px;line-height:1.55;color:var(--ink);opacity:.85;
+    font-weight:600;margin:7px 0}
+
+  /* ---------- cumplimiento del día ---------- */
+  .cumpl{display:flex;align-items:center;gap:13px;padding:15px 16px;border-radius:16px;
+    background:var(--card);border:1px solid var(--line)}
+  .cumpl.ok{border-color:color-mix(in srgb, var(--em) 45%, var(--line));background:var(--em-soft)}
+  .cumpl.medio{border-color:color-mix(in srgb, var(--amber) 45%, var(--line));background:var(--amber-soft)}
+  .cumpl.bajo{border-color:var(--line-str)}
+  .cumpl.descanso{background:var(--sky-soft);border-color:color-mix(in srgb, var(--sky) 40%, var(--line))}
+  .cu-pct{flex:none;font-family:"Space Grotesk",system-ui,sans-serif;font-size:27px;
+    font-weight:800;letter-spacing:-.02em;color:var(--em);line-height:1}
+  .cumpl.medio .cu-pct{color:var(--amber)}
+  .cumpl.bajo .cu-pct{color:var(--muted)}
+  .cumpl.descanso .cu-pct{color:var(--sky)}
+  .cu-t{min-width:0}
+  .cu-t b{display:block;font-size:14.5px;font-weight:800}
+  .cu-t small{display:block;font-size:12px;color:var(--ink);opacity:.75;font-weight:600;
+    margin-top:3px;line-height:1.45}
+  .cumpl-barras{display:flex;gap:10px;margin-top:10px}
+  .cb{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .cb span{display:block;font-size:10.5px;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--muted)}
+  .cb i{display:block;height:6px;border-radius:99px;background:var(--line-str);margin:7px 0 6px;
+    position:relative;overflow:hidden}
+  .cb i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--p,0%);
+    background:var(--em);border-radius:99px;transition:width .4s ease}
+  .cb b{font-size:12.5px;font-weight:800;color:var(--ink)}
+  .sc-manual{margin-left:auto;background:none;border:0;cursor:pointer;color:var(--muted);
+    font-family:inherit;font-size:11.5px;font-weight:700;text-decoration:underline;
+    padding:8px 6px;min-height:38px}
+
+  /* ---------- sub-pestañas dentro de una pestaña ---------- */
+  .sub-tabs{display:flex;gap:7px;margin:0 0 14px;padding:4px;border-radius:14px;
+    background:var(--velo);border:1px solid var(--line)}
+  .sub-tabs button{flex:1;min-height:42px;border:0;border-radius:11px;cursor:pointer;
+    background:none;color:var(--muted);font-family:inherit;font-size:13px;font-weight:800;
+    letter-spacing:.02em;transition:background .18s,color .18s}
+  .sub-tabs button.on{background:var(--card);color:var(--em);
+    box-shadow:0 1px 4px rgba(8,20,39,.14)}
+  #tab-hoy .sub{display:none}
+  #tab-hoy .sub.activa{display:block}
+
+  /* cards del mes: SIEMPRE en una línea, sean 4, 5 o 6 semanas */
+  .cycle-cal{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+    grid-template-columns:none;gap:6px;margin-bottom:12px}
+  .cw{padding:8px 3px}
+  .cw b{font-size:9.5px}
+  .cw span{font-size:9.5px;margin-top:2px;
+    overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .cw{border:1.5px solid var(--line);border-radius:12px;padding:9px 6px;text-align:center;position:relative}
   .cw b{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:var(--muted)}
   .cw span{display:block;font-size:10.5px;font-weight:700;margin-top:3px;color:var(--faint);line-height:1.25}
@@ -1573,6 +1702,11 @@
 
   <!-- ============ TAB: HOY ============ -->
   <section class="tab active" id="tab-hoy" aria-labelledby="todayName">
+    <div class="sub-tabs" role="tablist" aria-label="Secciones de hoy">
+      <button role="tab" data-sub="comidas" aria-selected="true" aria-controls="sub-comidas" class="on">Comidas</button>
+      <button role="tab" data-sub="snacks" aria-selected="false" aria-controls="sub-snacks">Snacks</button>
+    </div>
+    <div class="sub activa" id="sub-comidas" role="tabpanel">
     <!-- Lo primero que ves: qué sigue AHORA. Antes había que buscarlo
          scrolleando entre cinco tarjetas del mismo peso visual. -->
     <div id="ahora"></div>
@@ -1609,6 +1743,38 @@
       <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M7 21h10"/><path d="M5 7h14"/><path d="m5 7-3 6a3.2 3.2 0 0 0 6 0Z"/><path d="m19 7 3 6a3.2 3.2 0 0 1-6 0Z"/></svg></span>
       <div><b>Si el peso no se mueve 3 semanas seguidas:</b> quita 20 g de avena y 1 tortilla al día antes que tocar la proteína. <b>La proteína nunca se recorta.</b></div>
     </div>
+  </div>
+    <div class="sub" id="sub-snacks" role="tabpanel">
+    <div class="sec-title"><h2>Snacks del plan</h2><span class="ln"></span><span class="chip">un toque</span></div>
+    <!-- Lo de hoy, arriba de todo: registrar y deshacer sin buscar -->
+    <div id="snackHoy"></div>
+    <div id="snackList"></div>
+    <details class="mas-info">
+      <summary>¿Por qué estos snacks?</summary>
+      <div class="mi-body">Ya están contados en tus 2,400 kcal. No son antojo: son parte del plan
+      y están pensados para llevarlos al trabajo. Rota el que quieras cada día. Registrarlos
+      no cambia tu meta, sólo te deja ver qué comes de verdad.</div>
+    </details>
+
+    <div class="sec-title"><h2>Antojos libres</h2><span class="ln"></span><span class="chip" id="antojoChip">fin de semana</span></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px">
+        <b style="font-family:'Space Grotesk';font-size:22px" id="budgetLeft">1,200</b>
+        <span class="subtle">kcal disponibles esta semana</span>
+      </div>
+      <div class="budget-bar" id="budgetBar"><i id="budgetFill"></i></div>
+      <div class="budget-nums"><span>Usado: <b id="budgetUsed">0</b> kcal</span><span id="budgetSplit">Sáb + dom: ~600 c/u</span></div>
+    </div>
+    <div class="banner em" id="budgetMsg">
+      <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.3 2.4 2.4 4.6-4.9"/></svg></span>
+      <div><b>Este presupuesto es tuyo, úsalo.</b> Está calculado para que aun gastándolo completo sigas bajando grasa.</div>
+    </div>
+    <div id="antojoList"></div>
+    <div class="banner amber">
+      <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+      <div><b>La regla de los fines de semana.</b> Entre semana tienes los snacks del plan; el antojo libre se guarda para sábado y domingo. Así el antojo deja de ser un descarrilamiento y pasa a ser parte del plan.</div>
+    </div>
+  </div>
   </section>
 
   <!-- ============ TAB: MANDADO ============ -->
@@ -1673,21 +1839,20 @@
       <div class="rr-name" id="restName">…</div>
     </div>
 
-    <div class="sec-title"><h2>Tu semana</h2><span class="ln"></span><span class="chip" id="cicloChip">3-1-2-1</span></div>
-    <div class="banner em" style="align-items:center">
-      <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
-      <div><b>Semana fija:</b> entrenas lunes, martes y miércoles, descansas el <b>jueves</b>, entrenas viernes y sábado, y descansas el <b>domingo</b>. Siempre igual, sin ciclos que se recorren.</div>
-    </div>
+    <!-- La tira de días se queda a la vista porque la usas para moverte.
+         Lo demás (explicación de la semana y bloque del mes) se recoge. -->
     <div class="week-nav">
       <button id="wPrev" aria-label="Semana anterior">‹</button>
       <span class="wl" id="weekLabel">—</span>
       <button id="wNext" aria-label="Semana siguiente">›</button>
     </div>
     <div class="day-strip" id="dayStrip"></div>
-
     <div id="deloadBanner"></div>
-    <div class="sec-title"><h2>Bloque del mes</h2><span class="ln"></span><span class="chip" id="cycleChip">—</span></div>
-    <div class="cycle-cal" id="cycleCal"></div>
+
+    <details class="mas-info" id="semInfo"><summary><span class="mi-i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>Tu semana y el bloque del mes<span class="chip" id="cycleChip">—</span></summary><div class="mi-body">
+      <p style="margin:0 0 12px"><b>Semana fija:</b> entrenas lunes, martes y miércoles, descansas el <b>jueves</b>, entrenas viernes y sábado, y descansas el <b>domingo</b>. Siempre igual, sin ciclos que se recorren. <span class="chip" id="cicloChip">3-1-2-1</span></p>
+      <div class="cycle-cal" id="cycleCal"></div>
+    </div></details>
 
     <div class="routine-head">
       <div class="sec-title" style="margin:0"><h2 id="routineDayTitle">Rutina</h2></div>
@@ -1710,39 +1875,6 @@
     </div>
   </section>
 
-  <!-- ============ TAB: SNACKS ============ -->
-  <section class="tab" id="tab-antojos">
-    <div class="sec-title"><h2>Snacks del plan</h2><span class="ln"></span><span class="chip">un toque</span></div>
-    <!-- Lo de hoy, arriba de todo: registrar y deshacer sin buscar -->
-    <div id="snackHoy"></div>
-    <div id="snackList"></div>
-    <details class="mas-info">
-      <summary>¿Por qué estos snacks?</summary>
-      <div class="mi-body">Ya están contados en tus 2,400 kcal. No son antojo: son parte del plan
-      y están pensados para llevarlos al trabajo. Rota el que quieras cada día. Registrarlos
-      no cambia tu meta, sólo te deja ver qué comes de verdad.</div>
-    </details>
-
-    <div class="sec-title"><h2>Antojos libres</h2><span class="ln"></span><span class="chip" id="antojoChip">fin de semana</span></div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px">
-        <b style="font-family:'Space Grotesk';font-size:22px" id="budgetLeft">1,200</b>
-        <span class="subtle">kcal disponibles esta semana</span>
-      </div>
-      <div class="budget-bar" id="budgetBar"><i id="budgetFill"></i></div>
-      <div class="budget-nums"><span>Usado: <b id="budgetUsed">0</b> kcal</span><span id="budgetSplit">Sáb + dom: ~600 c/u</span></div>
-    </div>
-    <div class="banner em" id="budgetMsg">
-      <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.3 2.4 2.4 4.6-4.9"/></svg></span>
-      <div><b>Este presupuesto es tuyo, úsalo.</b> Está calculado para que aun gastándolo completo sigas bajando grasa.</div>
-    </div>
-    <div id="antojoList"></div>
-    <div class="banner amber">
-      <span class="i"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
-      <div><b>La regla de los fines de semana.</b> Entre semana tienes los snacks del plan; el antojo libre se guarda para sábado y domingo. Así el antojo deja de ser un descarrilamiento y pasa a ser parte del plan.</div>
-    </div>
-  </section>
-
   <!-- ============ TAB: PROGRESO ============ -->
   <section class="tab" id="tab-progreso" aria-labelledby="histTitulo">
     <div class="sec-title"><h2 id="histTitulo">Tu historial</h2><span class="ln"></span><span class="chip">en este teléfono</span></div>
@@ -1751,7 +1883,6 @@
     <div class="hist-tabs" role="tablist" aria-label="Vistas del historial">
       <button role="tab" data-hv="cuerpo" aria-selected="true"  aria-controls="hv-cuerpo">Cuerpo</button>
       <button role="tab" data-hv="gym"    aria-selected="false" aria-controls="hv-gym">Gimnasio</button>
-      <button role="tab" data-hv="dinero" aria-selected="false" aria-controls="hv-dinero">Dinero</button>
     </div>
     <div class="hv activa" id="hv-cuerpo" role="tabpanel">
     <div class="stat-grid">
@@ -1832,7 +1963,14 @@
       </div>
     </div>
 
-    <div class="hv" id="hv-dinero" role="tabpanel">
+    
+  </section>
+
+  <!-- ============ TAB: FINANZAS ============ -->
+  <section class="tab" id="tab-finanzas">
+    <div class="sec-title"><h2>Finanzas</h2><span class="ln"></span><span class="chip" id="finChip">gestión</span></div>
+<div id="finPanel">
+      <div id="finDeudas"></div>
       <!-- Candado: los datos financieros son mucho más sensibles que la dieta.
            Mientras esté puesto, #dinCuerpo y #dinAsesor no se pintan. -->
       <div class="candado" id="dinCandado" hidden></div>
@@ -1891,7 +2029,7 @@
   <button class="nb active" data-tab="hoy"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>Hoy</button>
   <button class="nb" data-tab="mandado"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Mandado</button>
   <button class="nb" data-tab="rutina"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m21 21-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/></svg>Rutina</button>
-  <button class="nb" data-tab="antojos"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 8.5c-1 1-1.5 2.3-1.5 3.5a5 5 0 0 0 10 0c0-1.2-.5-2.5-1.5-3.5L12 5 8.5 8.5Z"/><path d="M12 5V2"/></svg>Snacks</button>
+  <button class="nb" data-tab="finanzas"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/><circle cx="17" cy="14.5" r="1.6"/></svg>Finanzas</button>
   <button class="nb" data-tab="progreso"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Historial</button>
   <button class="nb" data-tab="config"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Ajustes</button>
 </nav>

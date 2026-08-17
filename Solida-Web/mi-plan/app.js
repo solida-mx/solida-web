@@ -1825,6 +1825,17 @@ function saneaImportado(St){
       .map(x=>({ id:texto(x.id,40), n:texto(x.n,80), kcal:n(x.kcal), d:fecha(x.d)||undefined, ts:n(x.ts) }));
   });
 
+  /* unidad de peso por ejercicio: sólo presentación, el dato va en kg */
+  if(St.unidadEx !== undefined){
+    const limpio = {};
+    if(St.unidadEx && typeof St.unidadEx === "object" && !Array.isArray(St.unidadEx))
+      Object.keys(St.unidadEx).forEach(k=>{
+        if(St.unidadEx[k] === "kg" || St.unidadEx[k] === "lb")
+          limpio[String(k).replace(/[^a-zA-Z0-9_-]/g,"").slice(0,40)] = St.unidadEx[k];
+      });
+    St.unidadEx = limpio;
+  }
+
   /* unidades propias por alimento: {n:"lata", f:4.25} */
   if(St.unidades && typeof St.unidades === "object" && !Array.isArray(St.unidades)){
     Object.keys(St.unidades).forEach(id=>{
@@ -2407,9 +2418,23 @@ function renderHdrMini(hecho){
   const tab = document.body.dataset.tab || "hoy";
   const hechas = (S.meals[dayKey]||[]).filter(Boolean).length;
   if(tab==="rutina"){
+    /* el contador de ejercicios se queda FIJO al deslizar: es el dato que
+       de verdad consultas a media rutina, no el nombre del bloque */
     const b = bloqueDe(viewKey), f = faseDe(viewKey);
-    el.innerHTML = `<span>${b?esc(b.short||b.title):"Descanso"}</span><span class="sep">·</span>`+
-                   `<span>${esc(CYCLE[f.idx].n)}</span>`;
+    const lista = b ? (RUTINA[b.id]||[]) : [];
+    const listos = lista.filter(x=>{
+      const st = (S.sets[viewKey]||{})[x.id]||0; return x.s>0 && st >= x.s;
+    }).length;
+    el.innerHTML = (lista.length
+        ? `<b>${listos}/${lista.length}</b><span>ejercicios</span><span class="sep">·</span>`
+        : `<span>Descanso</span><span class="sep">·</span>`)+
+      `<span>${b?esc(b.short||b.title):"hoy"}</span><span class="sep">·</span>`+
+      `<span>${esc(CYCLE[f.idx].n)}</span>`;
+  } else if(tab==="finanzas"){
+    const meta = numero(S.presupuestoMes), va = gastoDelMes(mesDe(dayKey));
+    el.innerHTML = dineroCerrado()
+      ? `<span>🔒 protegido</span>`
+      : `<b>${fmt$(va)}</b><span>${meta?"de "+fmt$(meta):"este mes"}</span>`;
   } else if(tab==="progreso"){
     el.innerHTML = `<b>${pesoActual()}</b><span>kg</span><span class="sep">·</span>`+
                    `<span>meta ${metaPesoKg()} kg</span>`;
@@ -2439,6 +2464,14 @@ function renderHdrExtra(){
     el.innerHTML = caja(p+" kg","peso")+
                    caja(meta+" kg","meta")+
                    caja(Math.abs(dif)+" kg", dif>0?"por bajar":dif<0?"por subir":"en meta");
+  } else if(tab==="finanzas"){
+    if(dineroCerrado()){ el.innerHTML = caja("🔒","protegido"); }
+    else {
+      const meta = numero(S.presupuestoMes), va = gastoDelMes(mesDe(dayKey));
+      el.innerHTML = caja(fmt$(va),"este mes")+
+                     caja(meta?fmt$(meta):"—","presupuesto")+
+                     caja(meta?fmt$(Math.max(0,meta-va)):"—","te queda");
+    }
   } else if(tab==="config"){
     const d = diasSinRespaldo();
     el.innerHTML = caja(Object.keys(S.trained||{}).length,"entrenos")+
@@ -3656,6 +3689,33 @@ function toUnit(kg){ return S.unidad==="lb" ? Math.round(kg*KG2LB/2.5)*2.5 : kg;
 function unitLabel(){ return S.unidad==="lb" ? "lb" : "kg"; }
 function fmtW(kg){ const v=toUnit(kg); return (Number.isInteger(v)?v:v.toFixed(1))+" "+unitLabel(); }
 
+/* ---------- unidad POR EJERCICIO ----------
+   Puramente de presentación: el peso siempre se guarda en kilos, así que
+   cambiar esto no toca ni un dato del historial. Sin valor propio, cada
+   ejercicio usa la unidad general de Ajustes. */
+function unidadDe(exId){
+  const u = (S.unidadEx || {})[exId];
+  return u === "lb" || u === "kg" ? u : (S.unidad === "lb" ? "lb" : "kg");
+}
+function toUnitEx(kg, exId){
+  return unidadDe(exId) === "lb" ? Math.round(kg*KG2LB/2.5)*2.5 : kg;
+}
+function fmtWEx(kg, exId){
+  const v = toUnitEx(kg, exId);
+  return (Number.isInteger(v) ? v : v.toFixed(1)) + " " + unidadDe(exId);
+}
+/* de lo que escribes en pantalla a kilos, que es como se guarda */
+function aKg(valor, exId){
+  const v = numero(valor);
+  return unidadDe(exId) === "lb" ? v / KG2LB : v;
+}
+function alternaUnidadEx(exId){
+  if(!S.unidadEx || typeof S.unidadEx !== "object") S.unidadEx = {};
+  S.unidadEx[exId] = unidadDe(exId) === "lb" ? "kg" : "lb";
+  save(); renderRoutine();
+  showToast(unidadDe(exId) === "lb" ? "Este ejercicio en libras" : "Este ejercicio en kilos");
+}
+
 function restFor(ex){
   const lo = parseInt(String(ex.r).split(/[-–]/)[0],10) || 10;
   const heavy = ex.grp==="inf" || /press|muerto|remo|dominada|sentadilla|hack|prensa|hip|militar|rumano/i.test(getVar(ex).n);
@@ -3781,7 +3841,7 @@ function vistaRutina(){
    var, no let: renderRoutine() está definida antes de esta línea. */
 var exAbiertos = new Set();
 
-function exTarjetaHtml(ex, isDeload){
+function exTarjetaHtml(ex, isDeload, compacta){
     const v=getVar(ex);
     const w=getW(ex), showW = isDeload ? roundP(w*0.62) : w;
     const inc = ex.grp==="inf"?5:2.5;
@@ -3791,31 +3851,31 @@ function exTarjetaHtml(ex, isDeload){
     const rest = restFor(ex);
     const sqs = Array.from({length:ex.s},(_,i)=>
       `<button class="set-sq${i<done?' on':''}" data-sq="${ex.id}" data-k="${i}" data-rest="${rest}" data-total="${ex.s}" data-name="${esc(v.n)}" aria-label="Serie ${i+1}" aria-pressed="${i<done}">${i<done?'✓':i+1}</button>`).join("");
-    return `<div class="ex${done>=ex.s?' ex-complete':''}" data-ex="${esc(ex.id)}">
+    return `<div class="ex${done>=ex.s?' ex-complete':''}${compacta?' ex-foco':''}" data-ex="${esc(ex.id)}">
       <div class="ex-top">
-        ${exPhoto(v)}
+        ${compacta ? `<button class="ex-info" data-exinfo="${esc(ex.id)}" aria-label="Ver detalle del ejercicio">i</button>` : exPhoto(v)}
         <span class="nm"><b>${esc(v.n)}</b>
           <small>${ex.s}×${ex.r} · descanso ${fmtRest(rest)}${v.u?" · "+esc(v.u):""}</small>
-          <span class="act"><span class="a-lbl">Activación</span><span class="a-bar"><i style="width:${v.act}%"></i></span><span class="a-num">${v.act}</span></span>
+          ${compacta ? "" : `<span class="act"><span class="a-lbl">Activación</span><span class="a-bar"><i style="width:${v.act}%"></i></span><span class="a-num">${v.act}</span></span>`}
         </span>
       </div>
       <div class="ex-wrow">
         <button data-w="-" aria-label="Bajar peso">−</button>
-        <span class="wv"><input class="wv-in" data-exw="${esc(ex.id)}" type="number" inputmode="decimal" min="0" max="600" step="any" value="${+toUnit(w).toFixed(1)}" aria-label="Peso"><small>Peso · ${bodyweight?"lastre":unitLabel()}</small></span>
+        <span class="wv"><input class="wv-in" data-exw="${esc(ex.id)}" type="number" inputmode="decimal" min="0" max="600" step="any" value="${+toUnitEx(w, ex.id).toFixed(1)}" aria-label="Peso"><button class="wv-u" data-exuni="${esc(ex.id)}" aria-label="Cambiar unidad">${bodyweight?"lastre":unidadDe(ex.id)}</button></span>
         <button data-w="+" aria-label="Subir peso">+</button>
       </div>
       ${isDeload?`<div class="deload-line">🧘 <b>Hoy levantas ${bodyweight?"solo tu peso corporal":fmtW(showW)}</b>${bodyweight?", sin lastre, con una serie menos y lejos del fallo":" · 62 % de tu peso de trabajo ("+fmtW(w)+"), sin llegar al fallo"}. El campo de arriba es tu <b>peso normal</b>: edítalo cuando quieras.</div>`:""}
       <div class="set-lbl">Series · toca un cuadro al terminar cada una</div>
       <div class="set-grid">${sqs}</div>
-      ${!isDeload?`
+      ${(!isDeload && !compacta)?`
       <div class="ex-done${hiDone?' on':''}" data-hi="${esc(ex.id)}">
         <span class="box">${hiDone?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
         <span>Completé todas las series en el rango alto</span>
       </div>
       <div class="next-up${hiDone?' show':''}">▲ Próxima sesión ${bodyweight?"añade lastre hasta "+fmtW(roundP(w+inc)):"sube a "+fmtW(roundP(w+inc))}</div>`:""}
-      <button class="var-btn" data-varsheet="${ex.id}">
+      ${compacta ? "" : `<button class="var-btn" data-varsheet="${ex.id}">
         <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg> <span>Cambiar variante del ejercicio</span><span class="vb-n">${ex.v.length}</span>
-      </button>
+      </button>`}
     </div>`;
 }
 
@@ -3834,25 +3894,97 @@ function exCompactaHtml(ex){
   </div>`;
 }
 
+/* calentamiento y cardio como tarjetas del carrusel de Foco */
+/* Ficha del ejercicio: lo que en Foco se sacó de la tarjeta para que
+   quepa todo sin deslizar (foto, activación, notas y variantes). */
+function abreFichaEjercicio(exId){
+  const ex = _asEjercicio(exId); if(!ex) return;
+  const v = getVar(ex);
+  openSheet(v.n, `${ex.s}×${ex.r} · descanso ${fmtRest(restFor(ex))}`, `
+    <div class="fx">
+      ${exPhoto(v)}
+      <div class="fx-act"><span>Activación</span>
+        <span class="a-bar"><i style="width:${numero(v.act)}%"></i></span>
+        <b>${numero(v.act)}</b></div>
+      ${v.u?`<p class="fx-nota"><b>Ejecución:</b> ${esc(v.u)}</p>`:""}
+      ${v.note?`<p class="fx-nota">${esc(v.note)}</p>`:""}
+      <div class="fx-peso">Peso de trabajo <b>${esc(fmtWEx(getW(ex), ex.id))}</b></div>
+      <button class="var-btn" data-varsheet="${esc(ex.id)}">
+        <span>Cambiar variante del ejercicio</span><span class="vb-n">${ex.v.length}</span>
+      </button>
+    </div>`);
+}
+
+function focoBloqueHtml(cual){
+  if(cual === "warm"){
+    const on = S.warm[viewKey] === true;
+    return `<div class="block${on?" on":""} blk-foco" data-blk="warm">
+      <span class="b-i">🔥</span>
+      <div class="b-t"><b>${esc(CALENTAMIENTO.t)}</b><small>${esc(CALENTAMIENTO.d)}</small></div>
+      <span class="b-c">${on?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span></div>`;
+  }
+  const on = S.cardio[viewKey] === true;
+  return `<div class="block${on?" on":""} blk-foco" data-blk="cardio"
+       style="--bc:rgba(89,207,224,.32);--bc2:var(--sky);--bbg2:var(--sky-soft)">
+    <span class="b-i">🏃</span>
+    <div class="b-t"><b>Cardio final · ${numero(CONFIG.cardioMin)} min</b>
+      <small>Caminadora en pendiente o elíptica a ritmo cómodo.</small></div>
+    <span class="b-c">${on?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span></div>`;
+}
+
+/* En Foco la pantalla NO se desliza: se mide el espacio que queda y la
+   pista se ajusta a él. Se recalcula al girar el teléfono o cambiar de día. */
+function ajustaAlturaFoco(){
+  const tab = document.getElementById("tab-rutina");
+  const raiz = document.documentElement;
+  if(!document.getElementById("focoPista") || !tab){
+    raiz.style.removeProperty("--foco-tab-h"); return;
+  }
+  /* Se mide el hueco REAL entre donde empieza la pestaña y donde empieza la
+     barra de pestañas. Dentro, el reparto lo hace flex: así no hay que
+     adivinar la altura de cada pieza ni queda scroll por unos píxeles. */
+  const nav = document.getElementById("nav");
+  const arriba = tab.getBoundingClientRect().top + window.scrollY;
+  const abajo = nav ? nav.getBoundingClientRect().height : 66;
+  const h = Math.max(320, Math.round(window.innerHeight - arriba - abajo - 6));
+  raiz.style.setProperty("--foco-tab-h", h + "px");
+}
+window.addEventListener("resize", ()=>{ if(vistaRutina()==="foco") ajustaAlturaFoco(); });
+
 function pintaEjercicios(list, isDeload){
   const modo = vistaRutina();
 
   if(modo === "foco"){
-    const puntos = list.map((ex,i)=>{
-      const listo = setsDone(viewKey, ex.id) >= ex.s;
-      return `<button class="fp${listo?" ok":""}" data-foco="${i}" aria-label="Ir a ${esc(getVar(ex).n)}"></button>`;
-    }).join("");
-    const cards = list.map((ex,i)=>
-      `<section class="foco-card" data-fi="${i}" aria-label="Ejercicio ${i+1} de ${list.length}">
-         <div class="foco-num">${i+1} de ${list.length}</div>
-         ${exTarjetaHtml(ex, isDeload)}
+    /* El día completo cabe en el carrusel: calentamiento primero, cardio al
+       final. Así no hay que salir de la vista para cerrar la sesión. */
+    const tarjetas = [{tipo:"warm"}].concat(list.map(ex=>({tipo:"ex", ex})))
+                                    .concat([{tipo:"cardio"}]);
+    const tot = tarjetas.length;
+    const listoDe = t => t.tipo === "warm"   ? S.warm[viewKey] === true
+                       : t.tipo === "cardio" ? S.cardio[viewKey] === true
+                       : setsDone(viewKey, t.ex.id) >= t.ex.s;
+    const puntos = tarjetas.map((t,i)=>
+      `<button class="fp${listoDe(t)?" ok":""}" data-foco="${i}" aria-label="Ir a la tarjeta ${i+1}"></button>`).join("");
+    const cuerpo = t =>
+      t.tipo === "warm"   ? focoBloqueHtml("warm")
+    : t.tipo === "cardio" ? focoBloqueHtml("cardio")
+    :                       exTarjetaHtml(t.ex, isDeload, true);
+    const titulo = t => t.tipo === "warm" ? "Calentamiento"
+                      : t.tipo === "cardio" ? "Cardio final" : "Ejercicio";
+    const cards = tarjetas.map((t,i)=>
+      `<section class="foco-card" data-fi="${i}" aria-label="${esc(titulo(t))} ${i+1} de ${tot}">
+         <div class="foco-num">${esc(titulo(t))} · ${i+1} de ${tot}</div>
+         <div class="foco-cuerpo">${cuerpo(t)}</div>
        </section>`).join("");
+    const cu = cumplimientoDe(viewKey);
     return `<div class="foco">
+      <div class="foco-cumpl"><b>${cu.entreno.pct} %</b> del entrenamiento
+        <span>${cu.entreno.detalle.length ? esc(cu.entreno.detalle[0]) : "completo"}</span></div>
       <div class="foco-puntos" role="tablist">${puntos}</div>
       <div class="foco-pista" id="focoPista">${cards}</div>
       <div class="foco-flechas">
-        <button data-focoir="-1" aria-label="Ejercicio anterior">‹</button>
-        <button data-focoir="1" aria-label="Ejercicio siguiente">›</button>
+        <button data-focoir="-1" aria-label="Anterior">‹</button>
+        <button data-focoir="1" aria-label="Siguiente">›</button>
       </div>
     </div>`;
   }
@@ -3952,6 +4084,8 @@ function renderRoutine(){
 
   const list = RUTINA[b.id];
   $("exList").innerHTML = pintaEjercicios(list, isDeload);
+  document.body.classList.toggle("rutina-foco", vistaRutina() === "foco");
+  if(vistaRutina() === "foco") requestAnimationFrame(ajustaAlturaFoco);
 
   const cOn = S.cardio[viewKey]===true;
   $("cardioBox").innerHTML = `<div class="block${cOn?' on':''}" data-blk="cardio" style="--bc:rgba(89,207,224,.32);--bc2:var(--sky);--bbg2:var(--sky-soft)">
@@ -3996,8 +4130,9 @@ $("exList").addEventListener("change",e=>{
   const inp=e.target.closest(".wv-in"); if(!inp) return;
   let v=parseFloat(String(inp.value).replace(",","."));
   if(isNaN(v)||v<0) v=0; if(v>600) v=600;
-  const kg = S.unidad==="lb" ? v/KG2LB : v;
   const b=bloqueDe(viewKey); const ex=RUTINA[b.id].find(x=>x.id===inp.dataset.exw);
+  if(!ex) return;
+  const kg = aKg(v, ex.id);                     /* según la unidad de ESTE ejercicio */
   S.lifts[liftKey(ex)]=Math.round(kg*100)/100;
   guardarCarga(ex, Math.round(kg*100)/100);
   save(); renderRoutine(); showToast("Peso guardado ✓");
@@ -4025,7 +4160,9 @@ $("exList").addEventListener("click",e=>{
        cerrar en la cara */
     if(target < total) exAbiertos.add(exId); else exAbiertos.delete(exId);
     const posFoco = vistaRutina()==="foco" ? focoActual() : -1;
-    save(); renderRoutine(); renderHdrExtra();
+    const nuevo = revisaEntrenoAuto(viewKey);      /* se marca solo */
+    save(); renderRoutine(); renderTrained(); renderHdrExtra();
+    if(nuevo) showToast("Día registrado como entrenado ✓");
     if(posFoco >= 0) vaAFoco(posFoco);
     if(target>cur && target<total){ startRest(rest,name); avisar("serie"); }
     else if(target>=total){ stopRest(); avisar("ejercicio", [30,50,60]);
@@ -4046,12 +4183,17 @@ $("exList").addEventListener("click",e=>{
     /* El paso va en la unidad que el usuario VE. Antes siempre sumaba 2.5 kg,
        que en libras se mostraba como saltos erráticos de 5 lb. */
     const pasoVisible = ex.grp==="inf" ? 5 : 2.5;
-    const enLb = S.unidad==="lb";
-    const actualVisible = enLb ? Math.round(getW(ex)*KG2LB/2.5)*2.5 : getW(ex);
+    const enLb = unidadDe(ex.id)==="lb";          /* la unidad de ESTE ejercicio */
+    const actualVisible = toUnitEx(getW(ex), ex.id);
     let nuevoVisible = actualVisible + (wb.dataset.w==="+"?pasoVisible:-pasoVisible);
     if(nuevoVisible<0) nuevoVisible=0;
     const w = enLb ? Math.round(nuevoVisible/KG2LB*100)/100 : nuevoVisible;
     S.lifts[liftKey(ex)]=w; guardarCarga(ex, w); save(); renderRoutine(); return; }
+
+  const ei=e.target.closest("[data-exinfo]");
+  if(ei){ abreFichaEjercicio(ei.dataset.exinfo); return; }
+  const eu=e.target.closest("[data-exuni]");
+  if(eu){ alternaUnidadEx(eu.dataset.exuni); return; }
 
   const hi=e.target.closest("[data-hi]");
   if(hi){ const ex=list.find(x=>x.id===hi.dataset.hi); const k=liftKey(ex);
@@ -4066,32 +4208,137 @@ document.addEventListener("click",e=>{
 });
 
 /* --- Botón "Entrené" --- */
+/* ==================================================================
+   CUMPLIMIENTO DEL PLAN
+   ------------------------------------------------------------------
+   Dos porcentajes separados a propósito: si el general sale 70 % pero
+   no sabes si falló el gimnasio o la comida, el número no sirve para
+   corregir nada.
+
+   El día de descanso NO vale 0: descansar es parte del plan. Un día de
+   descanso respetado cuenta 100 % de entrenamiento.
+   ================================================================== */
+const PESO_CUMPL = { series:0.60, calentamiento:0.10, cardio:0.30 };
+
+function cumplimientoEntreno(key){
+  const b = bloqueDe(key);
+  const detalle = [];
+  if(!b || b.t !== "entreno"){
+    /* descanso: sólo se falta si dejaste cardio rezagado sin recuperar */
+    return { pct:100, tipo:"descanso", detalle:["día de descanso respetado"] };
+  }
+  const lista = RUTINA[b.id] || [];
+  const totalSeries = lista.reduce((t,ex)=>t + numero(ex.s), 0);
+  const hechas = lista.reduce((t,ex)=>
+    t + Math.min(numero(ex.s), (S.sets[key]||{})[ex.id] || 0), 0);
+  const pSeries = totalSeries ? hechas / totalSeries : 0;
+  const pWarm   = S.warm[key]   === true ? 1 : 0;
+  const pCardio = S.cardio[key] === true ? 1 : 0;
+
+  if(pSeries < 1){
+    const faltan = totalSeries - hechas;
+    detalle.push(`faltaron ${faltan} serie${faltan===1?"":"s"} de ${totalSeries}`);
+  }
+  if(!pWarm)   detalle.push("faltó calentamiento");
+  if(!pCardio) detalle.push("faltó cardio");
+
+  const pct = Math.round((pSeries*PESO_CUMPL.series + pWarm*PESO_CUMPL.calentamiento +
+                          pCardio*PESO_CUMPL.cardio) * 100);
+  return { pct, tipo:"entreno", detalle, series:{hechas, total:totalSeries} };
+}
+
+/* dieta: comidas marcadas del día (el plan tiene MEALS.length comidas) */
+function cumplimientoDieta(key){
+  const hechas = (S.meals[key] || []).filter(Boolean).length;
+  const total = MEALS.length;
+  const pct = total ? Math.round(hechas / total * 100) : 0;
+  const detalle = hechas < total
+    ? [`${total - hechas} comida${total-hechas===1?"":"s"} sin marcar`] : [];
+  return { pct, detalle, hechas, total };
+}
+
+function cumplimientoDe(key){
+  const e = cumplimientoEntreno(key), d = cumplimientoDieta(key);
+  return { entreno:e, dieta:d, general: Math.round((e.pct + d.pct) / 2), key };
+}
+
+/* Promedio de los últimos N días con datos. Sirve para "cómo voy con el plan". */
+function cumplimientoRango(dias){
+  const n = dias || 30;
+  const hoy = fromKey(dayKey);
+  let sumE = 0, sumD = 0, cuenta = 0;
+  for(let i = 0; i < n; i++){
+    const k = localKey(addDays(hoy, -i));
+    const tieneAlgo = (S.sets[k] && Object.keys(S.sets[k]).length) ||
+                      (S.meals[k] && S.meals[k].filter(Boolean).length) ||
+                      S.trained[k] === true || S.warm[k] === true || S.cardio[k] === true ||
+                      bloqueDe(k).t !== "entreno";
+    if(!tieneAlgo) continue;
+    const c = cumplimientoDe(k);
+    sumE += c.entreno.pct; sumD += c.dieta.pct; cuenta++;
+  }
+  if(!cuenta) return null;
+  return { entreno: Math.round(sumE/cuenta), dieta: Math.round(sumD/cuenta),
+           general: Math.round((sumE+sumD)/(2*cuenta)), dias:cuenta };
+}
+
+/* "Entrené hoy" ya no se marca a mano: en cuanto completas un ejercicio
+   entero, el día queda registrado. Se puede desmarcar desde la tarjeta. */
+function revisaEntrenoAuto(key){
+  const b = bloqueDe(key);
+  if(!b || b.t !== "entreno") return false;
+  const lista = RUTINA[b.id] || [];
+  const algunoCompleto = lista.some(ex => numero(ex.s) > 0 &&
+                                    ((S.sets[key]||{})[ex.id] || 0) >= numero(ex.s));
+  if(algunoCompleto && S.trained[key] !== true){
+    S.trained[key] = true;
+    S.sessions = numero(S.sessions) + 1;
+    return true;
+  }
+  return false;
+}
+
 function renderTrained(){
-  const box=$("trainedBox");
-  if(bloqueDe(viewKey).t!=="entreno"){ box.innerHTML=""; return; }
+  const box=$("trainedBox"); if(!box) return;
+  const b = bloqueDe(viewKey);
+  const c = cumplimientoDe(viewKey);
   const on = S.trained[viewKey]===true;
-  const esHoy = viewKey===dayKey;
+
+  if(b.t!=="entreno"){
+    box.innerHTML = `<div class="cumpl descanso">
+      <span class="cu-pct">100 %</span>
+      <span class="cu-t"><b>Día de descanso</b><small>Descansar es parte del plan: cuenta completo.</small></span>
+    </div>`;
+    return;
+  }
+
+  const e = c.entreno;
+  const tono = e.pct >= 95 ? "ok" : e.pct >= 60 ? "medio" : "bajo";
+  /* Ya no hay botón de "entrené hoy": se marca solo al completar el primer
+     ejercicio. Queda un enlace discreto por si entrenaste fuera de la app. */
   box.innerHTML = `
-    <button class="trained-hero${on?' on':''}" id="trainedBtn" aria-pressed="${on}">
-      <span class="lifter" aria-hidden="true"><span class="l-head"></span><span class="l-body"></span><span class="l-arm"></span><span class="l-bar"><i></i><i></i></span></span>
-      <span class="t-txt">
-        <b>${on?'¡Sesión completada! 💥':(esHoy?'Marcar: entrené hoy':'Marcar este día como entrenado')}</b>
-        <small>${on?'Sumaste otro día. Así se construye.':'Registra tu día de entrenamiento'}</small>
-      </span>
-      <span class="t-check">${on?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
-    </button>
-    <div class="session-count"><span class="sc-num">${numero(S.sessions)}</span> <span class="sc-lbl">sesiones completadas en total</span></div>`;
-  $("trainedBtn").onclick=()=>{
-    const btn=$("trainedBtn");
-    if(S.trained[viewKey]){ delete S.trained[viewKey]; S.sessions=Math.max(0,(S.sessions||0)-1); }
-    else{
-      S.trained[viewKey]=true; S.sessions=(S.sessions||0)+1;
-      btn.classList.add("celebrate"); launchConfetti(btn); showCongrats();
-      try{navigator.vibrate&&navigator.vibrate([120,60,120]);}catch(e){}
-    }
-    save(); renderTrained(); renderWeekStrip(); renderBody();
+    <div class="cumpl ${tono}${on?" reg":""}">
+      <span class="cu-pct">${e.pct} %</span>
+      <span class="cu-t"><b>${on?"Día registrado":"Entrenamiento de hoy"}</b>
+        <small>${e.detalle.length ? esc(e.detalle.join(" · ")) : "completo: series, calentamiento y cardio"}</small></span>
+    </div>
+    <div class="cumpl-barras">
+      <div class="cb"><span>Series</span><i style="--p:${e.series?Math.round(e.series.hechas/Math.max(1,e.series.total)*100):0}%"></i>
+        <b>${e.series?e.series.hechas:0}/${e.series?e.series.total:0}</b></div>
+      <div class="cb"><span>Dieta</span><i style="--p:${c.dieta.pct}%"></i>
+        <b>${c.dieta.hechas}/${c.dieta.total}</b></div>
+    </div>
+    <div class="session-count"><span class="sc-num">${numero(S.sessions)}</span>
+      <span class="sc-lbl">sesiones completadas en total</span>
+      <button class="sc-manual" id="trainedManual">${on?"Quitar registro":"Marcar a mano"}</button></div>`;
+  const bt = $("trainedManual");
+  if(bt) bt.onclick = ()=>{
+    if(S.trained[viewKey]){ delete S.trained[viewKey]; S.sessions=Math.max(0,numero(S.sessions)-1); }
+    else { S.trained[viewKey]=true; S.sessions=numero(S.sessions)+1; }
+    save(); renderTrained(); renderHdrExtra();
   };
 }
+
 function showCongrats(){
   const msgs=["¡Bien hecho! 💪","¡Otro día ganado! 🔥","¡Constancia pura! 🏆","¡Así se hace! 🚀","¡Máquina! ⚡"];
   const el=document.createElement("div"); el.className="congrats";
@@ -4560,6 +4807,7 @@ function irAPestana(nombre, scroll){
     document.body.classList.remove("modo-mandado");
   }
   renderBarraMandado();
+  if(nombre === "finanzas") renderFinanzas();
   renderHdrExtra(); renderHdrMini();
   if(scroll!==false) window.scrollTo({top:0,behavior:"smooth"});
   return true;
@@ -5106,9 +5354,136 @@ ${esc("fechas: " + fechas.join(", "))}</code>
 function renderHistorial(){
   if(!document.getElementById("hv-cuerpo")) return;
   if(histVista==="gym") renderGym();
-  else if(histVista==="dinero"){ renderCandado(); renderAsesor(); renderDinero(); }
+}
+/* Finanzas vive en su propia pestaña: el candado, el asesor y los gastos
+   del mandado. En Historial ya sólo hay dieta y entrenamiento. */
+/* ==================================================================
+   FINANZAS — deudas y tarjetas
+   ------------------------------------------------------------------
+   Sólo números para gestionar tu dinero. Nada de RFC, SAT ni datos
+   fiscales: esto no es un contador y no pretende serlo.
+   ================================================================== */
+
+/* próxima vez que cae un día del mes, contando desde hoy */
+function proximaFecha(dia, desde){
+  const d = numero(dia);
+  if(!(d >= 1 && d <= 31)) return null;
+  const hoy = desde ? fromKey(desde) : fromKey(dayKey);
+  let a = hoy.getFullYear(), m = hoy.getMonth();
+  for(let i = 0; i < 3; i++){
+    const dim = diasDelMes(a, m+1);
+    const dd = Math.min(d, dim);
+    const f = new Date(a, m, dd);
+    if(f >= new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())) return localKey(f);
+    m++; if(m > 11){ m = 0; a++; }
+  }
+  return null;
+}
+const diasHasta = k => k ? daysBetween(dayKey, k) : null;
+
+/* interés al saldo de hoy: saldo × tasa/365 × días */
+function interesDe(deuda, dias){
+  return numero(deuda.saldo) * numero(deuda.tasaAnual) / 365 * (dias || 30);
+}
+
+/* Datos confirmados del análisis de tus estados de cuenta. Lo que el
+   propio análisis dejó "por averiguar" NO se inventa: va a pendientes. */
+const DEUDAS_SEMILLA = [
+  { id:"costco", nombre:"Costco revolvente", emisor:"Banamex", tipo:"revolvente",
+    saldo:6357, tasaAnual:0.6058, diaCorte:13, diaVencimiento:3, pagoMinimo:1510 },
+  { id:"diferido", nombre:"Diferimiento de saldo", emisor:"Banamex", tipo:"diferido",
+    saldo:2695, tasaAnual:0.52, diaCorte:13, diaVencimiento:3 },
+  { id:"station24", nombre:"Station 24 · a meses", emisor:"Banamex", tipo:"msi",
+    saldo:3332, tasaAnual:0, diaCorte:13, diaVencimiento:3, mesesRestantes:1 },
+  { id:"joy", nombre:"Tarjeta Joy", emisor:"Joy", tipo:"revolvente",
+    saldo:3862, tasaAnual:0, diaVencimiento:25, pagoMinimo:370 },
+  { id:"auto", nombre:"Crédito del auto", emisor:"—", tipo:"automotriz",
+    saldo:8650, tasaAnual:0.119, diaVencimiento:31 }
+];
+const PENDIENTES_SEMILLA = [
+  "Saldo revolvente EXACTO de la Costco: saldo total − $3,332 del Station 24 − $2,695 del diferimiento.",
+  "De qué son los $894 de comisiones de la Joy en 12 meses (la Joy no tiene anualidad).",
+  "Si el interés de tu estado de cuenta viene con IVA o no.",
+  "Tasa real de la tarjeta Joy: aquí está en 0 % porque no la tengo confirmada."
+];
+
+function cargaDeudasSemilla(){
+  const fn = fin();
+  const hay = new Set(fn.deudas.map(d=>d.id));
+  DEUDAS_SEMILLA.forEach(d=>{ if(!hay.has(d.id)) fn.deudas.push(Object.assign({}, d)); });
+  const textos = new Set(fn.pendientes.map(p=>p.texto));
+  PENDIENTES_SEMILLA.forEach((t,i)=>{
+    if(!textos.has(t)) fn.pendientes.push({ id:"ps"+i, texto:t, resuelto:false });
+  });
+  saneaFin(S); save(); renderFinanzas();
+  showToast("Tarjetas cargadas · revisa y ajusta los saldos");
+}
+
+function renderDeudas(){
+  const caja = $("finDeudas"); if(!caja) return;
+  if(dineroCerrado()){ caja.innerHTML = ""; return; }
+  const fn = fin();
+  const d = fn.deudas.filter(x=>numero(x.saldo) > 0);
+
+  if(!d.length){
+    caja.innerHTML = `<div class="ases">
+      <span class="ases-eyebrow">Deudas</span>
+      <h3>Todavía no tengo tus tarjetas</h3>
+      <p class="ases-sub">Con saldo, tasa y fechas de corte puedo avisarte del error que
+        más caro sale: pagar el «adeudo del periodo anterior» en lugar del
+        «pago para no generar intereses».</p>
+      <div class="ases-btns"><button id="finSemilla">Cargar las de mi análisis</button></div>
+    </div>`;
+    const b = $("finSemilla"); if(b) b.onclick = cargaDeudasSemilla;
+    return;
+  }
+
+  const totalMes = d.reduce((t,x)=>t + interesDe(x, 30), 0);
+  const filas = d.slice().sort((a,b)=>numero(b.tasaAnual) - numero(a.tasaAnual)).map(x=>{
+    const corte = proximaFecha(x.diaCorte), vence = proximaFecha(x.diaVencimiento);
+    const dv = diasHasta(vence), dc = diasHasta(corte);
+    const msi = x.tipo === "msi" && numero(x.tasaAnual) === 0;
+    const int = interesDe(x, 30);
+    return `<div class="deuda${msi?" msi":""}">
+      <div class="de-top">
+        <span class="de-n"><b>${esc(x.nombre)}</b>
+          <small>${esc(x.emisor||"")}${x.tasaAnual?` · ${(numero(x.tasaAnual)*100).toFixed(2)} % anual`:" · 0 % real"}</small></span>
+        <span class="de-s">${fmt$(numero(x.saldo))}</span>
+      </div>
+      <div class="de-fechas">
+        ${corte?`<span><i>corte</i>${fmtDateShort(corte)}${dc===0?" · hoy":dc!==null&&dc<=3?` · en ${dc} d`:""}</span>`:""}
+        ${vence?`<span><i>vence</i>${fmtDateShort(vence)}${dv!==null&&dv<=3?` · en ${dv} d`:""}</span>`:""}
+        <span><i>interés/mes</i>${msi?"—":fmt$(int)}</span>
+      </div>
+      ${msi
+        ? `<p class="de-aviso ok">Está a 0 % real: <b>no la adelantes</b>. Adelantarla no te ahorra un peso de interés y te quita liquidez.</p>`
+        : (dc !== null && dc <= 3
+           ? `<p class="de-aviso">El corte es en ${dc} día${dc===1?"":"s"}: lo que le cargues antes cae en este recibo; después, hasta el siguiente.</p>`
+           : "")}
+      ${numero(x.pagoMinimo) ? `<p class="de-aviso rojo"><b>Nunca pagues el mínimo (${fmt$(numero(x.pagoMinimo))}) ni el «adeudo del periodo anterior».</b> Ese renglón es informativo. Paga siempre el <b>«pago para no generar intereses»</b>.</p>` : ""}
+    </div>`;
+  }).join("");
+
+  const pend = fn.pendientes.filter(p=>!p.resuelto);
+  caja.innerHTML = `<div class="ases">
+      <span class="ases-eyebrow">Deudas</span>
+      <h3>Te cuestan ${fmt$(totalMes)} al mes</h3>
+      <p class="ases-sub">Interés al saldo de hoy, ordenadas de la más cara a la más barata:
+        ése es el orden de avalancha.</p>
+    </div>
+    <div class="deudas">${filas}</div>
+    ${pend.length ? `<div class="ases"><span class="ases-eyebrow">Por averiguar</span>
+      <p class="ases-sub">Un asesor honesto lleva lista de lo que todavía no sabe.
+        Estos datos cambian los cálculos:</p>
+      <ul class="pend-lista">${pend.slice(0,6).map(x=>`<li>${esc(x.texto)}</li>`).join("")}</ul></div>` : ""}`;
+}
+
+function renderFinanzas(){
+  if(!document.getElementById("finPanel")) return;
+  renderCandado(); renderAsesor(); renderDeudas(); renderDinero();
 }
 function irAVista(v){
+  if(v !== "cuerpo" && v !== "gym") v = "cuerpo";   /* dinero ya no vive aquí */
   histVista = v;
   document.querySelectorAll(".hist-tabs [data-hv]").forEach(b=>{
     const on = b.dataset.hv===v;
@@ -5130,6 +5505,28 @@ $("dinMeta").addEventListener("input", e=>{
   window._presT = setTimeout(()=>{ save(); renderDinero(); }, 400);
 });
 irAVista("cuerpo");
+
+/* ---------- sub-pestañas de Hoy: Comidas · Snacks ---------- */
+var subHoy = "comidas";
+function irASub(v){
+  subHoy = (v === "snacks") ? "snacks" : "comidas";
+  document.querySelectorAll(".sub-tabs [data-sub]").forEach(b=>{
+    const on = b.dataset.sub === subHoy;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  document.querySelectorAll("#tab-hoy .sub").forEach(x=>
+    x.classList.toggle("activa", x.id === "sub-" + subHoy));
+  if(subHoy === "snacks"){ renderSnacks(); renderAntojos(); renderBudget(); }
+}
+(function(){
+  const t = document.querySelector("#tab-hoy .sub-tabs");
+  if(t) t.addEventListener("click", e=>{
+    const b = e.target.closest("[data-sub]"); if(!b) return;
+    irASub(b.dataset.sub);
+  });
+})();
+
 
 /* ==================================================================
    ASISTENTE — botón flotante, chat y acciones
