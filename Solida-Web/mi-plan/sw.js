@@ -7,9 +7,13 @@
                   alimentos. Antes todo vivía junto, así que cada
                   actualización borraba la biblioteca de imágenes y
                   volvías al gimnasio sin fotos. */
-const VERSION     = "mi-plan-v6.0.0";
-const SHELL_CACHE = "shell-" + VERSION;
-const IMG_CACHE   = "img-v1";
+const APP         = "mi-plan";
+const VERSION     = "mi-plan-v6.1.0";
+/* Prefijados con el nombre de la app: CacheStorage es POR ORIGEN, no por
+   scope. Purgar por "shell-" borraba la caché de las apps hermanas del
+   mismo dominio, y "img-v1" era un nombre genérico que compartían. */
+const SHELL_CACHE = APP + ":shell-" + VERSION;
+const IMG_CACHE   = APP + ":img-v1";
 const SHELL = ["./", "index.html", "app.js", "manifest.json",
                "img/icon-192.png", "img/icon-512.png",
                "img/icon-512-maskable.png", "img/icon-180.png"];
@@ -37,8 +41,10 @@ self.addEventListener("activate", e => {
     const keys = await caches.keys();
     await Promise.all(keys.map(k => {
       if(k === SHELL_CACHE || k === IMG_CACHE) return null;
-      if(k.startsWith("shell-") || k.startsWith("mi-plan-")) return caches.delete(k);
-      return null;                       /* cachés ajenas: no las tocamos */
+      /* sólo lo nuestro, incluidos los nombres viejos sin prefijo */
+      if(k.startsWith(APP + ":") || k.startsWith("shell-mi-plan-") || k.startsWith("mi-plan-"))
+        return caches.delete(k);
+      return null;                       /* cachés de otras apps: intactas */
     }));
     await self.clients.claim();
   })());
@@ -46,23 +52,62 @@ self.addEventListener("activate", e => {
 
 /* Descargar todas las imágenes de golpe, desde Ajustes, antes de ir al gym.
    El SW no puede adivinar la lista, así que la app se la manda. */
+const TOPE_PRECACHE = 400;        /* hoy son ~113; el tope es el freno */
+
 self.addEventListener("message", e => {
   const d = e.data || {};
   if(d.tipo !== "precachear-imagenes") return;
+
+  /* Sólo una ventana DENTRO de nuestro scope puede pedir esto. Antes
+     cualquier página del mismo origen (o un XSS) podía mandar una lista
+     enorme y agotar la cuota, lo que además rompe localStorage. */
+  const src = e.source;
+  if(!src || src.type !== "window") return;
+  try{
+    const base = new URL(self.registration.scope);
+    const quien = new URL(src.url);
+    if(quien.origin !== base.origin || !quien.pathname.startsWith(base.pathname)) return;
+  }catch(err){ return; }
+
+  if(!Array.isArray(d.urls)) return;
   const puerto = e.ports && e.ports[0];
+
+  /* mismo origen, dentro del scope, sin duplicados y con tope */
+  const limpias = [];
+  const vistas = new Set();
+  for(const u of d.urls){
+    if(typeof u !== "string") continue;
+    let abs;
+    try{ abs = new URL(u, self.registration.scope); }catch(err){ continue; }
+    if(abs.origin !== location.origin) continue;
+    if(!abs.pathname.startsWith(new URL(self.registration.scope).pathname)) continue;
+    if(abs.search || abs.hash) continue;          /* ?x=1 multiplicaba la caché */
+    if(!/\.(png|jpe?g|webp|svg|gif)$/i.test(abs.pathname)) continue;
+    const clave = abs.href;
+    if(vistas.has(clave)) continue;
+    vistas.add(clave); limpias.push(clave);
+    if(limpias.length >= TOPE_PRECACHE) break;
+  }
+
   e.waitUntil((async () => {
     const c = await caches.open(IMG_CACHE);
-    let hechas = 0, fallidas = 0;
-    const total = d.urls.length;
-    for(const u of d.urls){
+    let hechas = 0, fallidas = 0, sinEspacio = false;
+    const total = limpias.length;
+    for(const u of limpias){
       try{
-        if(await c.match(u)) { hechas++; }
+        if(await c.match(u)) hechas++;
         else { await c.add(u); hechas++; }
-      }catch(err){ fallidas++; }
+      }catch(err){
+        fallidas++;
+        /* si ya no cabe, cortamos: seguir sólo empeora la cuota del origen */
+        if(err && (err.name === "QuotaExceededError" || /quota/i.test(String(err.message)))){
+          sinEspacio = true; break;
+        }
+      }
       if(puerto && (hechas + fallidas) % 5 === 0)
         puerto.postMessage({hechas, fallidas, total});
     }
-    if(puerto) puerto.postMessage({hechas, fallidas, total, fin:true});
+    if(puerto) puerto.postMessage({hechas, fallidas, total, fin:true, sinEspacio});
   })());
 });
 
@@ -85,8 +130,11 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   if(url.origin !== location.origin) return;
 
-  const esShell = req.mode === "navigate" ||
-                  /app\.js$|index\.html$|manifest\.json$/.test(url.pathname);
+  /* anclado a nuestro scope: sin esto, /barberia/app.js del mismo dominio
+     entraba a nuestra caché de shell */
+  const dentro = url.pathname.startsWith(new URL(self.registration.scope).pathname);
+  const esShell = dentro && (req.mode === "navigate" ||
+                  /(^|\/)(app\.js|index\.html|manifest\.json)$/.test(url.pathname));
 
   if(esShell){
     e.respondWith((async () => {
@@ -96,9 +144,13 @@ self.addEventListener("fetch", e => {
            de "acepta los términos" responde 200 con SU html: sin esta guarda
            se guardaba encima de index.html y la app abría el portal. */
         const ct = r.headers.get("content-type") || "";
-        const esHtml = req.mode === "navigate" || /index\.html$/.test(url.pathname);
-        const sirve = r.ok && r.type !== "opaqueredirect" && !r.redirected &&
-                      (!esHtml || ct.includes("text/html"));
+        /* cada recurso del shell sólo se cachea si el tipo cuadra: un 200 con
+           HTML en /app.js dejaba la app en blanco de forma persistente */
+        const esperado = req.mode === "navigate" || /index\.html$/.test(url.pathname) ? "text/html"
+                       : /app\.js$/.test(url.pathname)        ? "javascript"
+                       : /manifest\.json$/.test(url.pathname) ? "json" : null;
+        const sirve = r.status === 200 && r.type !== "opaqueredirect" && !r.redirected &&
+                      (!esperado || ct.includes(esperado));
         if(sirve){
           const cp = r.clone();
           e.waitUntil(caches.open(SHELL_CACHE).then(c => c.put(req, cp)).catch(()=>{}));

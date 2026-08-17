@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════╗
-║   MI PLAN v6 — aplicación completa (Salvador)                 ║
+║   MI PLAN v6.1 — aplicación completa (Salvador)               ║
 ║   Sólida Aplicaciones · azul marino + verde azulado           ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -140,6 +140,29 @@ completa → Implementar. Listo en 1 minuto.
   · Los que más repites suben solos a la primera fila.
   · Los antojos siguen descontando del presupuesto semanal
     y ahora también suman al día en que los comes.
+
+┌──────────────────────────────────────────────────────────┐
+│  SEGURIDAD (v6.1)                                         │
+└──────────────────────────────────────────────────────────┘
+  · Un respaldo es un ARCHIVO QUE SE COMPARTE, así que su
+    contenido se trata como no confiable: al importarlo se
+    fuerza el tipo de cada campo (números, fechas, textos
+    acotados) antes de guardarlo.
+  · Todo lo que se pinta en pantalla va escapado, incluidos
+    los atributos. Ya no hay JavaScript dentro de atributos
+    onerror: un solo manejador central atiende los fallos de
+    carga de imágenes.
+  · index.html trae una Content-Security-Policy: aunque algo
+    se colara, no puede cargar scripts de fuera, abrir un
+    iframe ni mandar tus datos a otro servidor.
+  · Las imágenes propias sólo se aceptan si son data:image
+    válidas; cualquier otro valor se descarta al cargar.
+  · El service worker sólo atiende peticiones de SU carpeta,
+    sólo acepta órdenes de una ventana de la propia app, y
+    sus cachés van prefijadas «mi-plan:» para no borrar las
+    de las otras apps del mismo dominio (barbería, taller…).
+  · El precacheo de imágenes tiene tope de 400 y corta si se
+    llena el espacio: agotar la cuota rompía el guardado.
 
 ┌──────────────────────────────────────────────────────────┐
 │  DETALLE DE CADA ALIMENTO                                 │

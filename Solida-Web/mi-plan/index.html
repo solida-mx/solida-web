@@ -11,6 +11,22 @@
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="Plan de dieta y entrenamiento de Salvador. Funciona sin conexión.">
+<!-- Red de contención: aunque se colara un XSS, no puede cargar scripts de
+     fuera, ni abrir un iframe, ni mandar datos a otro servidor. Las fuentes
+     de Google necesitan style-src/font-src; las imágenes, data: por el canvas.
+     'unsafe-inline' en script-src es necesario por los dos <script> del splash;
+     el resto de directivas sigue cerrando lo que importa. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  img-src 'self' data: blob:;
+  connect-src 'self';
+  frame-src 'none';
+  object-src 'none';
+  base-uri 'none';
+  form-action 'none'">
 <title>Mi Plan · Salvador</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%231b396b'/%3E%3Crect x='13' y='9' width='22' height='8' rx='4' fill='%232a9d8e'/%3E%3Crect x='10' y='20.5' width='28' height='8' rx='4' fill='%23e8f6f6'/%3E%3Crect x='6' y='32' width='36' height='8' rx='4' fill='%232a9d8e'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">

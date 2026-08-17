@@ -704,6 +704,9 @@ S.customFoods.forEach(cf=>{ if(cf.base==="fruta") cf.base="manzana"; });
    Aquí los revisamos una sola vez al arrancar.
    ------------------------------------------------------------------ */
 function saneaEstado(){
+  /* el mismo saneado que a un respaldo: lo que ya está guardado pudo
+     haberse escrito antes de esta versión, o por otra página del origen */
+  saneaImportado(S);
   const obj = k => (S[k] && typeof S[k]==="object" && !Array.isArray(S[k])) ? S[k] : (S[k]={});
   ["meals","water","swaps","mealOpt","lifts","liftHi","antojos","trained",
    "note","sets","varSel","warm","cardio","nutEdits",
@@ -1401,7 +1404,27 @@ const $ = id => document.getElementById(id);
 const toast = $("toast"); let toastT;
 function showToast(m){ toast.textContent=m; toast.classList.add("show");
   clearTimeout(toastT); toastT=setTimeout(()=>toast.classList.remove("show"),2200); }
-const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+/* esc() también escapa la comilla simple: sin eso, cualquier atributo
+   escrito con '…' o cualquier string JS dentro de un atributo convertía
+   esta función en decorativa. */
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+/* para números que se interpolan en HTML: si el dato viene de un respaldo
+   manipulado puede ser una cadena con etiquetas. Devuelve número o "—". */
+const numero = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const numeroTxt = (v, dec) => { const n = Number(v);
+  return Number.isFinite(n) ? (dec!==undefined ? n.toFixed(dec) : String(n)) : "—"; };
+
+/* Fallo de carga de imágenes, con UN handler delegado en vez de JS
+   incrustado en atributos onerror. El `error` de <img> no burbujea, pero
+   sí se puede capturar en la fase de captura. */
+document.addEventListener("error", e=>{
+  const el = e.target;
+  if(!el || el.tagName !== "IMG") return;
+  if(el.dataset.noimg && el.parentNode) el.parentNode.classList.add("noimg");
+  else if(el.dataset.fbk !== undefined)
+    el.replaceWith(document.createTextNode(el.dataset.fbk));
+}, true);
 
 /* ==================================================================
    TONOS SEGÚN EL TEMA
@@ -1503,14 +1526,14 @@ function foodIcon(it, alt){
   if(!alt){
     const src = srcImagen("food:"+it.id, "img/"+it.id+".png");
     return `<span class="fico"><img src="${src}" alt="" loading="lazy" `+
-           `onerror="this.parentNode.classList.add('noimg')"><span class="fe">${it.e}</span></span>`;
+           `data-noimg="1"><span class="fe">${esc(it.e)}</span></span>`;
   }
   const clave = "food:" + (alt.customId ? "custom:"+alt.customId : slugName(alt.n));
   const base  = imgDeEquivalencia(alt.n, it.id);
   const src   = srcImagen(clave, "img/"+base+".png");
   return `<span class="fico equiv" title="Equivalencia de ${esc(it.name)}">`+
-         `<img src="${src}" alt="" loading="lazy" onerror="this.parentNode.classList.add('noimg')">`+
-         `<span class="fe">${it.e}</span><span class="eq-mk" aria-hidden="true">↻</span></span>`;
+         `<img src="${src}" alt="" loading="lazy" data-noimg="1">`+
+         `<span class="fe">${esc(it.e)}</span><span class="eq-mk" aria-hidden="true">↻</span></span>`;
 }
 /* ---------- Imágenes personalizadas (se guardan en este navegador) ---------- */
 const IMG_KEY = "mi_plan_salvador_imgs_v1";
@@ -1536,7 +1559,7 @@ function exPhoto(v, small){
   if(!CONFIG.fotosEjercicios) return "";
   const sl = slugName(v.n);
   const src = srcImagen("ex:"+sl, "img/ej-"+sl+".png");
-  return `<span class="ex-photo${small?' sm':''}"><img src="${src}" alt="" loading="lazy" onerror="this.parentNode.classList.add('noimg')">${DUMBBELL_SVG}</span>`;
+  return `<span class="ex-photo${small?' sm':''}"><img src="${src}" alt="" loading="lazy" data-noimg="1">${DUMBBELL_SVG}</span>`;
 }
 
 /* ---------- Submenú deslizante (equivalencias / variantes) ---------- */
@@ -1620,6 +1643,96 @@ function buildBackupHtml(data){
 <script type="application/json" id="mi-plan-datos">${json}</script>
 </body></html>`;
 }
+/* ==================================================================
+   SANEADO DE UN RESPALDO IMPORTADO
+   El escape en el punto de pintado es la defensa principal. Esto es la
+   segunda: un respaldo es un archivo que se comparte por WhatsApp o Drive,
+   así que su contenido es dato NO CONFIABLE. Aquí se fuerza el tipo de
+   cada campo, para que ni un sink futuro sin escapar pueda explotarse.
+   ================================================================== */
+function saneaImportado(St){
+  if(!St || typeof St !== "object") return;
+  const n = (v, def) => { const x = Number(v); return Number.isFinite(x) ? x : (def===undefined?0:def); };
+  const texto = (v, max) => typeof v === "string" ? v.slice(0, max||120) : "";
+  const fecha = v => /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+
+  /* números que se pintan en la interfaz */
+  if(St.persona && typeof St.persona === "object"){
+    ["estatura","edad","act","metaGrasa","metaMusculo","cardioMin"].forEach(k=>{
+      if(St.persona[k] !== undefined) St.persona[k] = n(St.persona[k]);
+    });
+    if(St.persona.sexo !== "f") St.persona.sexo = "m";
+    if(!["perder","recomp","mantener","subir"].includes(St.persona.objetivo)) delete St.persona.objetivo;
+  }
+  St.sessions   = n(St.sessions);
+  St.cicloShift = n(St.cicloShift);
+  if(St.presupuestoMes !== undefined) St.presupuestoMes = n(St.presupuestoMes);
+  if(!["kg","lb"].includes(St.unidad)) St.unidad = "kg";
+  if(St.lastBackup !== undefined) St.lastBackup = n(St.lastBackup);
+
+  /* mediciones: fecha válida y números */
+  if(Array.isArray(St.body)) St.body = St.body
+    .filter(b => b && fecha(b.d))
+    .map(b => ({ d:b.d, kg:n(b.kg,null), grasa:n(b.grasa,null), mme:n(b.mme,null), imc:n(b.imc,null) }));
+
+  /* alimentos propios: id sin caracteres raros, texto acotado */
+  if(Array.isArray(St.customFoods)) St.customFoods = St.customFoods
+    .filter(c => c && typeof c === "object")
+    .map(c => ({ id: String(c.id||"").replace(/[^a-zA-Z0-9_-]/g,"").slice(0,40) || ("f"+n(Math.abs(n(c.kcal)))),
+                 base: String(c.base||"").replace(/[^a-z0-9-]/g,"").slice(0,40),
+                 n: texto(c.n, 80), hair: texto(c.hair, 80) || null,
+                 kcal:n(c.kcal), p:n(c.p), c:n(c.c), f:n(c.f),
+                 precio:n(c.precio), pz:!!c.pz, pzTxt: texto(c.pzTxt, 24) }))
+    .filter(c => c.id && c.base);
+
+  /* ediciones de etiqueta: sólo campos conocidos, con su tipo */
+  if(St.nutEdits && typeof St.nutEdits === "object") Object.keys(St.nutEdits).forEach(k=>{
+    const e = St.nutEdits[k];
+    if(!e || typeof e !== "object"){ delete St.nutEdits[k]; return; }
+    const limpio = {};
+    ["kcal","p","c","f","precio"].forEach(x=>{ if(e[x]!==undefined) limpio[x] = n(e[x]); });
+    if(e.pz !== undefined)    limpio.pz = !!e.pz;
+    if(e.pzTxt !== undefined) limpio.pzTxt = texto(e.pzTxt, 24);
+    St.nutEdits[k] = limpio;
+  });
+
+  /* snacks y compras: los ts y cantidades se pintan en atributos */
+  if(St.snacks && typeof St.snacks === "object") Object.keys(St.snacks).forEach(d=>{
+    if(!fecha(d) || !Array.isArray(St.snacks[d])){ delete St.snacks[d]; return; }
+    St.snacks[d] = St.snacks[d].filter(x=>x && typeof x==="object")
+      .map(x=>({ id: texto(x.id,40), n: texto(x.n,80), kcal:n(x.kcal), p:n(x.p), ts:n(x.ts) }));
+  });
+  if(St.compras && typeof St.compras === "object") Object.keys(St.compras).forEach(w=>{
+    const c = St.compras[w];
+    if(!fecha(w) || !c || typeof c!=="object"){ delete St.compras[w]; return; }
+    c.cerrada = !!c.cerrada;
+    if(c.items && typeof c.items === "object") Object.keys(c.items).forEach(id=>{
+      const it = c.items[id];
+      if(!it || typeof it!=="object"){ delete c.items[id]; return; }
+      c.items[id] = { e:n(it.e), $:n(it.$), q: it.q===undefined?undefined:n(it.q),
+                      u: texto(it.u, 24), pu: it.pu===undefined?undefined:n(it.pu) };
+    }); else c.items = {};
+  });
+  if(St.precios && typeof St.precios === "object") Object.keys(St.precios).forEach(k=>{
+    if(!Array.isArray(St.precios[k])){ delete St.precios[k]; return; }
+    St.precios[k] = St.precios[k].filter(x=>x && fecha(x.d))
+      .map(x=>({ d:x.d, pu:n(x.pu), u:texto(x.u,24) }));
+  });
+  /* historial de cargas y notas */
+  if(St.liftHist && typeof St.liftHist === "object") Object.keys(St.liftHist).forEach(k=>{
+    if(!Array.isArray(St.liftHist[k])){ delete St.liftHist[k]; return; }
+    St.liftHist[k] = St.liftHist[k].filter(x=>x && fecha(x.d)).map(x=>({d:x.d, kg:n(x.kg)}));
+  });
+  if(St.note && typeof St.note === "object") Object.keys(St.note).forEach(k=>{
+    St.note[k] = texto(St.note[k], 4000);
+  });
+  if(St.antojos && typeof St.antojos === "object") Object.keys(St.antojos).forEach(w=>{
+    if(!Array.isArray(St.antojos[w])){ delete St.antojos[w]; return; }
+    St.antojos[w] = St.antojos[w].filter(x=>x && typeof x==="object")
+      .map(x=>({ id:texto(x.id,40), n:texto(x.n,80), kcal:n(x.kcal), d:fecha(x.d)||undefined, ts:n(x.ts) }));
+  });
+}
+
 function parseBackup(text){
   let raw = text.trim();
   if(raw[0] !== "{"){
@@ -1634,6 +1747,7 @@ function parseBackup(text){
        y la app quedaba en blanco al recargar, sin forma de volver a Ajustes. */
     if(!d.S || typeof d.S!=="object" || Array.isArray(d.S)) return null;
     if(typeof d.v === "number" && d.v > 2) return null;   /* respaldo de una versión futura */
+    saneaImportado(d.S);      /* defensa en profundidad: el contenido también */
     /* las imágenes sólo pueden ser data:image — si no, cualquiera podría
        inyectar HTML dentro de la app mandándote un respaldo por WhatsApp */
     if(d.CIMG && typeof d.CIMG==="object" && !Array.isArray(d.CIMG)){
@@ -1746,7 +1860,7 @@ function allFoodKeys(){
 }
 function fmtN(v){ return (Math.round(v*10)/10).toString(); }
 function nutField(k,l,v){
-  return `<label class="nf"><span>${l}</span><input type="number" inputmode="decimal" step="any" min="0" data-nf="${k}" value="${v===""?"":+(+v).toFixed(1)}"></label>`;
+  return `<label class="nf"><span>${esc(l)}</span><input type="number" inputmode="decimal" step="any" min="0" data-nf="${esc(k)}" value="${v===""?"":numeroTxt(v,1)}"></label>`;
 }
 function nutRowsHtml(){
   const f = nutFilter.trim().toLowerCase();
@@ -1754,18 +1868,18 @@ function nutRowsHtml(){
   if(!list.length) return `<div class="sheet-note">Nada coincide con tu búsqueda.</div>`;
   return list.map(x=>{
     const n = nutOf(x.key), edited = !!S.nutEdits[x.key];
-    const per = n.pz ? "por "+(n.pzTxt||"pieza") : "por 100 "+(shopById[x.base].unit==="ml"?"ml":"g");
+    const per = esc(n.pz ? "por "+(n.pzTxt||"pieza") : "por 100 "+(shopById[x.base].unit==="ml"?"ml":"g"));
     const open = nutOpen===x.key;
     const imgK = "food:"+x.base, hasCustomImg = ES_IMAGEN(CIMG[imgK]);
     const imgSrc = srcImagen(imgK, "img/"+x.base+".png");
-    return `<div class="nut-row${open?' open':''}${x.isBase?'':' isalt'}" data-nutrow="${x.key}">
-      <div class="nut-head" data-nutopen="${x.key}">
-        ${x.isBase?`<span class="img-th sm"><img src="${imgSrc}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${shopById[x.base].e}'))"></span>`:""}
+    return `<div class="nut-row${open?' open':''}${x.isBase?'':' isalt'}" data-nutrow="${esc(x.key)}">
+      <div class="nut-head" data-nutopen="${esc(x.key)}">
+        ${x.isBase?`<span class="img-th sm"><img src="${imgSrc}" alt="" loading="lazy" data-fbk="${esc(shopById[x.base].e)}"></span>`:""}
         <span class="nut-nm">${esc(x.name)}
           ${x.sub?`<small>${esc(x.sub)}</small>`:""}
           ${edited?`<small class="ed">★ editado por ti</small>`:""}${x.custom?`<small class="ed">★ agregado por ti</small>`:""}</span>
         <span class="nut-vals">${Math.round(n.kcal)} kcal · ${fmtN(n.p)}P/${fmtN(n.c)}C/${fmtN(n.f)}G
-          <em>${per} · ${n.precio?fmt$(n.precio)+" "+(n.pz?"c/u":"por 100"):"sin precio"}</em></span>
+          <em>${per} · ${n.precio?fmt$(numero(n.precio))+" "+(n.pz?"c/u":"por 100"):"sin precio"}</em></span>
         <span class="nut-arrow">${open?"▴":"▾"}</span>
       </div>
       ${open?`<div class="nut-form">
@@ -1773,14 +1887,14 @@ function nutRowsHtml(){
         ${nutField("c","Carbos g",n.c)}${nutField("f","Grasa g",n.f)}
         ${nutField("precio","Precio $ "+(n.pz?"por "+(n.pzTxt||"pieza"):"por 100"),n.precio||0)}
         ${x.isBase?`<div class="nut-photo">
-          <span class="img-th"><img src="${imgSrc}" alt="" onerror="this.replaceWith(document.createTextNode('${shopById[x.base].e}'))"></span>
-          <label class="chg">📷 Cambiar imagen<input type="file" accept="image/*" data-imgkey="${imgK}"></label>
-          ${hasCustomImg?`<button class="del" data-imgdel="${imgK}" aria-label="Quitar imagen">✕</button>`:""}
+          <span class="img-th"><img src="${imgSrc}" alt="" data-fbk="${esc(shopById[x.base].e)}"></span>
+          <label class="chg">📷 Cambiar imagen<input type="file" accept="image/*" data-imgkey="${esc(imgK)}"></label>
+          ${hasCustomImg?`<button class="del" data-imgdel="${esc(imgK)}" aria-label="Quitar imagen">✕</button>`:""}
         </div>`:""}
         <div class="nut-btns">
-          <button class="nb-save" data-nutsave="${x.key}">Guardar</button>
-          ${edited?`<button class="nb-reset" data-nutreset="${x.key}">Restaurar original</button>`:""}
-          ${x.custom?`<button class="nb-del" data-nutdel="${x.key}">Eliminar alimento</button>`:""}
+          <button class="nb-save" data-nutsave="${esc(x.key)}">Guardar</button>
+          ${edited?`<button class="nb-reset" data-nutreset="${esc(x.key)}">Restaurar original</button>`:""}
+          ${x.custom?`<button class="nb-del" data-nutdel="${esc(x.key)}">Eliminar alimento</button>`:""}
         </div>
         <div class="nut-hint">Valores ${per}. Ideal para copiar la etiqueta real del producto que compras. Al guardar, la dieta y el mandado se recalculan solos.</div>
       </div>`:""}
@@ -1809,11 +1923,11 @@ function exRowsHtml(){
     const k = "ex:"+x.sl, custom = ES_IMAGEN(CIMG[k]);
     const src = srcImagen(k, "img/ej-"+x.sl+".png");
     return `<div class="img-row">
-      <span class="img-th"><img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('🏋️'))"></span>
+      <span class="img-th"><img src="${src}" alt="" loading="lazy" data-fbk="🏋️"></span>
       <span class="img-nm">${esc(x.n)}${custom?`<small>★ TU IMAGEN</small>`:""}</span>
       <span class="img-act">
-        <label class="chg">📷 Cambiar<input type="file" accept="image/*" data-imgkey="${k}"></label>
-        ${custom?`<button class="del" data-imgdel="${k}" aria-label="Quitar">✕</button>`:""}
+        <label class="chg">📷 Cambiar<input type="file" accept="image/*" data-imgkey="${esc(k)}"></label>
+        ${custom?`<button class="del" data-imgdel="${esc(k)}" aria-label="Quitar">✕</button>`:""}
       </span></div>`;
   }).join("") || `<div class="sheet-note">Ningún ejercicio coincide con tu búsqueda.</div>`;
 }
@@ -1823,9 +1937,9 @@ function lockedRow(l,v){
 }
 function personaHtml(){
   const P = personaGet(), kg = pesoActual();
-  const sel = (k,l,opts,cur)=>`<label class="nf"><span>${l}</span><select data-per="${k}">
+  const sel = (k,l,opts,cur)=>`<label class="nf"><span>${l}</span><select data-per="${esc(k)}">
     ${opts.map(o=>`<option value="${o[0]}" ${String(cur)===String(o[0])?"selected":""}>${o[1]}</option>`).join("")}</select></label>`;
-  const num = (k,l,v,step)=>`<label class="nf"><span>${l}</span><input type="number" inputmode="decimal" step="${step||1}" min="0" data-per="${k}" value="${v}"></label>`;
+  const num = (k,l,v,step)=>`<label class="nf"><span>${esc(l)}</span><input type="number" inputmode="decimal" step="${esc(step||1)}" min="0" data-per="${esc(k)}" value="${numero(v)}"></label>`;
   return `
     <div class="set-h">Tus datos (esto es lo único que editas)</div>
     <div class="nut-form open2">
@@ -1873,9 +1987,9 @@ function personaHtml(){
 /* ---- pestaña Diseño ---- */
 function disenoHtml(){
   const u = S.ui || {};
-  const chk = (k,l,d,on)=>`<label class="nf wide chk"><input type="checkbox" data-ui="${k}" ${on?"checked":""}><span>${l}<small class="ui-d">${d}</small></span></label>`;
+  const chk = (k,l,d,on)=>`<label class="nf wide chk"><input type="checkbox" data-ui="${esc(k)}" ${on?"checked":""}><span>${l}<small class="ui-d">${d}</small></span></label>`;
   const seg = (k,l,opts,cur)=>`<div class="nf wide"><span>${l}</span><div class="ui-seg">${opts.map(o=>
-    `<button data-ui="${k}" data-v="${o[0]}" class="${cur===o[0]?'on':''}">${o[1]}</button>`).join("")}</div></div>`;
+    `<button data-ui="${esc(k)}" data-v="${esc(o[0])}" class="${cur===o[0]?'on':''}">${o[1]}</button>`).join("")}</div></div>`;
   return `
     <div class="set-h">Apariencia</div>
     <div class="nut-form open2">
@@ -2153,7 +2267,7 @@ function renderAhora(){
   const m = sig.m, mm = mealMacros(m, sig.i);
   const tarde = sig.t!==null && min > sig.t + 90;
   box.innerHTML = `
-    <div class="ahora${tarde?' ah-tarde':''}" style="--ac:${m.color||'var(--em)'}">
+    <div class="ahora${tarde?' ah-tarde':''}" style="--ac:${m.color?tono(m.color):'var(--em)'}">
       <div class="ah-tag">${tarde?"Pendiente":"Ahora"}</div>
       <div class="ah-body">
         <div class="ah-t">${esc(m.name)}</div>
@@ -2206,7 +2320,7 @@ function renderMeals(){
       <ul class="foods">${items.map(f=>{
         const altF=selAlt(f.ref), swapped=!!altF, h=dispHair(f.ref);
         return `<li class="food${swapped?' swapped':''}" role="button" tabindex="0"
-            data-detalle="${f.ref}" data-g="${f.g}" data-u="${f.unit||''}"
+            data-detalle="${esc(f.ref)}" data-g="${esc(f.g)}" data-u="${esc(f.unit||'')}"
             aria-label="Ver detalle de ${esc(dispName(f.ref))}">
           ${foodIcon(shopById[f.ref], altF)}
           <span class="txt"><b>${esc(dispName(f.ref))}</b>${(!swapped && f.extra)?` <small>${esc(f.extra)}</small>`:''}
@@ -2392,7 +2506,7 @@ function abrirCompra(id){
         <select id="cpUnit">${unidades.map((u,i)=>`<option value="${i}"${i===ui?" selected":""}>${u[0]}</option>`).join("")}</select></label>
       <div class="cp-fila">
         <label class="nf"><span>Cuánto llevaste</span>
-          <input id="cpCant" type="number" inputmode="decimal" step="any" min="0" value="${cant}"></label>
+          <input id="cpCant" type="number" inputmode="decimal" step="any" min="0" value="${numero(cant)}"></label>
         <label class="nf"><span>Precio por unidad ($)</span>
           <input id="cpPu" type="number" inputmode="decimal" step="any" min="0" value="${+(+pu).toFixed(2)}"></label>
       </div>
@@ -2553,9 +2667,9 @@ function renderShop(){
         const real = (reg && reg.e===COMPRA_OK && reg.q!==undefined)
           ? `${+(+reg.q).toFixed(2)} ${esc(reg.u)}` : null;
         return `<div class="shop-item${swapped?' swapped':''}${clsE}" data-id="${it.id}">
-          <div class="shop-row" data-detalle="${it.id}" role="button" tabindex="0"
+          <div class="shop-row" data-detalle="${esc(it.id)}" role="button" tabindex="0"
                aria-label="Ver detalle de ${esc(swapped?a.n:it.name)}">
-            ${it.total?`<button class="sc-chk" data-comprar="${it.id}" aria-pressed="${est===COMPRA_OK}"
+            ${it.total?`<button class="sc-chk" data-comprar="${esc(it.id)}" aria-pressed="${est===COMPRA_OK}"
                aria-label="${est===COMPRA_OK?"Comprado":est===COMPRA_NO?"No lo encontré":"Marcar como comprado"}: ${esc(swapped?a.n:it.name)}">
                <span class="sc-box"></span></button>`:""}
             ${foodIcon(it, a)}
@@ -2631,7 +2745,7 @@ function detalleHtml(id, gramos, unidadOv){
   const unidad = (alt && alt.unit) || unidadOv || it.unit;
   const m = macrosOf(key, qty);
 
-  const porTxt = n.pz ? `por ${n.pzTxt||"pieza"}` : (it.unit==="ml" ? "por 100 ml" : "por 100 g");
+  const porTxt = esc(n.pz ? `por ${n.pzTxt||"pieza"}` : (it.unit==="ml" ? "por 100 ml" : "por 100 g"));
   const precioUnit = n.precio ? fmt$(n.precio) + " " + porTxt : null;
   const costo = qty ? (n.pz ? qty : qty/100) * (n.precio||0) : 0;
 
@@ -2673,8 +2787,8 @@ function detalleHtml(id, gramos, unidadOv){
   ${(!alt && it.tip)?`<div class="dt-nota">${it.tip}</div>`:""}
 
   <div class="dt-btns">
-    ${it.total?`<button class="dt-b dt-precio" data-dtprecio="${id}">Cambiar precio</button>`:""}
-    ${it.alts.length?`<button class="dt-b dt-swap" data-dtswap="${id}">${alt?"Otra equivalencia":"Equivalencias"} · ${it.alts.length}</button>`:""}
+    ${it.total?`<button class="dt-b dt-precio" data-dtprecio="${esc(id)}">Cambiar precio</button>`:""}
+    ${it.alts.length?`<button class="dt-b dt-swap" data-dtswap="${esc(id)}">${alt?"Otra equivalencia":"Equivalencias"} · ${it.alts.length}</button>`:""}
   </div>`;
 }
 
@@ -2726,7 +2840,7 @@ document.addEventListener("click", e=>{
    "bases internas" (100 g / 100 ml / pieza) caben en esa unidad */
 function priceUnits(it, n){
   if(n.pz){
-    const u=[[ (n.pzTxt||"pieza"), 1 ]];
+    const u=[[ esc(n.pzTxt||"pieza"), 1 ]];
     if(it.id==="huevos") u.push(["cartón (30 pzas)", 30]);
     if(it.id==="tortillas") u.push(["kilo (≈30 pzas)", 30]);
     if(it.id==="galletas") u.push(["caja (6 paquetes)", 6]);
@@ -2748,7 +2862,7 @@ function openPriceSheet(id){
   priceCtx = { id, key, qty, units, pz:!!n.pz };
   const curUnit = 0;
   const curPrice = (n.precio||0) * units[curUnit][1];
-  const qtyTxt = n.pz ? Math.round(qty)+" "+(n.pzTxt||"pieza")+(Math.round(qty)===1?"":"s")
+  const qtyTxt = n.pz ? Math.round(qty)+" "+esc(n.pzTxt||"pieza")+(Math.round(qty)===1?"":"s")
                       : fmtQty(qty, it.unit);
   openSheet("Precio de "+name, "Lo que pagas en TU tienda", `
     <div class="price-form">
@@ -2781,7 +2895,7 @@ function openAltsSheet(id){
   const it=shopById[id]; if(!it || !it.alts.length) return;
   const curIdx = (S.swaps[id]===undefined) ? -1 : S.swaps[id];
   const optBtn = (name, note, hair, prep, qty, idx, tag)=>`
-    <button class="alt${curIdx===idx?' on':''}" data-pick="${id}" data-alt="${idx}">
+    <button class="alt${curIdx===idx?' on':''}" data-pick="${esc(id)}" data-alt="${esc(idx)}">
       <span class="a-nm">${tag?`<span class="v-top">★ ${tag}</span>`:""}${esc(name)}${note?`<small>${esc(note)}</small>`:""}
         <span class="badges">${hairBadge(hair)}${prepBadge(prep)}</span></span>
       <span class="a-q">${qty}<em class="a-pr">≈ ${fmt$(shopItemCost(it, idx))}</em></span>
@@ -2959,7 +3073,7 @@ document.getElementById("sheetBody").addEventListener("click",e=>{
 /* compra inteligente */
 $("smartList").innerHTML = COMPRA.map(g=>`
   <div class="smart-group" id="sg-${g.id}">
-    <div class="smart-head" data-sg="${g.id}" role="button" tabindex="0">
+    <div class="smart-head" data-sg="${esc(g.id)}" role="button" tabindex="0">
       <span class="si">${g.e}</span>
       <span class="st"><b>${esc(g.t)}</b><small>${esc(g.sub)}</small></span>
       <span class="sv">${esc(g.save)}</span>
@@ -3079,7 +3193,7 @@ document.addEventListener("visibilitychange",()=>{
 });
 
 function renderUnitToggle(){
-  $("unitToggle").innerHTML = ["kg","lb"].map(u=>`<button data-u="${u}" class="${S.unidad===u?'on':''}">${u.toUpperCase()}</button>`).join("");
+  $("unitToggle").innerHTML = ["kg","lb"].map(u=>`<button data-u="${esc(u)}" class="${S.unidad===u?'on':''}">${u.toUpperCase()}</button>`).join("");
 }
 
 /* --- Cardio pendiente: días entrenados sin cardio marcado --- */
@@ -3105,7 +3219,7 @@ function renderWeekStrip(){
     const b = bloqueDe(k), d = fromKey(k);
     const isToday = k===dayKey, sel = k===viewKey;
     const done = S.trained[k]===true;
-    return `<button class="day-btn ${b.t==="entreno"?"train":"rest"}${sel?" sel":""}${isToday?" today":""}${done?" done-day":""}" data-day="${k}">
+    return `<button class="day-btn ${b.t==="entreno"?"train":"rest"}${sel?" sel":""}${isToday?" today":""}${done?" done-day":""}" data-day="${esc(k)}">
       <span class="dn">${DSHORT[i]}</span>
       <span class="dd">${d.getDate()}</span>
       <span class="dt">${b.t==="entreno"?esc(b.short):"Descanso"}</span>
@@ -3199,7 +3313,7 @@ function renderRoutine(){
     const rest = restFor(ex);
     const sqs = Array.from({length:ex.s},(_,i)=>
       `<button class="set-sq${i<done?' on':''}" data-sq="${ex.id}" data-k="${i}" data-rest="${rest}" data-total="${ex.s}" data-name="${esc(v.n)}" aria-label="Serie ${i+1}" aria-pressed="${i<done}">${i<done?'✓':i+1}</button>`).join("");
-    return `<div class="ex${done>=ex.s?' ex-complete':''}" data-ex="${ex.id}">
+    return `<div class="ex${done>=ex.s?' ex-complete':''}" data-ex="${esc(ex.id)}">
       <div class="ex-top">
         ${exPhoto(v)}
         <span class="nm"><b>${esc(v.n)}</b>
@@ -3209,14 +3323,14 @@ function renderRoutine(){
       </div>
       <div class="ex-wrow">
         <button data-w="-" aria-label="Bajar peso">−</button>
-        <span class="wv"><input class="wv-in" data-exw="${ex.id}" type="number" inputmode="decimal" min="0" max="600" step="any" value="${+toUnit(w).toFixed(1)}" aria-label="Peso"><small>Peso · ${bodyweight?"lastre":unitLabel()}</small></span>
+        <span class="wv"><input class="wv-in" data-exw="${esc(ex.id)}" type="number" inputmode="decimal" min="0" max="600" step="any" value="${+toUnit(w).toFixed(1)}" aria-label="Peso"><small>Peso · ${bodyweight?"lastre":unitLabel()}</small></span>
         <button data-w="+" aria-label="Subir peso">+</button>
       </div>
       ${isDeload?`<div class="deload-line">🧘 <b>Hoy levantas ${bodyweight?"solo tu peso corporal":fmtW(showW)}</b>${bodyweight?", sin lastre, con una serie menos y lejos del fallo":" · 62 % de tu peso de trabajo ("+fmtW(w)+"), sin llegar al fallo"}. El campo de arriba es tu <b>peso normal</b>: edítalo cuando quieras.</div>`:""}
       <div class="set-lbl">Series · toca un cuadro al terminar cada una</div>
       <div class="set-grid">${sqs}</div>
       ${!isDeload?`
-      <div class="ex-done${hiDone?' on':''}" data-hi="${ex.id}">
+      <div class="ex-done${hiDone?' on':''}" data-hi="${esc(ex.id)}">
         <span class="box">${hiDone?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
         <span>Completé todas las series en el rango alto</span>
       </div>
@@ -3230,7 +3344,7 @@ function renderRoutine(){
   const cOn = S.cardio[viewKey]===true;
   $("cardioBox").innerHTML = `<div class="block${cOn?' on':''}" data-blk="cardio" style="--bc:rgba(89,207,224,.32);--bc2:var(--sky);--bbg2:var(--sky-soft)">
     <span class="b-i">🏃</span>
-    <div class="b-t"><b>Cardio final · ${CONFIG.cardioMin} min</b>
+    <div class="b-t"><b>Cardio final · ${numero(CONFIG.cardioMin)} min</b>
     <small>Caminadora en pendiente o elíptica a ritmo cómodo. Si hoy no te da el tiempo, no pasa nada: aparecerá como pendiente en tu próximo día de descanso.</small></div>
     <span class="b-c">${cOn?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span></div>`;
 }
@@ -3339,7 +3453,7 @@ function renderTrained(){
       </span>
       <span class="t-check">${on?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>':''}</span>
     </button>
-    <div class="session-count"><span class="sc-num">${S.sessions||0}</span> <span class="sc-lbl">sesiones completadas en total</span></div>`;
+    <div class="session-count"><span class="sc-num">${numero(S.sessions)}</span> <span class="sc-lbl">sesiones completadas en total</span></div>`;
   $("trainedBtn").onclick=()=>{
     const btn=$("trainedBtn");
     if(S.trained[viewKey]){ delete S.trained[viewKey]; S.sessions=Math.max(0,(S.sessions||0)-1); }
@@ -3415,7 +3529,7 @@ function renderSnacks(){
         <div class="sn-hoy-h"><b>Hoy comiste</b>
           <span>${Math.round(m.kcal)} kcal · ${Math.round(m.p)} g prot</span></div>
         <div class="sn-chips">${hoy.map(x=>`
-          <button class="sn-chip" data-quitar="${x.ts}" aria-label="Quitar ${esc(x.n)}">
+          <button class="sn-chip" data-quitar="${numero(x.ts)}" aria-label="Quitar ${esc(x.n)}">
             ${esc(x.n.split("·")[0].split("(")[0].trim())}<i>✕</i></button>`).join("")}</div>
       </div>`
     : `<div class="sn-vacio">Toca un snack cuando te lo comas. Se suma a tu día y puedes deshacerlo.</div>`;
@@ -3427,7 +3541,7 @@ function renderSnacks(){
   $("snackList").innerHTML = orden.map(({s,n})=>{
     const hoyN = hoy.filter(x=>x.id===s.id).length;
     return `
-    <button class="antojo sn-btn${hoyN?' usado':''}" data-snack="${s.id}"
+    <button class="antojo sn-btn${hoyN?' usado':''}" data-snack="${esc(s.id)}"
             aria-label="Registrar ${esc(s.n)}">
       <span class="nm"><b>${esc(s.n)}${hoyN>1?` <span class="sn-x">×${hoyN}</span>`:""}</b>
         <small>${esc(s.note)}</small>
@@ -3478,7 +3592,7 @@ function renderAntojos(){
     <div class="antojo">
       <span class="nm"><b>${esc(a.n)} <span class="tag ${a.tag}">${a.tagT}</span></b><small>${esc(a.note)}</small></span>
       <span class="kc">~${a.kcal} kcal</span>
-      <button class="log-btn" data-log="${a.id}">+ Registrar</button>
+      <button class="log-btn" data-log="${esc(a.id)}">+ Registrar</button>
     </div>`).join("");
 }
 $("antojoList").addEventListener("click",e=>{
@@ -3546,7 +3660,7 @@ function goalBar(label, unit, base, cur, meta, color){
     <div class="g-top"><span>${label}</span><b style="color:${pct>0?tono(color):'var(--muted)'}">${
       pct>0?pct+"%":"sin avance aún"}</b></div>
     <div class="g-bar${pct===0?' cero':''}"><i style="width:${pct}%;background:${tono(color,3)}"></i></div>
-    <small>Hoy: ${cur.toFixed(1)}${unit} · Meta: ${meta}${unit} · ${left>0?`Te faltan ${left}${unit}`:"¡Meta alcanzada!"}</small></div>`;
+    <small>Hoy: ${numeroTxt(cur,1)}${esc(unit)} · Meta: ${numeroTxt(meta)}${esc(unit)} · ${left>0?`Te faltan ${numeroTxt(left)}${esc(unit)}`:"¡Meta alcanzada!"}</small></div>`;
 }
 function mealStreak(){
   const doneAll=k=>{const m=S.meals[k]; return !!m && m.length>0 && m.every(Boolean);};
@@ -3625,7 +3739,7 @@ function renderBody(){
         <span>${p.kg?p.kg.toFixed(1):"—"}<i>kg</i></span>
         <span>${p.grasa?p.grasa.toFixed(1):"—"}<i>%gr</i></span>
         <span>${p.mme?p.mme.toFixed(1):"—"}<i>MME</i></span>
-        ${isBase?'':`<button class="del" data-delbody="${p.d}" aria-label="Borrar">✕</button>`}
+        ${isBase?'':`<button class="del" data-delbody="${esc(p.d)}" aria-label="Borrar">✕</button>`}
       </span></li>`;
   }).join("") || `<li><span>Aún no hay mediciones</span></li>`;
 }
