@@ -3536,6 +3536,22 @@ document.getElementById("cfgPanel").addEventListener("click",e=>{
 
 });
 document.getElementById("sheetBody").addEventListener("click",e=>{
+  /* --- movimiento manual: tipo, categoría, método, deuda --- */
+  const mt = e.target.closest("[data-movtipo]");
+  if(mt){ cambiaTipoMov(mt.dataset.movtipo); return; }
+  const mc = e.target.closest("[data-movcat]");
+  if(mc && movCtx){ movCtx.cat = mc.dataset.movcat;
+    document.querySelectorAll("#movCats [data-movcat]").forEach(x=>
+      x.classList.toggle("on", x === mc)); return; }
+  const mm = e.target.closest("[data-movmet]");
+  if(mm && movCtx){ movCtx.metodo = mm.dataset.movmet;
+    document.querySelectorAll("#movMets [data-movmet]").forEach(x=>
+      x.classList.toggle("on", x === mm)); pintaEfectoMov(); return; }
+  const md = e.target.closest("[data-movdeuda]");
+  if(md && movCtx){ movCtx.deuda = md.dataset.movdeuda;
+    document.querySelectorAll("#movDeudas [data-movdeuda]").forEach(x=>
+      x.classList.toggle("on", x === md)); pintaEfectoMov(); return; }
+
   /* --- unidades: chips, y la de "otra…" --- */
   const uc = e.target.closest("[data-uni]");
   if(uc){ eligeUnidad(+uc.dataset.uni); return; }
@@ -5176,10 +5192,45 @@ function renderCandado(err){
    No se guarda ninguna biometría: el teléfono guarda la llave y sólo nos
    dice "sí, es él". Si algo falla, siempre queda el PIN. */
 var _bioIntentado = false;
-function hayBiometria(){
-  return !!(window.PublicKeyCredential && navigator.credentials &&
-            location.protocol === "https:" || location.hostname === "localhost");
+/* BUG 1: `&&` gana sobre `||`, así que esto era (A&&B&&C) || localhost y
+   daba true sin soporte real. BUG 2: la función ni siquiera se usaba, y la
+   única forma de activar la huella estaba escondida dentro de "Cambiar PIN",
+   donde nadie la iba a encontrar. Ahora se ofrece justo después de entrar. */
+async function puedeBiometria(){
+  if(!window.PublicKeyCredential || !navigator.credentials) return false;
+  const seguro = location.protocol === "https:" || location.hostname === "localhost";
+  if(!seguro) return false;
+  try{
+    if(PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable)
+      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  }catch(e){ return false; }
+  return false;
 }
+/* Se ofrece UNA vez, justo después de entrar con el PIN, que es el momento
+   en que la molestia está fresca. Si dices que no, no se vuelve a preguntar. */
+async function ofreceBiometria(){
+  const c = fin().candado;
+  if(!c || c.bio || S.bioNo === true) return;
+  if(!(await puedeBiometria())) return;
+  openSheet("Entra de un toque", "Face ID o huella", `
+    <div class="alta-form">
+      <div class="bio-ilu" aria-hidden="true">
+        <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 4.5c-3 0-5.5 1.6-5.5 5v3c0 1.3-.3 2.6-.9 3.7"/><path d="M12 8c-1.4 0-2.5.9-2.5 2.5v3c0 2-.4 3.9-1.2 5.6"/><path d="M12 11.5v3c0 2.6-.6 5.1-1.7 7.4"/><path d="M14.5 10.5v3c0 3-.5 5.9-1.6 8.6"/><path d="M17.5 12c0 3.4-.6 6.7-1.8 9.8"/><path d="M4 8.2A9 9 0 0 1 20 8.2"/></svg>
+      </div>
+      <p class="ui-nota" style="text-align:center">Para que registrar un gasto no
+        se te haga pesado, puedes entrar con el mismo desbloqueo de tu teléfono.
+        <b>Tu huella nunca se guarda aquí</b>: el teléfono sólo nos responde si eres tú.
+        El PIN sigue funcionando siempre.</p>
+      <div class="ases-btns">
+        <button id="bioSi">Activar</button>
+        <button class="sec" id="bioNo">Ahora no</button>
+      </div>
+    </div>`);
+  const si = $("bioSi"), no = $("bioNo");
+  if(si) si.onclick = async ()=>{ if(await registraBiometria()){ closeSheet(); renderFinanzas(); } };
+  if(no) no.onclick = ()=>{ S.bioNo = true; save(); closeSheet(); };
+}
+
 async function registraBiometria(){
   if(!window.PublicKeyCredential){ showToast("Este teléfono no ofrece huella para apps web"); return false; }
   try{
@@ -5231,7 +5282,8 @@ async function intentaAbrirDinero(){
   /* BUG: faltaba renderDeudas(). Al abrir con el PIN se repintaba el resumen
      y el mandado, pero las deudas —lo más importante del módulo— se quedaban
      vacías porque sólo las pinta renderFinanzas(). */
-  if(bien){ dineroAbierto = true; renderFinanzas(); sonar("comida"); return; }
+  if(bien){ dineroAbierto = true; renderFinanzas(); sonar("comida");
+            ofreceBiometria(); return; }
   renderCandado("Ese PIN no es correcto. Vuelve a intentar.");
 }
 
@@ -5555,10 +5607,24 @@ function renderDeudas(){
       <ul class="pend-lista">${pend.slice(0,6).map(x=>`<li>${esc(x.texto)}</li>`).join("")}</ul></div>` : ""}`;
 }
 
+/* botones de los paneles de Finanzas (viven fuera de la hoja) */
+(function(){
+  const panel = document.getElementById("finPanel");
+  if(!panel) return;
+  panel.addEventListener("click", e=>{
+    const nm = e.target.closest("[data-movnuevo]");
+    if(nm){ abrirMovimiento(nm.dataset.movnuevo); return; }
+    const ap = e.target.closest("[data-apedit]");
+    if(ap){ abrirApartado(ap.dataset.apedit); return; }
+    const du = e.target.closest("[data-deshacermov]");
+    if(du){ deshaceUltimoMov(); return; }
+  });
+})();
+
 /* ---------- sub-pestañas de Finanzas ---------- */
 var finSub = "resumen";
 function irAFin(v){
-  const ok = ["resumen","deudas","movs","mandado"];
+  const ok = ["resumen","movs","deudas","apartados","mandado"];
   finSub = ok.includes(v) ? v : "resumen";
   document.querySelectorAll("#finTabs [data-fsub]").forEach(b=>{
     const on = b.dataset.fsub === finSub;
@@ -5610,7 +5676,11 @@ function renderMovimientos(){
       <span class="ases-eyebrow">Movimientos</span>
       <h3>Todavía no hay nada registrado</h3>
       <p class="ases-sub">Dile al asistente «gasté 300 en salidas» y aparecerá aquí
-        en cuanto lo confirmes. También aparece cada mandado que marques.</p></div>`;
+        en cuanto lo confirmes. También puedes capturarlo a mano.</p>
+      <div class="ases-btns">
+        <button data-movnuevo="gasto">＋ Registrar un gasto</button>
+        <button class="sec" data-movnuevo="pago">Pagar una tarjeta</button>
+      </div></div>`;
     return;
   }
 
@@ -5631,10 +5701,309 @@ function renderMovimientos(){
   }).join("");
 
   caja.innerHTML = `
+    <div class="mv-acc">
+      <button data-movnuevo="gasto">＋ Gasto</button>
+      <button data-movnuevo="ingreso" class="sec">＋ Ingreso</button>
+      <button data-movnuevo="pago" class="sec">Pagar tarjeta</button>
+    </div>
+    ${ultimoDeshacer ? `<div class="ases-btns" style="margin-bottom:12px">
+      <button class="sec" data-deshacermov="1">↩︎ Deshacer «${esc(ultimoDeshacer.resumen)}»</button></div>` : ""}
     <div class="mv-tot"><span>Salidas de ${esc(nombreMes(mesActual))}</span><b>${fmt$(gastoMes)}</b></div>
     <div class="mv-lista">${filas}</div>
     ${bit.length ? `<details class="mas-info"><summary><span class="mi-i">📝</span>Qué cambió el asistente</summary><div class="mi-body">
       <ul class="pend-lista">${bit.map(x=>`<li>${esc(x.resumen)}</li>`).join("")}</ul></div></details>` : ""}`;
+}
+
+/* ==================================================================
+   MOVIMIENTOS MANUALES Y APARTADOS
+   ------------------------------------------------------------------
+   El asistente es el camino rápido; esto es el camino seguro, para
+   cuando quieres capturar con calma o no te entendió.
+
+   Regla de saldos: un cargo a tarjeta SUBE la deuda y un pago la BAJA,
+   para que el número que ves sea tu deuda real y el interés que calcula
+   el asesor esté sobre algo verdadero. Todo con deshacer.
+   ================================================================== */
+const CAT_GASTO = ["Despensa","Salidas","Transporte","Servicios","Salud","Ropa",
+                   "Casa","Regalos","Otro"];
+
+/* de dónde salió el dinero: efectivo/nómina o alguna tarjeta */
+function metodosPago(){
+  const out = [{ id:"nomina", n:"Nómina / débito", credito:false },
+               { id:"efectivo", n:"Efectivo", credito:false }];
+  fin().deudas.forEach(d=>{
+    if(d.tipo === "revolvente" || d.tipo === "msi" || d.tipo === "diferido")
+      out.push({ id:d.id, n:d.nombre || "Tarjeta", credito:true });
+  });
+  return out;
+}
+var movCtx = null;
+
+function abrirMovimiento(tipo){
+  const t = ["gasto","ingreso","pago"].includes(tipo) ? tipo : "gasto";
+  movCtx = { tipo:t, metodo:"nomina", cat:"Despensa", deuda:null };
+  const met = metodosPago();
+  const deudas = fin().deudas.filter(d=>numero(d.saldo) > 0);
+  if(t === "pago" && deudas.length) movCtx.deuda = deudas[0].id;
+
+  openSheet(t === "gasto" ? "Registrar un gasto"
+          : t === "ingreso" ? "Registrar un ingreso" : "Pagar una tarjeta",
+    t === "pago" ? "Baja el saldo de la deuda" : "Queda en tus movimientos", `
+    <div class="alta-form">
+      <div class="ctabs sub-tabs" id="movTipo" role="tablist">
+        <button data-movtipo="gasto"   class="${t==='gasto'?'on':''}">Gasto</button>
+        <button data-movtipo="ingreso" class="${t==='ingreso'?'on':''}">Ingreso</button>
+        <button data-movtipo="pago"    class="${t==='pago'?'on':''}">Pago de tarjeta</button>
+      </div>
+      <label class="nf"><span>¿Cuánto?</span>
+        <input id="movMonto" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></label>
+      <label class="nf"><span>¿Cuándo?</span>
+        <input id="movFecha" type="date" value="${esc(dayKey)}"></label>
+
+      <div class="nf" id="movCatBox"${t==='gasto'?'':' hidden'}><span>¿En qué?</span>
+        <div class="uni-chips" id="movCats">${CAT_GASTO.map(c=>
+          `<button type="button" class="uni-chip${c===movCtx.cat?' on':''}" data-movcat="${esc(c)}">${esc(c)}</button>`).join("")}</div></div>
+
+      <div class="nf" id="movMetBox"${t==='pago'?' hidden':''}><span>¿Con qué lo pagaste?</span>
+        <div class="uni-chips" id="movMets">${met.map(m=>
+          `<button type="button" class="uni-chip${m.id===movCtx.metodo?' on':''}" data-movmet="${esc(m.id)}">${esc(m.n)}</button>`).join("")}</div>
+        <small class="ui-d" id="movMetNota"></small></div>
+
+      <div class="nf" id="movDeudaBox"${t==='pago'?'':' hidden'}><span>¿Cuál tarjeta pagas?</span>
+        <div class="uni-chips" id="movDeudas">${deudas.length ? deudas.map(d=>
+          `<button type="button" class="uni-chip${d.id===movCtx.deuda?' on':''}" data-movdeuda="${esc(d.id)}">${esc(d.nombre)} · ${fmt$(numero(d.saldo))}</button>`).join("")
+          : `<span class="ui-d">Todavía no tienes deudas capturadas.</span>`}</div></div>
+
+      <label class="nf"><span>Nota (opcional)</span>
+        <input id="movNota" type="text" maxlength="80" placeholder="con quién, dónde…"></label>
+      <div class="ases-btns"><button id="movGuardar">Guardar</button></div>
+      <div class="nut-hint" id="movEfecto"></div>
+    </div>`);
+  const g = $("movGuardar"); if(g) g.onclick = guardarMovimiento;
+  ["movMonto","movFecha"].forEach(k=>{ const e = $(k);
+    if(e) e.addEventListener("input", pintaEfectoMov); });
+  pintaEfectoMov();
+}
+
+function cambiaTipoMov(t){
+  if(!movCtx) return;
+  movCtx.tipo = t;
+  document.querySelectorAll("#movTipo [data-movtipo]").forEach(b=>
+    b.classList.toggle("on", b.dataset.movtipo === t));
+  const cb = $("movCatBox"), mb = $("movMetBox"), db = $("movDeudaBox");
+  if(cb) cb.hidden = t !== "gasto";
+  if(mb) mb.hidden = t === "pago";
+  if(db) db.hidden = t !== "pago";
+  pintaEfectoMov();
+}
+
+/* se dice ANTES de guardar qué va a pasar con el saldo */
+function pintaEfectoMov(){
+  const caja = $("movEfecto"); if(!caja || !movCtx) return;
+  const monto = numero(($("movMonto")||{}).value);
+  if(!(monto > 0)){ caja.textContent = "Escribe el monto y te digo qué va a cambiar."; return; }
+  if(movCtx.tipo === "pago"){
+    const d = fin().deudas.find(x=>x.id === movCtx.deuda);
+    caja.textContent = d
+      ? `${d.nombre} bajaría de ${fmt$(numero(d.saldo))} a ${fmt$(Math.max(0, numero(d.saldo) - monto))}.`
+      : "Elige la tarjeta que estás pagando.";
+    return;
+  }
+  const m = metodosPago().find(x=>x.id === movCtx.metodo);
+  if(movCtx.tipo === "gasto" && m && m.credito){
+    const d = fin().deudas.find(x=>x.id === m.id);
+    caja.textContent = d
+      ? `Se registra el gasto y ${d.nombre} subiría de ${fmt$(numero(d.saldo))} a ${fmt$(numero(d.saldo) + monto)}.`
+      : "Se registra el gasto.";
+    return;
+  }
+  const meta = numero(S.presupuestoMes);
+  caja.textContent = movCtx.tipo === "ingreso"
+    ? "Se suma a tus movimientos como entrada."
+    : (meta > 0 ? `Se registra el gasto. Llevarías ${fmt$(gastoDelMes(mesDe(dayKey)) + monto)} de ${fmt$(meta)} este mes.`
+                : "Se registra el gasto.");
+}
+
+function guardarMovimiento(){
+  if(!movCtx) return;
+  const monto = numero(($("movMonto")||{}).value);
+  if(!(monto > 0)){ showToast("Escribe cuánto fue"); return; }
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(($("movFecha")||{}).value) ? $("movFecha").value : dayKey;
+  const nota = String(($("movNota")||{}).value || "").slice(0, 80);
+  const antes = { fin: JSON.parse(JSON.stringify(S.fin)) };
+  const fn = fin();
+  let resumen = "";
+
+  if(movCtx.tipo === "pago"){
+    const d = fn.deudas.find(x=>x.id === movCtx.deuda);
+    if(!d){ showToast("Elige la tarjeta que pagas"); return; }
+    d.saldo = Math.max(0, numero(d.saldo) - monto);
+    fn.movimientos.push({ id:"mv"+Date.now().toString(36), fecha, monto, tipo:"pago",
+      cuenta:"nomina", categoria:"Pago de tarjeta", deudaId:d.id, apartadoId:null,
+      nota, planeado:false });
+    resumen = `Pago de ${fmt$(monto)} a ${d.nombre}`;
+  } else {
+    const m = metodosPago().find(x=>x.id === movCtx.metodo) || {id:"nomina", n:"Nómina", credito:false};
+    if(movCtx.tipo === "gasto" && m.credito){
+      const d = fn.deudas.find(x=>x.id === m.id);
+      if(d) d.saldo = numero(d.saldo) + monto;      /* el cargo sube la deuda */
+    }
+    fn.movimientos.push({ id:"mv"+Date.now().toString(36), fecha, monto,
+      tipo: movCtx.tipo === "ingreso" ? "ingreso" : "gasto",
+      cuenta: m.id, categoria: movCtx.tipo === "gasto" ? movCtx.cat : "Ingreso",
+      deudaId: m.credito ? m.id : null, apartadoId:null, nota, planeado:false });
+    resumen = `${movCtx.tipo === "ingreso" ? "Ingreso" : "Gasto"} de ${fmt$(monto)} · ${m.n}`;
+  }
+
+  saneaFin(S);
+  anotaBitacora("movimiento", resumen);
+  save(); closeSheet();
+  ultimoDeshacer = { antes, resumen };
+  irAFin("movs");
+  showToast("✓ " + resumen);
+}
+
+/* un deshacer sencillo para lo capturado a mano */
+var ultimoDeshacer = null;
+function deshaceUltimoMov(){
+  if(!ultimoDeshacer) return;
+  S.fin = ultimoDeshacer.antes.fin;
+  anotaBitacora("deshacer", ultimoDeshacer.resumen);
+  ultimoDeshacer = null;
+  save(); renderFinanzas();
+  showToast("↩︎ Deshecho");
+}
+
+/* ---------- apartados (los sobres del banco) ---------- */
+const APARTADOS_SEMILLA = [
+  { id:"ap_auto",     nombre:"Auto",        montoPorDeposito:2200, meta:8650,
+    destino:{tipo:"deuda", ref:"auto"}, requiereTransferencia:true, diaLimite:28 },
+  { id:"ap_despensa", nombre:"Despensa",    montoPorDeposito:1200, meta:6000,
+    destino:{tipo:"gasto", ref:null}, requiereTransferencia:false, diaLimite:null },
+  { id:"ap_joy",      nombre:"Tarjeta Joy", montoPorDeposito:715,  meta:2860,
+    destino:{tipo:"deuda", ref:"joy"}, requiereTransferencia:true, diaLimite:25 },
+  { id:"ap_serv",     nombre:"Servicios",   montoPorDeposito:350,  meta:1400,
+    destino:{tipo:"gasto", ref:null}, requiereTransferencia:false, diaLimite:null },
+  { id:"ap_lav",      nombre:"Lavandería",  montoPorDeposito:300,  meta:1200,
+    destino:{tipo:"gasto", ref:null}, requiereTransferencia:false, diaLimite:null },
+  { id:"ap_salidas",  nombre:"Salidas",     montoPorDeposito:250,  meta:1000,
+    destino:{tipo:"gasto", ref:null}, requiereTransferencia:false, diaLimite:null }
+];
+function cargaApartadosSemilla(){
+  const fn = fin();
+  const hay = new Set(fn.apartados.map(a=>a.id));
+  APARTADOS_SEMILLA.forEach(a=>{ if(!hay.has(a.id)) fn.apartados.push(JSON.parse(JSON.stringify(a))); });
+  saneaFin(S); save(); renderFinanzas();
+  showToast("Apartados cargados · ajústalos si cambiaron");
+}
+
+function abrirApartado(id){
+  const fn = fin();
+  const a = id ? fn.apartados.find(x=>x.id === id) : null;
+  const deudas = fn.deudas;
+  openSheet(a ? "Editar apartado" : "Nuevo apartado",
+            a ? esc(a.nombre) : "Como los del banco", `
+    <div class="alta-form">
+      <label class="nf"><span>Nombre</span>
+        <input id="apNombre" type="text" maxlength="40" value="${a?esc(a.nombre):""}" placeholder="Auto, Despensa…"></label>
+      <div class="fila">
+        <label class="nf"><span>Por depósito</span>
+          <input id="apMonto" type="number" inputmode="decimal" step="any" min="0" value="${a?numero(a.montoPorDeposito):""}"></label>
+        <label class="nf"><span>Meta del mes</span>
+          <input id="apMeta" type="number" inputmode="decimal" step="any" min="0" value="${a&&a.meta?numero(a.meta):""}"></label>
+      </div>
+      <label class="nf"><span>Saldo apartado hoy</span>
+        <input id="apSaldo" type="number" inputmode="decimal" step="any" min="0" value="${a?numero(a.saldo):0}"></label>
+      <label class="nf wide chk"><input type="checkbox" id="apTransf" ${a&&a.requiereTransferencia?"checked":""}>
+        <span>Hay que transferirlo a la cuenta<small class="ui-d">Si el cargo sale de la cuenta y no del apartado, te recuerdo el día límite.</small></span></label>
+      <label class="nf" id="apDiaBox"><span>Día límite para transferirlo</span>
+        <input id="apDia" type="number" inputmode="numeric" min="1" max="31" value="${a&&a.diaLimite?a.diaLimite:28}"></label>
+      <label class="nf"><span>¿A qué va dirigido?</span>
+        <select id="apDest">
+          <option value="">Un gasto del mes</option>
+          ${deudas.map(d=>`<option value="${esc(d.id)}"${a&&a.destino&&a.destino.ref===d.id?" selected":""}>${esc(d.nombre)}</option>`).join("")}
+        </select></label>
+      <div class="ases-btns">
+        <button id="apGuardar">Guardar</button>
+        ${a?`<button class="sec" id="apBorrar">Eliminar</button>`:""}
+      </div>
+    </div>`);
+  const g = $("apGuardar");
+  if(g) g.onclick = ()=>{
+    const nom = String($("apNombre").value||"").trim().slice(0,40);
+    if(!nom){ showToast("Ponle nombre al apartado"); return; }
+    const ref = $("apDest").value || null;
+    const dato = {
+      id: a ? a.id : "ap"+Date.now().toString(36),
+      nombre: nom,
+      montoPorDeposito: Math.max(0, numero($("apMonto").value)),
+      meta: numero($("apMeta").value) || null,
+      saldo: Math.max(0, numero($("apSaldo").value)),
+      destino: { tipo: ref ? "deuda" : "gasto", ref },
+      requiereTransferencia: !!$("apTransf").checked,
+      diaLimite: $("apTransf").checked ? Math.min(31, Math.max(1, Math.round(numero($("apDia").value)||28))) : null
+    };
+    if(a) Object.assign(a, dato); else fn.apartados.push(dato);
+    saneaFin(S); save(); closeSheet(); renderFinanzas();
+    showToast(a ? "Apartado actualizado ✓" : "Apartado creado ✓");
+  };
+  const bo = $("apBorrar");
+  if(bo) bo.onclick = ()=>{
+    if(!confirm(`¿Eliminar el apartado "${a.nombre}"?`)) return;
+    fn.apartados = fn.apartados.filter(x=>x.id !== a.id);
+    save(); closeSheet(); renderFinanzas(); showToast("Apartado eliminado");
+  };
+}
+
+function renderApartados(){
+  const caja = $("finApartados"); if(!caja) return;
+  if(dineroCerrado()){ caja.innerHTML = ""; return; }
+  const fn = fin();
+  if(!fn.apartados.length){
+    caja.innerHTML = `<div class="ases">
+      <span class="ases-eyebrow">Apartados</span>
+      <h3>Tus sobres del banco</h3>
+      <p class="ases-sub">Cada apartado guarda una parte de cada depósito para
+        algo concreto. Te aviso cuando haya que transferirlo a la cuenta, que es
+        donde de verdad se rompe: el dinero apartado no paga el cargo solo.</p>
+      <div class="ases-btns">
+        <button id="apSemilla">Cargar los de mi análisis</button>
+        <button class="sec" id="apNuevo1">Crear uno vacío</button>
+      </div></div>`;
+    const b1 = $("apSemilla"); if(b1) b1.onclick = cargaApartadosSemilla;
+    const b2 = $("apNuevo1");  if(b2) b2.onclick = ()=>abrirApartado(null);
+    return;
+  }
+  const total = fn.apartados.reduce((t,a)=>t + numero(a.montoPorDeposito), 0);
+  const guardado = fn.apartados.reduce((t,a)=>t + numero(a.saldo), 0);
+  const hoyDia = fromKey(dayKey).getDate();
+  const filas = fn.apartados.map(a=>{
+    const meta = numero(a.meta);
+    const pct = meta > 0 ? Math.min(100, Math.round(numero(a.saldo)/meta*100)) : 0;
+    const faltan = a.diaLimite ? a.diaLimite - hoyDia : null;
+    const urge = a.requiereTransferencia && faltan !== null && faltan >= 0 && faltan <= 3;
+    return `<div class="apa${urge?" urge":""}" data-apedit="${esc(a.id)}" role="button" tabindex="0">
+      <div class="apa-top">
+        <span class="apa-n"><b>${esc(a.nombre)}</b>
+          <small>${fmt$(numero(a.montoPorDeposito))} por depósito${
+            a.destino && a.destino.ref ? " · va a "+esc((fn.deudas.find(d=>d.id===a.destino.ref)||{}).nombre||"una deuda") : ""}</small></span>
+        <span class="apa-s">${fmt$(numero(a.saldo))}${meta?`<em>de ${fmt$(meta)}</em>`:""}</span>
+      </div>
+      ${meta?`<div class="apa-bar"><i style="width:${pct}%"></i></div>`:""}
+      ${a.requiereTransferencia ? `<p class="apa-av${urge?" urge":""}">
+        ${faltan !== null && faltan >= 0
+          ? `Transfiérelo a la cuenta antes del día ${a.diaLimite}${faltan===0?" — es hoy":faltan<=3?` — faltan ${faltan} día${faltan===1?"":"s"}`:""}. Si se te pasa, el cargo rebota.`
+          : `Se transfiere a la cuenta el día ${a.diaLimite}.`}</p>` : ""}
+    </div>`;
+  }).join("");
+  caja.innerHTML = `
+    <div class="mv-tot"><span>Apartas por depósito</span><b>${fmt$(total)}</b></div>
+    <div class="apas">${filas}</div>
+    <div class="ases-btns" style="margin-bottom:12px">
+      <button id="apNuevo">＋ Nuevo apartado</button>
+      <button class="sec" id="apTotal">Guardado: ${fmt$(guardado)}</button>
+    </div>`;
+  const bn = $("apNuevo"); if(bn) bn.onclick = ()=>abrirApartado(null);
 }
 
 function renderFinanzas(){
@@ -5643,7 +6012,7 @@ function renderFinanzas(){
   const t = document.getElementById("finTabs");
   if(t) t.hidden = dineroCerrado();
   if(dineroCerrado()){ renderAsesor(); renderDeudas(); renderMovimientos(); renderDinero(); return; }
-  renderAsesor(); renderDeudas(); renderMovimientos(); renderDinero();
+  renderAsesor(); renderDeudas(); renderApartados(); renderMovimientos(); renderDinero();
 }
 function irAVista(v){
   if(v !== "cuerpo" && v !== "gym") v = "cuerpo";   /* dinero ya no vive aquí */
