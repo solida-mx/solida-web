@@ -5131,6 +5131,484 @@ $("dinMeta").addEventListener("input", e=>{
 });
 irAVista("cuerpo");
 
+/* ==================================================================
+   ASISTENTE — botón flotante, chat y acciones
+   ------------------------------------------------------------------
+   Corre COMPLETO dentro del teléfono: no hay servidor, no hay API,
+   no sale un byte. El intérprete vive en asistente.js (puro); aquí
+   están las acciones, que son las únicas que tocan tus datos.
+
+   Regla que no se rompe: el asistente PROPONE y tú confirmas. Cada
+   acción que escribe algo muestra el antes, el después y su efecto,
+   guarda cómo estaba, y deja un deshacer. Todo queda en la bitácora.
+   ================================================================== */
+var chatMsgs = [];          /* {quien:"tu"|"bot", texto, tarjeta, id} */
+var pendiente = null;       /* acción esperando confirmación */
+var asistenteAbierto = false;
+
+const AVATAR = `<svg viewBox="0 0 40 40" aria-hidden="true" class="ava">
+  <defs><linearGradient id="avg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#2fb5a3"/><stop offset="1" stop-color="#1b396b"/></linearGradient></defs>
+  <circle cx="20" cy="20" r="20" fill="url(#avg)"/>
+  <rect x="10" y="13" width="20" height="16" rx="7" fill="#eef7f6"/>
+  <circle cx="16" cy="21" r="2.4" fill="#1b396b"/><circle cx="24" cy="21" r="2.4" fill="#1b396b"/>
+  <circle cx="16.8" cy="20.2" r=".8" fill="#fff"/><circle cx="24.8" cy="20.2" r=".8" fill="#fff"/>
+  <path d="M17 25.4c1.8 1.3 4.2 1.3 6 0" stroke="#1b396b" stroke-width="1.6"
+        stroke-linecap="round" fill="none"/>
+  <path d="M20 13V9.5" stroke="#eef7f6" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="20" cy="8.2" r="1.9" fill="#59cfe0"/>
+  <rect x="6.6" y="18" width="2.6" height="6" rx="1.3" fill="#eef7f6" opacity=".85"/>
+  <rect x="30.8" y="18" width="2.6" height="6" rx="1.3" fill="#eef7f6" opacity=".85"/>
+</svg>`;
+
+/* catálogos que el intérprete usa para reconocer de qué hablas */
+function contextoAsistente(){
+  const alimentos = SHOP.map(it=>{
+    const a = selAlt(it.id);
+    return { id: it.id, nombre: (a ? a.n : it.name) };
+  });
+  const ejercicios = [];
+  Object.values(RUTINA).forEach(list => list.forEach(ex=>{
+    if(!ejercicios.some(x=>x.id===ex.id))
+      ejercicios.push({ id: ex.id, nombre: getVar(ex).n });
+  }));
+  return {
+    hoy: new Date(), hoyClave: dayKey,
+    alimentos, ejercicios,
+    categorias: Object.keys(CATS).map(k=>({ id:k, nombre:CATS[k].t }))
+      .concat([{id:"salidas",nombre:"Salidas"},{id:"despensa",nombre:"Despensa"},
+               {id:"transporte",nombre:"Transporte"},{id:"servicios",nombre:"Servicios"},
+               {id:"salud",nombre:"Salud"},{id:"ropa",nombre:"Ropa"}]),
+    snacks: SNACKS.map((s,i)=>({ id:"sn"+i, nombre:s.n, ref:s }))
+  };
+}
+
+/* ---------- acciones: lo ÚNICO que puede tocar tus datos ---------- */
+const ACCIONES = {
+
+  registrarGasto: { dominio:"dinero", escribe:true,
+    previo(p){
+      const cat = p.etiqueta || "sin categoría";
+      const mes = mesDe(p.fecha || dayKey);
+      const yaVa = gastoDelMes(mes);
+      const meta = numero(S.presupuestoMes);
+      const lineas = [["Monto", fmt$(p.monto)], ["Categoría", cat],
+                      ["Fecha", p.fecha || dayKey]];
+      let efecto = "";
+      if(meta > 0){
+        const desp = yaVa + p.monto;
+        efecto = desp > meta
+          ? `Con esto llevarías ${fmt$(desp)} contra tu presupuesto de ${fmt$(meta)}: te pasarías ${fmt$(desp-meta)}.`
+          : `Llevarías ${fmt$(desp)} de ${fmt$(meta)}; te quedarían ${fmt$(meta-desp)} para el resto del mes.`;
+      }
+      return { titulo:"Registrar un gasto", lineas, efecto };
+    },
+    aplica(p){
+      const antes = { fin: JSON.parse(JSON.stringify(S.fin)) };
+      fin().movimientos.push({ id:"mv"+Date.now().toString(36), fecha:p.fecha || dayKey,
+        monto:numero(p.monto), tipo:"gasto", cuenta:"", categoria:String(p.categoria||""),
+        deudaId:null, apartadoId:null, nota:"", planeado:false });
+      return { resumen:`Gasto de ${fmt$(p.monto)} registrado`, antes };
+    } },
+
+  ajustarPresupuesto: { dominio:"dinero", escribe:true,
+    previo(p){ return { titulo:"Cambiar el presupuesto del mes",
+      lineas:[["Antes", fmt$(numero(S.presupuestoMes))], ["Después", fmt$(p.monto)]],
+      efecto:`Llevas ${fmt$(gastoDelMes(mesDe(dayKey)))} gastados este mes.` }; },
+    aplica(p){ const antes = { presupuestoMes: S.presupuestoMes };
+      S.presupuestoMes = numero(p.monto);
+      return { resumen:`Presupuesto en ${fmt$(p.monto)}`, antes }; } },
+
+  puedoGastar: { dominio:"dinero", escribe:false,
+    responde(p){
+      const meta = numero(S.presupuestoMes), yaVa = gastoDelMes(mesDe(dayKey));
+      if(meta <= 0) return `Todavía no me has puesto un presupuesto del mes, así que no tengo contra qué comparar. Ponlo en Historial → Dinero y te contesto con números.`;
+      const queda = meta - yaVa;
+      const desp = queda - numero(p.monto);
+      return desp >= 0
+        ? `Sí te alcanza. Llevas ${fmt$(yaVa)} de ${fmt$(meta)}; después de ese gasto te quedarían ${fmt$(desp)} para el resto del mes.`
+        : `No sin pasarte. Te quedan ${fmt$(queda)} del presupuesto y ese gasto es de ${fmt$(p.monto)}: te pasarías ${fmt$(-desp)}.`;
+    } },
+
+  comoVoy: { dominio:"dinero", escribe:false,
+    responde(){
+      const meta = numero(S.presupuestoMes), yaVa = gastoDelMes(mesDe(dayKey));
+      const nm = nombreMes(mesDe(dayKey));
+      if(meta <= 0) return `En ${nm} llevas ${fmt$(yaVa)} de mandado. No tienes presupuesto puesto, así que no puedo decirte si vas bien o mal.`;
+      const pct = Math.round(yaVa / meta * 100);
+      return `En ${nm} llevas ${fmt$(yaVa)} de ${fmt$(meta)} — ${pct} % del presupuesto. ${
+        yaVa > meta ? `Te pasaste ${fmt$(yaVa-meta)}.` : `Te quedan ${fmt$(meta-yaVa)}.`}`;
+    } },
+
+  ordenDeuda: { dominio:"dinero", escribe:false,
+    responde(p){
+      const d = fin().deudas.filter(x=>numero(x.saldo) > 0);
+      if(!d.length) return `Todavía no me has capturado ninguna deuda. En cuanto estén, te comparo avalancha contra bola de nieve con tus tasas reales.`;
+      const conInteres = d.map(x=>({ n:x.nombre || "sin nombre", saldo:numero(x.saldo),
+        tasa:numero(x.tasaAnual), mes: numero(x.saldo) * numero(x.tasaAnual) / 12,
+        msi: x.tipo === "msi" && numero(x.tasaAnual) === 0 }));
+      const avalancha = conInteres.slice().sort((a,b)=> b.tasa - a.tasa);
+      const nieve     = conInteres.slice().sort((a,b)=> a.saldo - b.saldo);
+      const total = conInteres.reduce((s,x)=>s + x.mes, 0);
+      const protegidas = conInteres.filter(x=>x.msi);
+      return `Al saldo de hoy, tus deudas te cuestan ${fmt$(total)} de interés al mes.\n\n`+
+        `Avalancha (menos interés total): ${avalancha.map(x=>x.n).join(" → ")}\n`+
+        `Bola de nieve (victorias antes): ${nieve.map(x=>x.n).join(" → ")}\n\n`+
+        (protegidas.length
+          ? `Ojo: ${protegidas.map(x=>x.n).join(", ")} está a 0 % real. Adelantarla no te ahorra un peso de interés y te quita liquidez, así que va al final pase lo que pase.`
+          : `Yo iría por avalancha: paga primero la de tasa más alta.`);
+    } },
+
+  precioAlimento: { dominio:"mandado", escribe:true,
+    previo(p){
+      const uni = p.unidad === "kg" ? "kilo" : p.unidad === "l" ? "litro"
+                : p.unidad === "pz" ? "pieza" : (p.unidad || "unidad");
+      const at = precioAtipico(p.alimento, uni, p.precio);
+      return { titulo:"Guardar un precio",
+        lineas:[["Alimento", p.nombre], ["Precio", fmt$(p.precio) + " por " + uni]],
+        efecto: at ? `Ese precio está ${Math.abs(at.pct)} % ${at.pct>0?"arriba":"abajo"} de tu mediana (${fmt$(at.mediana)} por ${uni}).`
+                   : `Se guarda con la fecha de hoy para tu tendencia de precios.` };
+    },
+    aplica(p){
+      const antes = { precios: JSON.parse(JSON.stringify(S.precios||{})),
+                      nutEdits: JSON.parse(JSON.stringify(S.nutEdits||{})) };
+      const uni = p.unidad === "kg" ? "kilo" : p.unidad === "l" ? "litro"
+                : p.unidad === "pz" ? "pieza" : (p.unidad || "unidad");
+      const factorU = uni === "kilo" || uni === "litro" ? 10 : 1;
+      const key = nutKey(p.alimento, S.swaps[p.alimento]);
+      if(!S.nutEdits[key]) S.nutEdits[key] = {};
+      S.nutEdits[key].precio = numero(p.precio) / factorU;
+      if(!S.precios[p.alimento]) S.precios[p.alimento] = [];
+      S.precios[p.alimento].push({ d:dayKey, pu:numero(p.precio), u:uni });
+      return { resumen:`${p.nombre} a ${fmt$(p.precio)} por ${uni}`, antes,
+               repinta:["shop","historial"] };
+    } },
+
+  definirUnidad: { dominio:"mandado", escribe:true,
+    previo(p){ return { titulo:"Guardar una unidad tuya",
+      lineas:[["Alimento", p.nombre], ["Unidad", p.unidad],
+              ["Equivale a", p.cuanto + " " + p.medida]],
+      efecto:`La próxima vez que registres ${p.nombre} vas a poder elegir "${p.unidad}" de un toque.` }; },
+    aplica(p){
+      const antes = { unidades: JSON.parse(JSON.stringify(S.unidades||{})) };
+      guardaUnidad(p.alimento, p.unidad, p.cuanto, p.medida);
+      return { resumen:`"${p.unidad}" = ${p.cuanto} ${p.medida} en ${p.nombre}`, antes };
+    } },
+
+  cambiarCarga: { dominio:"rutina", escribe:true,
+    previo(p){
+      const ex = _asEjercicio(p.ejercicio);
+      if(!ex) return null;
+      return { titulo:"Cambiar la carga",
+        lineas:[["Ejercicio", p.nombre], ["Antes", fmtW(getW(ex))],
+                ["Después", p.peso + " " + p.unidad]],
+        efecto:`Cambia el peso de trabajo; tu progresión sigue igual.` };
+    },
+    aplica(p){
+      const ex = _asEjercicio(p.ejercicio);
+      const antes = { lifts: JSON.parse(JSON.stringify(S.lifts||{})),
+                      liftHist: JSON.parse(JSON.stringify(S.liftHist||{})) };
+      const kg = roundP(p.unidad === "lb" ? numero(p.peso) / KG2LB : numero(p.peso));
+      /* dos cosas distintas: S.lifts es el peso de TRABAJO (lo que ves y
+         usa la progresión) y guardarCarga() sólo anota el histórico.
+         Escribir sólo el histórico dejaba la carga sin cambiar. */
+      S.lifts[liftKey(ex)] = kg;
+      guardarCarga(ex, kg);
+      return { resumen:`${p.nombre} en ${p.peso} ${p.unidad}`, antes, repinta:["rutina"] };
+    } },
+
+  sustituirEjercicio: { dominio:"rutina", escribe:true,
+    previo(p){
+      const ex = _asEjercicio(p.ejercicio);
+      if(!ex) return null;
+      const cand = buscaEnCatalogo(p.busca, ex.v.map((v,i)=>({id:i, nombre:v.n})), 0.55);
+      if(!cand) return { titulo:"Cambiar la variante", lineas:[["Ejercicio", p.nombre]],
+        efecto:`No encontré "${p.busca}" entre las ${ex.v.length} variantes de ese ejercicio. Ábrelo y elígela a mano.`, sinAccion:true };
+      return { titulo:"Cambiar la variante",
+        lineas:[["Antes", getVar(ex).n], ["Después", ex.v[cand.item.id].n]],
+        efecto:`Cambia el ejercicio de hoy en adelante. Las cargas se guardan por variante, así que no pierdes tu historial.`,
+        _vi: cand.item.id };
+    },
+    aplica(p, prev){
+      const ex = _asEjercicio(p.ejercicio);
+      const antes = { varSel: JSON.parse(JSON.stringify(S.varSel||{})) };
+      S.varSel[ex.id] = prev._vi;
+      return { resumen:`${p.nombre} → ${ex.v[prev._vi].n}`, antes, repinta:["rutina"] };
+    } },
+
+  registrarSnack: { dominio:"dieta", escribe:true,
+    previo(p){ return { titulo:"Registrar un snack",
+      lineas:[["Snack", p.nombre]],
+      efecto:`Se suma a tus snacks de hoy y a los macros del día.` }; },
+    aplica(p){
+      const antes = { snacks: JSON.parse(JSON.stringify(S.snacks||{})) };
+      const i = +String(p.snack).replace("sn","");
+      const s = SNACKS[i];
+      if(s) snacksHoy().push({ id:p.snack, n:s.n, kcal:numero(s.kcal),
+                               p:numero(String(s.p).replace(/\D/g,"")), ts:Date.now() });
+      return { resumen:`${p.nombre} registrado`, antes, repinta:["snacks","hoy"] };
+    } },
+
+  cambiarMacros: { dominio:"dieta", escribe:true,
+    previo(p){
+      const key = nutKey(p.alimento, S.swaps[p.alimento]);
+      const n = nutOf(key);
+      const etq = {kcal:"calorías", p:"proteína", c:"carbohidratos", f:"grasa"}[p.campo];
+      return { titulo:"Cambiar la etiqueta",
+        lineas:[["Alimento", p.nombre], ["Campo", etq],
+                ["Antes", fmtN(n[p.campo])], ["Después", fmtN(p.valor)]],
+        efecto:`Recalcula los macros de toda la app: comidas, día completo y equivalencias.` };
+    },
+    aplica(p){
+      const antes = { nutEdits: JSON.parse(JSON.stringify(S.nutEdits||{})) };
+      const key = nutKey(p.alimento, S.swaps[p.alimento]);
+      if(!S.nutEdits[key]) S.nutEdits[key] = {};
+      S.nutEdits[key][p.campo] = numero(p.valor);
+      return { resumen:`${p.nombre}: ${p.campo} = ${fmtN(p.valor)}`, antes,
+               repinta:["todo"] };
+    } },
+
+  sustituirAlimento: { dominio:"dieta", escribe:false,
+    responde(p){ return `Para cambiar ${p.nombre} por una equivalencia, ábrelo en el Mandado y toca "Cambiar por otra opción": ahí te muestro las equivalencias que mantienen tus macros.`; } }
+};
+
+function _asEjercicio(id){
+  for(const list of Object.values(RUTINA)){
+    const ex = list.find(x=>x.id === id);
+    if(ex) return ex;
+  }
+  return null;
+}
+
+const ETIQUETA_ACCION = {
+  registrarGasto:"Registrar un gasto", ajustarPresupuesto:"Cambiar el presupuesto",
+  puedoGastar:"¿Me alcanza para…?", comoVoy:"¿Cómo voy este mes?",
+  ordenDeuda:"¿Qué deuda pago primero?", precioAlimento:"Guardar un precio",
+  definirUnidad:"Definir una unidad", cambiarCarga:"Cambiar una carga",
+  sustituirEjercicio:"Cambiar de variante", registrarSnack:"Registrar un snack",
+  cambiarMacros:"Cambiar una etiqueta", sustituirAlimento:"Sustituir un alimento"
+};
+const PIDE_DATO = {
+  monto:"¿de cuánto?", precio:"¿a qué precio?", alimento:"¿de cuál alimento?",
+  ejercicio:"¿de cuál ejercicio?", peso:"¿cuánto peso?", cuanto:"¿de cuánto es?",
+  nombreUnidad:"¿cómo le dices a esa unidad?", snack:"¿cuál snack?",
+  valor:"¿qué valor?", cual:"¿cuál macro: proteína, carbos, grasa o calorías?",
+  reemplazo:"¿por cuál lo cambio?"
+};
+
+/* ---------- bitácora ---------- */
+function anotaBitacora(accion, resumen){
+  if(!Array.isArray(S.bitacora)) S.bitacora = [];
+  S.bitacora.unshift({ ts:Date.now(), accion:String(accion).slice(0,40),
+                       resumen:String(resumen).slice(0,200) });
+  if(S.bitacora.length > 100) S.bitacora.length = 100;
+}
+
+/* ---------- conversación ---------- */
+function diAsistente(texto, tarjeta){
+  chatMsgs.push({ quien:"bot", texto, tarjeta, id:"m"+(chatMsgs.length+1) });
+  renderChat();
+}
+function mandaAlAsistente(txt){
+  const frase = String(txt||"").trim();
+  if(!frase) return;
+  chatMsgs.push({ quien:"tu", texto:frase, id:"m"+(chatMsgs.length+1) });
+  renderChat();
+
+  const r = interpreta(frase, contextoAsistente());
+
+  if(!r.accion){
+    if(r.motivo === "falta-dato"){
+      diAsistente(`Entendí que quieres ${ (ETIQUETA_ACCION[r.intencion]||"eso").toLowerCase() }, pero me falta un dato: ${PIDE_DATO[r.falta] || "¿me lo dices?"}`);
+      return;
+    }
+    diAsistente("No te entendí esa. ¿Quisiste alguna de éstas?", {
+      tipo:"botones", opciones:(r.sugerencias||[]).map(s=>({ id:s.id,
+        txt: ETIQUETA_ACCION[s.id] || s.id })) });
+    return;
+  }
+
+  const def = ACCIONES[r.accion];
+  if(!def){ diAsistente("Eso todavía no lo sé hacer."); return; }
+
+  /* el candado manda: con Dinero cerrado, el asistente no toca dinero */
+  if(def.dominio === "dinero" && dineroCerrado()){
+    diAsistente("Tu sección de Dinero está protegida con PIN. Ábrela en Historial → Dinero y aquí seguimos.");
+    return;
+  }
+
+  if(!def.escribe){
+    diAsistente(def.responde ? def.responde(r.params) : "Sin datos suficientes todavía.");
+    return;
+  }
+
+  const prev = def.previo(r.params);
+  if(!prev){ diAsistente("No pude preparar ese cambio. Revisa que el dato exista."); return; }
+  if(prev.sinAccion){ diAsistente(prev.efecto); return; }
+
+  /* id propio: sin esto, una tarjeta vieja seguía con su botón activo y
+     aplicaba la propuesta ACTUAL, que no es la que estaba mostrando */
+  const pid = "p" + Date.now().toString(36) + chatMsgs.length;
+  pendiente = { id:pid, accion:r.accion, params:r.params, prev };
+  diAsistente(null, { tipo:"confirmar", pid, titulo:prev.titulo, lineas:prev.lineas,
+                      efecto:prev.efecto });
+}
+
+function aplicaPendiente(pid){
+  if(!pendiente || (pid && pendiente.id !== pid)) return;
+  const { accion, params, prev } = pendiente;
+  const def = ACCIONES[accion];
+  const res = def.aplica(params, prev);
+  anotaBitacora(accion, res.resumen);
+  save();
+  pendiente = null;
+  refrescaPor(res.repinta);
+  const idDeshacer = "u" + Date.now().toString(36);
+  chatMsgs.push({ quien:"bot", texto:"✓ " + res.resumen, id:idDeshacer,
+                  tarjeta:{ tipo:"deshacer", antes:res.antes, repinta:res.repinta } });
+  renderChat(); avisar("comida");
+}
+
+function deshaceCambio(idx){
+  const m = chatMsgs[idx];
+  if(!m || !m.tarjeta || m.tarjeta.tipo !== "deshacer") return;
+  Object.keys(m.tarjeta.antes).forEach(k=>{ S[k] = m.tarjeta.antes[k]; });
+  save();
+  refrescaPor(m.tarjeta.repinta);
+  m.tarjeta = null;
+  m.texto = "↩︎ Deshecho. Tus datos quedaron como estaban.";
+  anotaBitacora("deshacer", m.texto);
+  renderChat();
+}
+
+function refrescaPor(lista){
+  const q = lista || [];
+  if(q.includes("todo")){ applyPersona(); renderTargets(); renderMeals(); renderShop();
+                          renderRoutine(); renderHistorial(); renderSnacks(); return; }
+  if(q.includes("shop"))      renderShop();
+  if(q.includes("rutina"))    renderRoutine();
+  if(q.includes("snacks"))    renderSnacks();
+  if(q.includes("hoy"))     { renderMeals(); renderTargets(); }
+  if(q.includes("historial") || !q.length) renderHistorial();
+}
+
+/* ---------- pintado ---------- */
+function renderChat(){
+  const caja = $("chatMsgs"); if(!caja) return;
+  caja.innerHTML = chatMsgs.map((m,i)=>{
+    if(m.quien === "tu") return `<div class="ch-tu">${esc(m.texto)}</div>`;
+    let extra = "";
+    const t = m.tarjeta;
+    if(t && t.tipo === "confirmar"){
+      extra = `<div class="ch-conf">
+        <b>${esc(t.titulo)}</b>
+        <dl>${t.lineas.map(l=>`<div><dt>${esc(l[0])}</dt><dd>${esc(String(l[1]))}</dd></div>`).join("")}</dl>
+        ${t.efecto?`<p class="ch-ef">${esc(t.efecto)}</p>`:""}
+        ${(pendiente && pendiente.id === t.pid)
+          ? `<div class="ch-btns">
+               <button data-aplicar="${esc(t.pid)}">Sí, hazlo</button>
+               <button class="sec" data-cancelar="1">Cancelar</button>
+             </div>`
+          : `<p class="ch-caduca">Esta propuesta ya no está vigente.</p>`}</div>`;
+    } else if(t && t.tipo === "botones"){
+      extra = `<div class="ch-ops">${t.opciones.map(o=>
+        `<button data-sugerencia="${esc(o.id)}">${esc(o.txt)}</button>`).join("")}</div>`;
+    } else if(t && t.tipo === "deshacer"){
+      extra = `<div class="ch-btns"><button class="sec" data-deshacer="${i}">Deshacer</button></div>`;
+    }
+    return `<div class="ch-bot">${AVATAR}<div class="ch-burb">${
+      m.texto ? `<p>${esc(m.texto).replace(/\n/g,"<br>")}</p>` : ""}${extra}</div></div>`;
+  }).join("");
+  caja.scrollTop = caja.scrollHeight;
+}
+
+function abreAsistente(){
+  asistenteAbierto = true;
+  $("chatOv").classList.add("show");
+  document.body.classList.add("chat-abierto");
+  document.body.style.overflow = "hidden";
+  if(!chatMsgs.length){
+    diAsistente("Hola, soy tu asistente. Dime qué hiciste y yo lo registro: «gasté 300 con mi novia», «el pollo a 148 el kilo», «subí a 52.5 en sentadilla». Nada de esto sale de tu teléfono.");
+  }
+  setTimeout(()=>{ const i = $("chatIn"); if(i) i.focus(); }, 120);
+}
+function cierraAsistente(){
+  asistenteAbierto = false; pendiente = null;
+  $("chatOv").classList.remove("show");
+  document.body.classList.remove("chat-abierto");
+  document.body.style.overflow = "";
+}
+
+/* ---------- micrófono (sólo donde el navegador lo trae) ---------- */
+function hayDictado(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+var _rec = null;
+function alternaDictado(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ showToast("Usa el micrófono de tu teclado para dictar"); return; }
+  if(_rec){ try{ _rec.stop(); }catch(e){} _rec = null;
+            $("chatMic").classList.remove("oyendo"); return; }
+  _rec = new SR();
+  _rec.lang = "es-MX"; _rec.interimResults = false; _rec.maxAlternatives = 1;
+  _rec.onresult = ev=>{ const txt = ev.results[0][0].transcript;
+    const i = $("chatIn"); if(i){ i.value = txt; } };
+  _rec.onend = ()=>{ _rec = null; $("chatMic").classList.remove("oyendo"); };
+  _rec.onerror = ()=>{ _rec = null; $("chatMic").classList.remove("oyendo");
+                       showToast("No pude escuchar; escríbelo o usa el teclado"); };
+  try{ _rec.start(); $("chatMic").classList.add("oyendo"); }
+  catch(e){ _rec = null; }
+}
+
+/* ---------- eventos ---------- */
+(function(){
+  const fab = $("fabIA");
+  if(fab) fab.onclick = abreAsistente;
+  const cerrar = $("chatClose");
+  if(cerrar) cerrar.onclick = cierraAsistente;
+  const ov = $("chatOv");
+  if(ov) ov.addEventListener("click", e=>{ if(e.target === ov) cierraAsistente(); });
+  const enviar = ()=>{ const i = $("chatIn"); if(!i) return;
+                       const v = i.value; i.value = ""; mandaAlAsistente(v); };
+  const bEnv = $("chatSend");
+  if(bEnv) bEnv.onclick = enviar;
+  const inp = $("chatIn");
+  if(inp) inp.addEventListener("keydown", e=>{ if(e.key === "Enter") enviar(); });
+  const mic = $("chatMic");
+  if(mic){ mic.hidden = !hayDictado(); mic.onclick = alternaDictado; }
+
+  const msgs = $("chatMsgs");
+  if(msgs) msgs.addEventListener("click", e=>{
+    const ap = e.target.closest("[data-aplicar]");
+    if(ap){ aplicaPendiente(ap.dataset.aplicar); return; }
+    if(e.target.closest("[data-cancelar]")){ pendiente = null;
+      diAsistente("Listo, no cambié nada."); return; }
+    const d = e.target.closest("[data-deshacer]");
+    if(d){ deshaceCambio(+d.dataset.deshacer); return; }
+    const s = e.target.closest("[data-sugerencia]");
+    if(s){ const id = s.dataset.sugerencia;
+      diAsistente(`Va. Dímelo así: ${EJEMPLOS[id] || "descríbelo con el dato que falta"}`); return; }
+  });
+})();
+
+const EJEMPLOS = {
+  registrarGasto:"«gasté 300 en salidas»", ajustarPresupuesto:"«pon el presupuesto en 6000»",
+  puedoGastar:"«me alcanza para unos tenis de 1800»", comoVoy:"«cómo voy este mes»",
+  ordenDeuda:"«qué deuda pago primero»", precioAlimento:"«el pollo a 148 el kilo»",
+  definirUnidad:"«la lata de atún es de 425 gramos»", cambiarCarga:"«subí a 52.5 en sentadilla»",
+  sustituirEjercicio:"«cambia el press inclinado por aperturas»",
+  registrarSnack:"«me comí unas pepitas»", cambiarMacros:"«el pollo tiene 120 calorías»"
+};
+
+/* el botón se encoge al bajar para no estorbar la lectura */
+(function(){
+  const fab = $("fabIA"); if(!fab) return;
+  let ultimo = 0;
+  window.addEventListener("scroll", ()=>{
+    const y = window.scrollY || 0;
+    fab.classList.toggle("chico", y > ultimo && y > 80);
+    ultimo = y;
+  }, {passive:true});
+})();
+
 /* ---------- Quitar la pantalla de apertura ----------
    La animación CSS ya la oculta sola aunque este código no llegue a
    correr (fill:forwards + visibility:hidden), así que un error nunca
