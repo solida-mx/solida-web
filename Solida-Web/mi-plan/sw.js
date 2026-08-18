@@ -8,7 +8,7 @@
                   actualización borraba la biblioteca de imágenes y
                   volvías al gimnasio sin fotos. */
 const APP         = "mi-plan";
-const VERSION     = "mi-plan-v6.9.0";
+const VERSION     = "mi-plan-v6.10.0";
 /* Prefijados con el nombre de la app: CacheStorage es POR ORIGEN, no por
    scope. Purgar por "shell-" borraba la caché de las apps hermanas del
    mismo dominio, y "img-v1" era un nombre genérico que compartían. */

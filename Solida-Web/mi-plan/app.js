@@ -5527,21 +5527,33 @@ function tasaEfectiva(deuda){
 /* Datos confirmados del análisis de tus estados de cuenta. Lo que el
    propio análisis dejó "por averiguar" NO se inventa: va a pendientes. */
 const DEUDAS_SEMILLA = [
-  /* Estado de cuenta Costco de agosto 2026. El revolvente sale de restarle
-     al pago-para-no-generar-intereses ($13,441.41) los dos pagos de meses
-     que ese importe ya incluye. */
-  { id:"costco", nombre:"Costco revolvente", emisor:"Banamex", tipo:"revolvente",
+  /* Estado de cuenta Costco de agosto 2026. Ojo con el modelo: el
+     revolvente, el diferimiento y el Station 24 NO son tres tarjetas.
+     Son tres renglones del MISMO plástico, y por eso `tarjeta` apunta a
+     "costco" en los tres. La prueba está en la aritmética del propio
+     estado de cuenta:
+        10,914.29  saldo revolvente
+     +     860.79  pago del mes del diferimiento
+     +   1,666.33  pago del mes del Station 24
+     =  13,441.41  pago para no generar intereses
+     El PNGI ya incluye los pagos de meses. Tratarlos por separado hacía
+     parecer que debías pagar 13,441.41 + los meses. */
+  { id:"costco", nombre:"Tarjeta Costco", etiqueta:"Saldo revolvente",
+    emisor:"Banamex", tipo:"revolvente", tarjeta:"costco",
     saldo:10914.29, tasaAnual:0.6049, ivaSobreInteres:true,
     diaCorte:13, diaVencimiento:3, pagoSinIntereses:13441.41 },
-  { id:"diferido", nombre:"Diferimiento de saldo", emisor:"Banamex", tipo:"diferido",
+  { id:"diferido", nombre:"Diferimiento de saldo", etiqueta:"Diferimiento de saldo",
+    emisor:"Banamex", tipo:"diferido", tarjeta:"costco",
     saldo:1835.06, tasaAnual:0.52, ivaSobreInteres:true,
-    diaCorte:13, diaVencimiento:3, mesesRestantes:2 },
-  { id:"station24", nombre:"Station 24 · a meses", emisor:"Banamex", tipo:"msi",
+    diaCorte:13, diaVencimiento:3, mesesRestantes:2, pagoMensual:860.79 },
+  { id:"station24", nombre:"Station 24 · a meses", etiqueta:"Station 24 · a meses",
+    emisor:"Banamex", tipo:"msi", tarjeta:"costco",
     saldo:1666.34, tasaAnual:0, ivaSobreInteres:false,
-    diaCorte:13, diaVencimiento:3, mesesRestantes:1 },
+    diaCorte:13, diaVencimiento:3, mesesRestantes:1, pagoMensual:1666.33 },
   /* La Joy no generó intereses este periodo porque pagaste completo el
      anterior. Su tasa es la MÁS ALTA de las dos: 62.98 %. */
-  { id:"joy", nombre:"Tarjeta Joy", emisor:"Joy", tipo:"revolvente",
+  { id:"joy", nombre:"Tarjeta Joy", etiqueta:"Saldo revolvente",
+    emisor:"Joy", tipo:"revolvente", tarjeta:"joy",
     saldo:3862.35, tasaAnual:0.6298, ivaSobreInteres:true,
     diaVencimiento:25, pagoMinimo:370, pagoSinIntereses:3862.35 },
   { id:"auto", nombre:"Crédito del auto", emisor:"—", tipo:"automotriz",
@@ -5553,10 +5565,39 @@ const PENDIENTES_SEMILLA = [
   "Fecha exacta de vencimiento de la Costco (aquí quedó el día 3)."
 ];
 
+/* Las deudas que ya estaban guardadas se cargaron ANTES de que existiera
+   el agrupado por tarjeta, así que no traen `tarjeta` ni `pagoMensual` y
+   se pintarían sueltas. Aquí se completa sólo lo que falta: los saldos y
+   las tasas que ya editaste NO se tocan. */
+function completaDeuda(actual, semilla){
+  let cambio = false;
+  ["tarjeta","etiqueta"].forEach(k=>{
+    if(!actual[k] && semilla[k]){ actual[k] = semilla[k]; cambio = true; }
+  });
+  if(!numero(actual.pagoMensual) && numero(semilla.pagoMensual)){
+    actual.pagoMensual = semilla.pagoMensual; cambio = true;
+  }
+  return cambio;
+}
+(function migraTarjetas(){
+  const fn = S && S.fin && typeof S.fin === "object" ? S.fin : null;
+  if(!fn || !Array.isArray(fn.deudas) || !fn.deudas.length) return;
+  let cambio = false;
+  DEUDAS_SEMILLA.forEach(s=>{
+    const d = fn.deudas.find(x=>x.id === s.id);
+    if(d && completaDeuda(d, s)) cambio = true;
+  });
+  if(cambio) save();
+})();
+
 function cargaDeudasSemilla(){
   const fn = fin();
-  const hay = new Set(fn.deudas.map(d=>d.id));
-  DEUDAS_SEMILLA.forEach(d=>{ if(!hay.has(d.id)) fn.deudas.push(Object.assign({}, d)); });
+  const hay = new Map(fn.deudas.map(d=>[d.id, d]));
+  DEUDAS_SEMILLA.forEach(d=>{
+    const ya = hay.get(d.id);
+    if(ya) completaDeuda(ya, d);
+    else fn.deudas.push(Object.assign({}, d));
+  });
   const textos = new Set(fn.pendientes.map(p=>p.texto));
   PENDIENTES_SEMILLA.forEach((t,i)=>{
     if(!textos.has(t)) fn.pendientes.push({ id:"ps"+i, texto:t, resuelto:false });
@@ -5567,12 +5608,20 @@ function cargaDeudasSemilla(){
 
 /* Editar una deuda a mano: era sólo informativa y no había forma de
    actualizar saldos ni tasas cuando llega el estado de cuenta. */
+const TIPO_DEUDA_TXT = {
+  revolvente:"Revolvente", msi:"Meses sin intereses", diferido:"Diferimiento a meses",
+  fijo:"Crédito fijo", automotriz:"Crédito automotriz"
+};
+
 function abrirDeuda(id){
   const fn = fin();
   const d = id ? fn.deudas.find(x=>x.id === id) : null;
   const tipos = [["revolvente","Revolvente (tarjeta)"],["msi","Meses sin intereses"],
                  ["diferido","Diferimiento a meses"],["fijo","Crédito fijo"],
                  ["automotriz","Crédito automotriz"]];
+  /* candidatas a "tarjeta madre": cualquier deuda distinta de ésta que no
+     cuelgue ya de otra, para no armar cadenas de tres niveles */
+  const madres = fn.deudas.filter(x=>(!d || x.id !== d.id) && (!x.tarjeta || x.tarjeta === x.id));
   openSheet(d ? "Editar deuda" : "Nueva deuda", d ? esc(d.nombre) : "Tarjeta o crédito", `
     <div class="alta-form">
       <label class="nf"><span>Nombre</span>
@@ -5606,8 +5655,21 @@ function abrirDeuda(id){
         <label class="nf"><span>Pago sin intereses</span>
           <input id="dPngi" type="number" inputmode="decimal" step="any" min="0" value="${d&&numero(d.pagoSinIntereses)?numero(d.pagoSinIntereses):""}"></label>
       </div>
-      <label class="nf"><span>Pagos que faltan (si va a meses)</span>
-        <input id="dMeses" type="number" inputmode="numeric" min="0" max="120" value="${d&&d.mesesRestantes!==null&&d.mesesRestantes!==undefined?d.mesesRestantes:""}" placeholder="deja vacío si es revolvente"></label>
+      <div class="fila">
+        <label class="nf"><span>Pagos que faltan (si va a meses)</span>
+          <input id="dMeses" type="number" inputmode="numeric" min="0" max="120" value="${d&&d.mesesRestantes!==null&&d.mesesRestantes!==undefined?d.mesesRestantes:""}" placeholder="vacío si es revolvente"></label>
+        <label class="nf"><span>Pago mensual del plan</span>
+          <input id="dMensual" type="number" inputmode="decimal" step="any" min="0" value="${d&&numero(d.pagoMensual)?numero(d.pagoMensual):""}" placeholder="lo dice el estado"></label>
+      </div>
+      <label class="nf"><span>Pertenece a la tarjeta</span>
+        <select id="dTarjeta">
+          <option value="">Es una tarjeta o crédito aparte</option>
+          ${madres.map(m=>`<option value="${esc(m.id)}"${d&&d.tarjeta===m.id?" selected":""}>${esc(m.nombre)}</option>`).join("")}
+        </select>
+        <small class="ui-d">El saldo revolvente, el diferimiento y las compras a
+          meses del mismo plástico van agrupados. Así el pago del corte sale bien.</small></label>
+      <label class="nf"><span>Cómo se llama este renglón</span>
+        <input id="dEtiqueta" type="text" maxlength="60" value="${d?esc(d.etiqueta||""):""}" placeholder="Saldo revolvente, Station 24…"></label>
       <label class="nf wide chk"><input type="checkbox" id="dCong" ${d&&d.congelada?"checked":""}>
         <span>Congelada<small class="ui-d">Te aviso si registras un cargo con ella.</small></span></label>
       <div class="ases-btns">
@@ -5637,6 +5699,8 @@ function abrirDeuda(id){
     const dato = {
       id: d ? d.id : "de"+Date.now().toString(36),
       nombre: nom,
+      etiqueta: String($("dEtiqueta").value||"").trim().slice(0,60),
+      tarjeta: String($("dTarjeta").value||"") || null,
       emisor: String($("dEmisor").value||"").trim().slice(0,40),
       tipo: $("dTipo").value,
       saldo: Math.max(0, numero($("dSaldo").value)),
@@ -5646,6 +5710,7 @@ function abrirDeuda(id){
       diaVencimiento: numero($("dVence").value) || null,
       pagoMinimo: Math.max(0, numero($("dMin").value)),
       pagoSinIntereses: Math.max(0, numero($("dPngi").value)),
+      pagoMensual: Math.max(0, numero($("dMensual").value)),
       mesesRestantes: meses === "" ? null : Math.max(0, Math.round(numero(meses))),
       congelada: !!$("dCong").checked
     };
@@ -5655,7 +5720,12 @@ function abrirDeuda(id){
   };
   const bo = $("dBorrar");
   if(bo) bo.onclick = ()=>{
-    if(!confirm(`¿Eliminar "${d.nombre}"? Se va del cálculo de intereses.`)) return;
+    const hijas = fn.deudas.filter(x=>x.id !== d.id && x.tarjeta === d.id);
+    if(!confirm(`¿Eliminar "${d.nombre}"? Se va del cálculo de intereses.` +
+      (hijas.length ? `\n\nSus ${hijas.length} renglón(es) agrupados quedan sueltos, no se borran.` : ""))) return;
+    /* sin esto apuntarían a una tarjeta que ya no existe y el grupo se
+       quedaría sin titular, o sea sin fechas ni pago del corte */
+    hijas.forEach(x=>{ x.tarjeta = null; });
     fn.deudas = fn.deudas.filter(x=>x.id !== d.id);
     save(); closeSheet(); renderFinanzas(); showToast("Deuda eliminada");
   };
@@ -5681,39 +5751,90 @@ function renderDeudas(){
   }
 
   const totalMes = d.reduce((t,x)=>t + interesDe(x, 30), 0);
-  const filas = d.slice().sort((a,b)=>numero(b.tasaAnual) - numero(a.tasaAnual)).map(x=>{
-    const corte = proximaFecha(x.diaCorte), vence = proximaFecha(x.diaVencimiento);
-    const dv = diasHasta(vence), dc = diasHasta(corte);
-    const msi = x.tipo === "msi" && numero(x.tasaAnual) === 0;
+
+  /* Una tarjeta = un bloque. El revolvente, el diferimiento y los meses
+     eran renglones sueltos y no había forma de saber qué pertenecía a
+     qué plástico ni cuánto pagar en el siguiente corte. */
+  const grupos = agrupaDeudas(d).map(g=>{
+    g.interes = g.partes.reduce((t,x)=>t + interesDe(x, 30), 0);
+    return g;
+  }).sort((a,b)=>b.interes - a.interes);
+
+  const filaParte = x => {
+    const msi = FIN_TIPOS_PLAN.includes(x.tipo) && numero(x.tasaAnual) === 0;
     const int = interesDe(x, 30);
-    return `<div class="deuda${msi?" msi":""}" data-deedit="${esc(x.id)}" role="button" tabindex="0">
+    const mensual = numero(x.pagoMensual);
+    const meses = numero(x.mesesRestantes);
+    return `<div class="de-parte${msi?" msi":""}" data-deedit="${esc(x.id)}" role="button" tabindex="0">
       <div class="de-top">
-        <span class="de-n"><b>${esc(x.nombre)}</b>
-          <small>${esc(x.emisor||"")}${x.tasaAnual
+        <span class="de-n"><b>${esc(x.etiqueta || x.nombre)}</b>
+          <small>${esc(TIPO_DEUDA_TXT[x.tipo] || x.tipo)}${numero(x.tasaAnual)
             ? ` · ${(numero(x.tasaAnual)*100).toFixed(2)} %${x.ivaSobreInteres===true?` (${(tasaEfectiva(x)*100).toFixed(2)} % con IVA)`:""}`
             : " · 0 % real"}</small></span>
         <span class="de-s">${fmt$(numero(x.saldo))}</span>
       </div>
       <div class="de-fechas">
-        ${corte?`<span><i>corte</i>${fmtDateShort(corte)}${dc===0?" · hoy":dc!==null&&dc<=3?` · en ${dc} d`:""}</span>`:""}
-        ${vence?`<span><i>vence</i>${fmtDateShort(vence)}${dv!==null&&dv<=3?` · en ${dv} d`:""}</span>`:""}
+        <span><i>${FIN_TIPOS_PLAN.includes(x.tipo)?"pago del mes":"a pagar en el corte"}</i>${
+          FIN_TIPOS_PLAN.includes(x.tipo)
+            ? (mensual ? fmt$(mensual) : (meses > 0 ? fmt$(numero(x.saldo)/meses) + " aprox." : "—"))
+            : fmt$(numero(x.saldo))}</span>
+        ${meses > 0 ? `<span><i>faltan</i>${meses} pago${meses===1?"":"s"}</span>` : ""}
         <span><i>interés/mes</i>${msi?"—":fmt$(int)}</span>
       </div>
-      ${msi
-        ? `<p class="de-aviso ok">Está a 0 % real: <b>no la adelantes</b>. Adelantarla no te ahorra un peso de interés y te quita liquidez.</p>`
-        : (dc !== null && dc <= 3
-           ? `<p class="de-aviso">El corte es en ${dc} día${dc===1?"":"s"}: lo que le cargues antes cae en este recibo; después, hasta el siguiente.</p>`
-           : "")}
-      ${numero(x.pagoMinimo) ? `<p class="de-aviso rojo"><b>Nunca pagues el mínimo (${fmt$(numero(x.pagoMinimo))}) ni el «adeudo del periodo anterior».</b> Ese renglón es informativo. Paga siempre el <b>«pago para no generar intereses»</b>.</p>` : ""}
+      ${msi ? `<p class="de-aviso ok">Está a 0 % real: <b>no la adelantes</b>. Adelantarla no te ahorra un peso de interés y te quita liquidez.</p>` : ""}
+    </div>`;
+  };
+
+  const filas = grupos.map(g=>{
+    const corte = proximaFecha(g.diaCorte), vence = proximaFecha(g.diaVencimiento);
+    const dv = diasHasta(vence), dc = diasHasta(corte);
+    return `<div class="tarjeta-gr">
+      <div class="tg-cab">
+        <div class="tg-tit">
+          <span class="tg-n"><b>${esc(g.nombre)}</b><small>${esc(g.emisor||"")}${
+            g.partes.length > 1 ? ` · ${g.partes.length} renglones` : ""}</small></span>
+          <span class="tg-saldo"><i>saldo total</i>${fmt$(g.saldo)}</span>
+        </div>
+        <div class="tg-pago${g.fuente === "desconocido" ? " flojo" : ""}">
+          <span class="tg-etq">${g.esTarjeta ? "A pagar en el siguiente corte" : "Tu mensualidad"}</span>
+          <b>${g.fuente === "desconocido" ? "—" : fmt$(g.pagoCorte)}</b>
+          <small>${
+            g.fuente === "estado"     ? "Es el «pago para no generar intereses» de tu estado de cuenta."
+          : g.fuente === "capturado"  ? "No tiene corte: es un crédito fijo. Se paga la mensualidad y punto."
+          : g.fuente === "desconocido"? "Es un crédito fijo, sin corte. Captura tu mensualidad para que entre en el presupuesto."
+          : g.estimado                ? "Calculado aquí, con una parte estimada: captura el pago mensual de cada plan a meses para afinarlo."
+          :                             "Calculado con los saldos y los pagos mensuales que capturaste."}</small>
+        </div>
+        <div class="de-fechas tg-f">
+          ${corte?`<span><i>corte</i>${fmtDateShort(corte)}${dc===0?" · hoy":dc!==null&&dc<=5?` · en ${dc} d`:""}</span>`:""}
+          ${vence?`<span><i>vence</i>${fmtDateShort(vence)}${dv!==null&&dv<=5?` · en ${dv} d`:""}</span>`:""}
+          <span><i>interés/mes</i>${g.interes > 0 ? fmt$(g.interes) : "—"}</span>
+        </div>
+        ${g.descuadre ? `<p class="de-aviso">El estado de cuenta pide ${fmt$(g.pagoCorte)} y con los renglones de aquí salen ${fmt$(g.pagoCalculado)}: hay ${fmt$(Math.abs(g.descuadre))} de diferencia. Suele ser un cargo nuevo o un saldo desactualizado.</p>` : ""}
+        ${dc !== null && dc <= 5 ? `<p class="de-aviso">El corte es en ${dc} día${dc===1?"":"s"}: lo que le cargues antes cae en este recibo; después, hasta el siguiente.</p>` : ""}
+        ${g.pagoMinimo ? `<p class="de-aviso rojo"><b>Nunca pagues el mínimo (${fmt$(g.pagoMinimo)}) ni el «adeudo del periodo anterior».</b> Ese renglón es informativo. Paga siempre los ${fmt$(g.pagoCorte)} de arriba.</p>` : ""}
+        ${g.partes.length === 1
+          ? `<div class="ases-btns"><button class="sec" data-deedit="${esc(g.partes[0].id)}">Actualizar datos</button></div>`
+          : ""}
+      </div>
+      ${g.partes.length === 1 ? "" :
+        `<div class="tg-partes">${g.partes.slice().sort((a,b)=>numero(b.saldo)-numero(a.saldo)).map(filaParte).join("")}</div>`}
     </div>`;
   }).join("");
 
   const pend = fn.pendientes.filter(p=>!p.resuelto);
+  /* sólo tarjetas: un crédito fijo no se "libra" de intereses pagándolo
+     este mes, así que meter su saldo aquí inflaba la cifra */
+  const soloTarjetas = grupos.filter(g=>g.esTarjeta);
+  const totalCorte = soloTarjetas.reduce((t,g)=>t + g.pagoCorte, 0);
   caja.innerHTML = `<div class="ases">
       <span class="ases-eyebrow">Deudas</span>
       <h3>Te cuestan ${fmt$(totalMes)} al mes</h3>
-      <p class="ases-sub">Interés al saldo de hoy, ordenadas de la más cara a la más barata:
-        ése es el orden de avalancha.</p>
+      <p class="ases-sub">Agrupadas por tarjeta y ordenadas por lo que te cobran de
+        interés: ése es el orden de avalancha.${soloTarjetas.length
+        ? ` Para no generar intereses este ciclo tendrías que pagar <b>${fmt$(totalCorte)}</b>
+          entre ${soloTarjetas.length === 1 ? "tu tarjeta" : "tus " + soloTarjetas.length + " tarjetas"}.`
+        : ""}</p>
     </div>
     <div class="deudas">${filas}</div>
     <div class="ases-btns" style="margin-bottom:12px">

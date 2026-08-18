@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════╗
-║   MI PLAN v6.2 — aplicación completa (Salvador)               ║
+║   MI PLAN v6.10 — aplicación completa (Salvador)              ║
 ║   Sólida Aplicaciones · azul marino + verde azulado           ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -9,6 +9,65 @@ Publicada como proyecto propio en Cloudflare Pages
 PARA ACTUALIZARLA: Cloudflare → Workers y Pages → tu proyecto
 mi-plan → "Crear nueva implementación" → arrastra esta carpeta
 completa → Implementar. Listo en 1 minuto.
+
+┌──────────────────────────────────────────────────────────┐
+│  LO NUEVO DE LA v6.10 — DEUDAS AGRUPADAS POR TARJETA      │
+└──────────────────────────────────────────────────────────┘
+  El problema: el saldo revolvente de la Costco, el
+  diferimiento y el Station 24 salian como tres deudas
+  distintas. No son tres tarjetas: son tres renglones del
+  MISMO plastico. Verlos sueltos hacia imposible saber que
+  pertenece a que, y sumar sus saldos daba un total que no
+  corresponde a nada.
+
+  AHORA: un plastico = un bloque.
+    · Arriba, en grande, LO QUE HAY QUE PAGAR EN EL
+      SIGUIENTE CORTE de esa tarjeta.
+    · Debajo, el corte, el vencimiento y el interes del mes.
+    · Al final, el detalle renglon por renglon.
+
+  Por que el pago del corte NO es la suma de saldos:
+    lo revolvente se paga COMPLETO (si no, genera interes),
+    pero un plan a meses solo cobra la mensualidad. Con tus
+    datos reales de agosto:
+        10,914.29  saldo revolvente
+      +    860.79  mensualidad del diferimiento
+      +  1,666.33  mensualidad del Station 24
+      =  13,441.41  <- el "pago para no generar intereses"
+    Cuadra al centavo con tu estado de cuenta.
+
+  Si el estado de cuenta declara ese importe, ese manda.
+  Si no, se calcula aqui y se avisa cuando alguna parte es
+  estimada. Si los dos no cuadran, sale el aviso de
+  descuadre: casi siempre es un cargo nuevo.
+
+  El credito del auto ya NO se cuenta como tarjeta: no tiene
+  corte, se paga la mensualidad. Antes su saldo entraba en
+  el total "para no generar intereses" e inflaba la cifra de
+  $17,304 a $25,954.
+
+  CAMPOS NUEVOS AL EDITAR UNA DEUDA (toca cualquier renglon):
+    · "Pertenece a la tarjeta" — para agrupar tu mismo.
+    · "Pago mensual del plan"  — el que pide el estado de
+      cuenta. Dividir el saldo entre los meses da un numero
+      parecido pero no el bueno: el plan trae su interes.
+    · "Como se llama este renglon" — la etiqueta corta.
+
+  Tus deudas ya guardadas se agrupan solas al abrir la app.
+  Los saldos y las tasas que hayas editado NO se tocan.
+
+  DE PASO: dos fallos reales de contraste en tema oscuro.
+  El texto de enfasis usaba --em-deep, que es un color para
+  RELLENOS: como texto sobre fondo oscuro daba 2.6:1 cuando
+  el minimo es 4.5:1. Ahora hay un token aparte, --em-txt.
+  El boton "Entrar" de Finanzas llevaba blanco fijo sobre
+  verde claro: 2.54:1. Las 18 pantallas pasan AA en los dos
+  temas.
+
+  Y UN FALLO DE FECHAS: leeFecha() del asistente comprobaba
+  la fecha base con `instanceof Date`, que falla cuando el
+  dato viene de otro contexto. Se caia al reloj real sin
+  avisar, y un "hoy" que no es hoy fecha mal un gasto.
 
 ┌──────────────────────────────────────────────────────────┐
 │  LO NUEVO DE LA v6.2 — ASESOR FINANCIERO (FASE 0)         │

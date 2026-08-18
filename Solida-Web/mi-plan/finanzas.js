@@ -149,6 +149,9 @@ function saneaFin(St){
       .map(x => ({
         id:      _finId(x.id) || ("d" + Math.abs(Math.round(_finNum(x.saldo)))),
         nombre:  _finTxt(x.nombre, 80),
+        /* cómo se llama ESTE renglón dentro de la tarjeta ("Saldo
+           revolvente", "Station 24"). Vacío = usa el nombre. */
+        etiqueta: _finTxt(x.etiqueta, 60),
         emisor:  _finTxt(x.emisor, 80),
         tipo:    _finDe(x.tipo, FIN_TIPOS_DEUDA, "revolvente"),
         saldo:   Math.max(0, _finNum(x.saldo)),
@@ -163,6 +166,13 @@ function saneaFin(St){
         diaVencimiento:  _finDiaMes(x.diaVencimiento),
         pagoMinimo:        Math.max(0, _finNum(x.pagoMinimo)),
         pagoSinIntereses:  Math.max(0, _finNum(x.pagoSinIntereses)),
+        /* pago requerido del mes cuando va a meses (lo dice el estado de
+           cuenta); dividir el saldo entre los meses da un número parecido
+           pero no el bueno, porque el plan trae su propio interés */
+        pagoMensual:       Math.max(0, _finNum(x.pagoMensual)),
+        /* a qué tarjeta física pertenece: el revolvente, el diferimiento y
+           los meses sin intereses son partes del MISMO plástico */
+        tarjeta:           _finId(x.tarjeta) || null,
         congelada:     _finBool(x.congelada, false),
         mesesRestantes: x.mesesRestantes === null || x.mesesRestantes === undefined
                         ? null : Math.max(0, Math.round(_finNum(x.mesesRestantes)))
@@ -308,6 +318,102 @@ function ingresoDelMes(fin, anio, mes, opciones){
     total += _finNum(ing.monto) * veces;
   }
   return Math.round(total * 100) / 100;
+}
+
+/* ============================================================
+   3.b AGRUPADO POR TARJETA FÍSICA
+   ------------------------------------------------------------
+   Un plástico puede traer varios renglones a la vez: el saldo
+   revolvente, un diferimiento y una compra a meses. Listados
+   sueltos parecen tres deudas distintas y das por bueno un total
+   que no existe. Se agrupan por el campo `tarjeta`; la deuda
+   cuyo id coincide con esa clave es la titular (la que trae las
+   fechas y el pago para no generar intereses).
+
+   El pago del siguiente corte NO es la suma de saldos:
+     · lo revolvente se paga COMPLETO (si no, genera interés);
+     · un plan a meses sólo cobra la mensualidad del periodo.
+   Cuando el estado de cuenta declara el «pago para no generar
+   intereses», ése manda: trae los redondeos del banco. Lo
+   calculado se devuelve aparte para poder compararlos.
+   ============================================================ */
+const FIN_TIPOS_PLAN = ["msi", "diferido"];
+
+function agrupaDeudas(lista){
+  const arr = Array.isArray(lista) ? lista.filter(x => x && typeof x === "object") : [];
+  const orden = [], mapa = new Map();
+  for(const d of arr){
+    const clave = _finId(d.tarjeta) || _finId(d.id);
+    if(!mapa.has(clave)){ mapa.set(clave, []); orden.push(clave); }
+    mapa.get(clave).push(d);
+  }
+  return orden.map(clave => {
+    const partes  = mapa.get(clave);
+    const titular = partes.find(x => _finId(x.id) === clave) || partes[0];
+    const saldo   = partes.reduce((t, x) => t + Math.max(0, _finNum(x.saldo)), 0);
+
+    /* cuánto pide cada renglón en este corte */
+    let estimado = false, calculado = 0;
+    for(const x of partes){
+      const esPlan = FIN_TIPOS_PLAN.includes(x.tipo);
+      if(!esPlan){ calculado += Math.max(0, _finNum(x.saldo)); continue; }
+      const mensual = Math.max(0, _finNum(x.pagoMensual));
+      if(mensual > 0){ calculado += mensual; continue; }
+      /* sin el dato del estado de cuenta sólo queda repartir el saldo
+         entre los pagos que faltan, y eso se marca como estimado
+         porque el plan puede traer su propio interés */
+      const meses = Math.max(0, Math.round(_finNum(x.mesesRestantes)));
+      const sal   = Math.max(0, _finNum(x.saldo));
+      calculado += meses > 0 ? sal / meses : sal;
+      if(sal > 0) estimado = true;
+    }
+    calculado = Math.round(calculado * 100) / 100;
+
+    /* Un crédito fijo (el del auto, una hipoteca) no tiene corte ni
+       "pago para no generar intereses": pagas tu mensualidad y ya. Meter
+       su saldo completo en ese total decía que había que juntar $25,954
+       cuando la cifra real de las tarjetas eran $17,304. */
+    const esTarjeta = !["fijo", "automotriz"].includes(titular.tipo);
+    const declarado = Math.max(0, _finNum(titular.pagoSinIntereses));
+    if(!esTarjeta){
+      const mensual = Math.max(0, _finNum(titular.pagoMensual));
+      return {
+        clave, esTarjeta:false,
+        nombre: _finTxt(titular.nombre, 80) || "Crédito",
+        emisor: _finTxt(titular.emisor, 80),
+        titular, partes,
+        saldo: Math.round(saldo * 100) / 100,
+        diaCorte: null,
+        diaVencimiento: _finDiaMes(titular.diaVencimiento),
+        pagoMinimo: Math.max(0, _finNum(titular.pagoMinimo)),
+        pagoCorte: mensual,
+        pagoCalculado: mensual,
+        fuente: mensual > 0 ? "capturado" : "desconocido",
+        estimado: false,
+        descuadre: 0
+      };
+    }
+    return {
+      esTarjeta: true,
+      clave,
+      nombre: _finTxt(titular.nombre, 80) || "Tarjeta",
+      emisor: _finTxt(titular.emisor, 80),
+      titular,
+      partes,
+      saldo:  Math.round(saldo * 100) / 100,
+      diaCorte:       _finDiaMes(titular.diaCorte)       || _finDiaMes((partes.find(x=>_finDiaMes(x.diaCorte))||{}).diaCorte),
+      diaVencimiento: _finDiaMes(titular.diaVencimiento) || _finDiaMes((partes.find(x=>_finDiaMes(x.diaVencimiento))||{}).diaVencimiento),
+      pagoMinimo: Math.max(0, _finNum(titular.pagoMinimo)),
+      pagoCorte:  declarado > 0 ? declarado : calculado,
+      pagoCalculado: calculado,
+      fuente: declarado > 0 ? "estado" : "calculado",
+      /* el declarado viene del banco: nunca es una estimación */
+      estimado: declarado > 0 ? false : estimado,
+      /* difieren en más de un peso → algo cambió desde el último corte */
+      descuadre: declarado > 0 && Math.abs(declarado - calculado) > 1
+                 ? Math.round((declarado - calculado) * 100) / 100 : 0
+    };
+  });
 }
 
 /* ============================================================

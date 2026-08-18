@@ -48,6 +48,9 @@
     --line:#2a4a7d;--line-str:#5480c8;
     --ink:#eef7f6;--muted:#a8c0dd;--faint:#8ba3c6;
     --em:#2fb5a3;--em-deep:#1f8577;--em-soft:rgba(47,181,163,.14);
+    /* --em-deep es para RELLENOS. Como TEXTO sobre fondo oscuro daba 2.6:1,
+       así que el texto de énfasis tiene su propio token en cada tema. */
+    --em-txt:#6fd5c4;
     --brand:#2a9d8e;
     --amber:#f2b544;--amber-soft:rgba(242,181,68,.13);
     --coral:#ff8b80;--coral-soft:rgba(255,123,110,.13);
@@ -70,6 +73,7 @@
     --line:#d7e0ed;--line-str:#6b83a6;
     --ink:#0d1c33;--muted:#4a5f7f;--faint:#586c8b;
     --em:#0d6c60;--em-deep:#09564c;--em-soft:rgba(13,108,96,.07);
+    --em-txt:#09564c;
     --brand:#0f7a6d;
     --amber:#845700;--amber-soft:rgba(132,87,0,.07);
     --coral:#ac3629;--coral-soft:rgba(172,54,41,.07);
@@ -1147,7 +1151,7 @@
   .ch-btns,.ch-ops{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   .ch-btns button,.ch-ops button{flex:1 1 auto;min-height:44px;min-width:110px;
     border-radius:11px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:800;
-    padding:11px 13px;background:var(--em-soft);border:1px solid var(--em);color:var(--em-deep)}
+    padding:11px 13px;background:var(--em-soft);border:1px solid var(--em);color:var(--em-txt)}
   .ch-btns button.sec,.ch-ops button{background:var(--velo);border-color:var(--line-str);
     color:var(--ink)}
   .ch-btns button:active,.ch-ops button:active{transform:scale(.97)}
@@ -1158,7 +1162,7 @@
     font-family:inherit;font-size:15px;font-weight:600}
   .chat-in button{width:48px;height:48px;flex:none;border-radius:13px;cursor:pointer;
     display:grid;place-items:center;background:var(--em-soft);
-    border:1px solid var(--em);color:var(--em-deep)}
+    border:1px solid var(--em);color:var(--em-txt)}
   .chat-in button[hidden]{display:none}
   #chatMic.oyendo{background:var(--coral);border-color:var(--coral);color:#fff}
   .chat-in button:active{transform:scale(.94)}
@@ -1174,7 +1178,7 @@
   .exc-nm b{display:block;font-size:14px;font-weight:700;line-height:1.3;color:var(--ink);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .exc-nm small{display:block;font-size:12px;color:var(--ink);opacity:.72;font-weight:700;margin-top:2px}
-  .exc-abrir{flex:none;font-size:11.5px;font-weight:800;color:var(--em-deep);
+  .exc-abrir{flex:none;font-size:11.5px;font-weight:800;color:var(--em-txt);
     letter-spacing:.04em;text-transform:uppercase}
 
   /* ---------- Rutina: vista Foco ---------- */
@@ -1367,7 +1371,7 @@
   .note-area:focus{border-color:var(--em)}
   .note-area::placeholder{color:var(--faint)}
   .report-btn{width:100%;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:9px;
-    background:linear-gradient(135deg,var(--em),var(--em-deep));border:none;color:light-dark(#fff,var(--on-em));
+    background:linear-gradient(135deg,var(--em),color-mix(in srgb, var(--em) 85%, var(--em-deep)));border:none;color:light-dark(#fff,var(--on-em));
     font-family:"Space Grotesk",sans-serif;font-weight:800;font-size:15px;padding:15px;border-radius:14px;cursor:pointer;
     box-shadow:0 10px 26px rgba(42,157,142,.3);transition:transform .12s}
   .report-btn:active{transform:scale(.98)}
@@ -1420,7 +1424,7 @@
     line-height:1.55;margin:7px auto 0;max-width:30ch}
   .se-bio{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
     min-height:54px;margin-top:20px;border-radius:14px;cursor:pointer;
-    background:var(--em-soft);border:1px solid var(--em);color:var(--em-deep);
+    background:var(--em-soft);border:1px solid var(--em);color:var(--em-txt);
     font-family:inherit;font-size:14px;font-weight:800}
   .se-bio:active{transform:scale(.98)}
   .se-fila{display:flex;gap:9px;margin-top:12px}
@@ -1429,7 +1433,9 @@
     background:var(--velo);border:1px solid var(--line-str);color:var(--ink);
     border-radius:14px;padding:12px}
   .se-fila button{flex:none;min-width:104px;min-height:54px;border-radius:14px;cursor:pointer;
-    background:var(--em);border:1px solid var(--em);color:#fff;
+    /* blanco fijo sobre el verde claro del tema oscuro daba 2.54:1;
+       --on-em es tinta clara u oscura según el tema */
+    background:var(--em);border:1px solid var(--em);color:var(--on-em);
     font-family:inherit;font-size:14px;font-weight:800}
   .se-fila button:active{transform:scale(.97)}
   .se-err{margin-top:13px;font-size:12.5px;font-weight:700;color:var(--coral)}
@@ -1470,7 +1476,7 @@
   .mv-acc{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
   .mv-acc button{flex:1 1 auto;min-width:104px;min-height:46px;border-radius:12px;
     cursor:pointer;font-family:inherit;font-size:13px;font-weight:800;padding:11px 12px;
-    background:var(--em-soft);border:1px solid var(--em);color:var(--em-deep)}
+    background:var(--em-soft);border:1px solid var(--em);color:var(--em-txt)}
   .mv-acc button.sec{background:var(--velo);border-color:var(--line-str);color:var(--ink)}
   .mv-acc button:active{transform:scale(.97)}
   .apas{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
@@ -1498,8 +1504,6 @@
 
   /* ---------- deudas ---------- */
   .deudas{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
-  .deuda{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px}
-  .deuda.msi{border-color:color-mix(in srgb, var(--lime) 40%, var(--line))}
   .de-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
   .de-n{min-width:0}
   .de-n b{display:block;font-size:14.5px;font-weight:800;line-height:1.3}
@@ -1516,6 +1520,41 @@
     border-left:3px solid var(--amber);color:var(--ink)}
   .de-aviso.ok{background:var(--lime-soft);border-left-color:var(--lime)}
   .de-aviso.rojo{background:var(--coral-soft);border-left-color:var(--coral)}
+  /* un plástico = un bloque; dentro, sus renglones */
+  .tarjeta-gr{background:var(--card);border:1px solid var(--line);border-radius:17px;
+    overflow:hidden}
+  .tg-cab{padding:14px 14px 13px;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--velo) 70%, transparent), transparent)}
+  .tg-tit{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .tg-n{min-width:0}
+  .tg-n b{display:block;font-size:16px;font-weight:800;line-height:1.25;color:var(--ink)}
+  .tg-n small{display:block;font-size:11.5px;color:var(--muted);font-weight:700;margin-top:2px}
+  .tg-saldo{flex:none;text-align:right;font-family:"Space Grotesk",system-ui,sans-serif;
+    font-size:15px;font-weight:800;color:var(--ink)}
+  .tg-saldo i{display:block;font-style:normal;font-size:9.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:1px;
+    font-family:inherit}
+  /* el número que de verdad importa: lo que hay que pagar en el corte */
+  .tg-pago{margin-top:12px;padding:11px 13px;border-radius:13px;
+    background:var(--em-soft);border:1px solid color-mix(in srgb, var(--em) 32%, var(--line))}
+  .tg-etq{display:block;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
+    font-weight:800;color:var(--em-txt)}
+  .tg-pago b{display:block;font-family:"Space Grotesk",system-ui,sans-serif;
+    font-size:25px;font-weight:800;line-height:1.15;margin-top:3px;color:var(--em-txt)}
+  .tg-pago small{display:block;font-size:11.5px;line-height:1.5;font-weight:650;
+    margin-top:4px;color:var(--em-txt);opacity:.86}
+  /* sin el dato todavía: se ve que es un hueco, no una cifra */
+  .tg-pago.flojo{background:var(--velo);border-color:var(--line)}
+  .tg-pago.flojo .tg-etq,.tg-pago.flojo b{color:var(--muted)}
+  .tg-pago.flojo small{color:var(--muted)}
+  .tg-f{margin-top:11px}
+  .tg-partes{border-top:1px solid var(--line);padding:4px 6px 6px}
+  .de-parte{padding:11px 8px;border-radius:12px}
+  .de-parte + .de-parte{border-top:1px dashed var(--line)}
+  .de-parte.msi{background:color-mix(in srgb, var(--lime-soft) 55%, transparent)}
+  .de-parte .de-fechas{margin-top:9px}
+  .de-parte .de-n b{font-size:13.5px}
+  .de-parte .de-s{font-size:16px}
   .pend-lista{margin:10px 0 0;padding-left:18px}
   .pend-lista li{font-size:12.5px;line-height:1.55;color:var(--ink);opacity:.85;
     font-weight:600;margin:7px 0}

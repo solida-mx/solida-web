@@ -154,9 +154,26 @@ function leeNumeros(frase){
 
 /* ---------- fechas relativas ---------- */
 const _asDias = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
+/* Se comprueba por comportamiento, no con `instanceof Date`: esa prueba
+   falla cuando la fecha viene de otro realm (un iframe, un worker o el
+   banco de pruebas) y entonces `leeFecha` se caía al reloj real sin
+   avisar. Un "hoy" que no es hoy fecha mal un gasto. También acepta
+   "AAAA-MM-DD" porque es como la app guarda los días. */
+function _asFechaBase(v){
+  if(v && typeof v.getTime === "function"){
+    const t = v.getTime();
+    if(Number.isFinite(t)) return new Date(t);
+  }
+  if(typeof v === "string"){
+    const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  }
+  return new Date();
+}
+
 function leeFecha(frase, hoy){
   const t = normaliza(frase);
-  const base = hoy instanceof Date ? new Date(hoy) : new Date();
+  const base = _asFechaBase(hoy);
   const mueve = n => { const d = new Date(base); d.setDate(d.getDate() + n); return d; };
   const clave = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") +
                      "-" + String(d.getDate()).padStart(2,"0");
