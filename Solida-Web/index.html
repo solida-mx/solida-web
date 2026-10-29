@@ -97,16 +97,28 @@
   .lead{margin-top:8px;font-size:clamp(14.5px,1.8vw,16px);color:var(--ink-soft);font-weight:500;max-width:62ch}
   @media (min-width:860px){.sec{padding-top:72px}}
 
-  /* ---------- GIROS (chips) ---------- */
-  .segments{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
-  .seg-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px 0 8px;border-radius:999px;
-    border:1.5px solid #d5e2ea;background:var(--card);font-family:inherit;font-weight:700;font-size:13.5px;color:var(--ink);
-    cursor:pointer;transition:border-color .18s,background .18s,color .18s}
-  .seg-btn:hover{border-color:var(--teal)}
-  .seg-ico{width:30px;height:30px;border-radius:999px;background:var(--mist);color:var(--teal-deep);
-    display:flex;align-items:center;justify-content:center;flex:none}
-  .seg-btn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
-  .seg-btn[aria-pressed="true"] .seg-ico{background:var(--teal-bright);color:var(--navy-3)}
+  /* ---------- GIROS: cuadros de 2 en 2 (3 en 3 en computadora), un color por giro ---------- */
+  /* Cada cuadro trae su color en --c (tinta), --t (fondo del icono) y --f (relleno al elegirlo). Ver COLORES en el script. */
+  .segments{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+  @media (min-width:760px){.segments{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}}
+  .seg-btn{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:168px;padding:16px 14px 14px;
+    border-radius:18px;border:1.5px solid var(--line);background:var(--card);box-shadow:0 8px 20px rgba(16,39,74,.06);
+    font-family:inherit;color:var(--ink);text-align:left;cursor:pointer;transition:border-color .18s,background .18s,box-shadow .18s,transform .12s}
+  .seg-btn:hover{border-color:var(--c)}
+  .seg-btn:active{transform:scale(.985)}
+  .seg-btn:focus-visible{outline:3px solid var(--c);outline-offset:2px}
+  .seg-ico{width:60px;height:60px;border-radius:16px;background:var(--t);color:var(--c);display:flex;align-items:center;justify-content:center;flex:none}
+  .seg-t{font-family:"Sora";font-weight:800;font-size:15.5px;line-height:1.2}
+  .seg-d{font-size:12.5px;color:var(--ink-soft);font-weight:600;line-height:1.35}
+  .seg-p{margin-top:auto;font-size:12px;font-weight:800;color:var(--c)}
+  .seg-ok{position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:999px;background:var(--c);color:#fff;
+    display:none;align-items:center;justify-content:center}
+  .seg-btn[aria-pressed="true"]{background:var(--f);border:2.5px solid var(--c);padding:15px 13px 13px;box-shadow:0 14px 30px rgba(16,39,74,.14)}
+  .seg-btn[aria-pressed="true"] .seg-ok{display:flex}
+  @media (min-width:760px){.seg-btn{min-height:150px;padding:20px 18px 18px}.seg-btn[aria-pressed="true"]{padding:19px 17px 17px}}
+  .seg-sel{display:flex;align-items:center;gap:10px;margin-top:22px}
+  .seg-sel::before,.seg-sel::after{content:"";height:1px;flex:1;background:#d5e2ea}
+  .seg-sel span{font-size:12px;font-weight:800;color:var(--ink-soft);letter-spacing:.08em;text-transform:uppercase;text-align:center}
 
   /* ---------- PAQUETES ---------- */
   .pricing-body{margin-top:18px}
@@ -305,9 +317,10 @@
 <section class="sec" id="paginas">
   <div class="wrap">
     <p class="kick">1 · Páginas para tu negocio</p>
-    <h2 class="h2">Elige tu giro y ve tus precios</h2>
-    <p class="lead">Un solo pago para dejarla lista. La mensualidad es opcional y cubre cambios y hosting.</p>
+    <h2 class="h2">¿De qué es tu negocio?</h2>
+    <p class="lead">Tócalo y te enseñamos sus paquetes y un ejemplo real. Un solo pago para dejarla lista; la mensualidad es opcional y cubre cambios y hosting.</p>
     <div class="segments" id="segments" role="group" aria-label="Giro de tu negocio"></div>
+    <div class="seg-sel" id="segSel" aria-hidden="true"><span></span></div>
     <div class="pricing-body" id="pricing-body" aria-live="polite"></div>
   </div>
 </section>
@@ -471,6 +484,16 @@ const APARTE = "invitaciones";   // tiene su propia sección; no va en los giros
 const finalCta=document.getElementById('finalCta');
 
 /* ---- Giros ---- */
+// Un color por giro: tinta (contraste AA sobre blanco y sobre su relleno), fondo del icono y relleno al elegirlo.
+const COLORES = {
+  restaurantes:  { c:'#8c4f10', t:'#fbe3c6', f:'#fdf3e6' },
+  profesionales: { c:'#2f5fb3', t:'#e6efff', f:'#eef4ff' },
+  talleres:      { c:'#3d4b5e', t:'#e6eaf0', f:'#f2f4f7' },
+  nutriologos:   { c:'#2f7a3d', t:'#e3f4e6', f:'#eef8f0' },
+  uniformes:     { c:'#5e40a8', t:'#efe9fc', f:'#f5f1fd' },
+  barberias:     { c:'#a3365a', t:'#fbe8ee', f:'#fdf0f4' }
+};
+const OK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
 const segWrap = document.getElementById('segments');
 Object.entries(SEGMENTS).filter(([key])=>key!==APARTE).forEach(([key,s])=>{
   const b=document.createElement('button');
@@ -478,7 +501,10 @@ Object.entries(SEGMENTS).filter(([key])=>key!==APARTE).forEach(([key,s])=>{
   b.className='seg-btn';
   b.setAttribute('aria-pressed','false');
   b.dataset.key=key;
-  b.innerHTML=`<span class="seg-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[key]}</svg></span>${s.label}`;
+  const col=COLORES[key]||COLORES.talleres;
+  b.style.setProperty('--c',col.c); b.style.setProperty('--t',col.t); b.style.setProperty('--f',col.f);
+  b.innerHTML=`<span class="seg-ok">${OK_SVG}</span><span class="seg-ico"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[key]}</svg></span>`+
+    `<span class="seg-t">${s.label}</span><span class="seg-d">${s.short}</span><span class="seg-p">desde ${s.tiers[0].amount}</span>`;
   b.addEventListener('click',()=>selectSegment(key,true));
   segWrap.appendChild(b);
 });
@@ -555,11 +581,11 @@ function selectSegment(key, conScroll){
   document.querySelectorAll('.seg-btn').forEach(b=>b.setAttribute('aria-pressed', b.dataset.key===key?'true':'false'));
   const cont=document.getElementById('pricing-body');
   pintaPaquetes(key, cont);
+  const sel=document.getElementById('segSel');
+  sel.querySelector('span').textContent=`${SEGMENTS[key].label} · ${SEGMENTS[key].tiers.length} paquetes`;
   finalCta.href=waLink(`Hola Solida Aplicaciones 👋 Me interesa el servicio para ${SEGMENTS[key].label}. ¿Me pueden ayudar?`);
-  if(conScroll){
-    const r=segWrap.getBoundingClientRect();
-    if(r.top<0||r.top>innerHeight*0.5) segWrap.scrollIntoView({behavior:prefersReduced()?'auto':'smooth',block:'start'});
-  }
+  // Con los cuadros, los paquetes quedan abajo: al tocar un giro se baja a ellos.
+  if(conScroll) sel.scrollIntoView({behavior:prefersReduced()?'auto':'smooth',block:'start'});
 }
 
 /* ---- Arranque: el primer giro ya abierto e invitaciones en su sección ---- */
