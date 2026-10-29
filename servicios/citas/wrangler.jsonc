@@ -1,0 +1,21 @@
+{
+  // Servicio de citas de Agenda Total: citas.solidaaplicaciones.com
+  "name": "solida-citas",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [{ "pattern": "citas.solidaaplicaciones.com", "custom_domain": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "solida-citas",
+      "database_id": "7b99aa8d-6b4e-4052-a673-7fcf15503992",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Una vez al día se borran las citas de hace más de 120 días.
+  "triggers": { "crons": ["41 10 * * *"] },
+  // Secretos (npx wrangler secret put …): SECRETO firma las sesiones de las dueñas; MAESTRA da de alta negocios.
+  "observability": { "enabled": true }
+}

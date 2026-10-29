@@ -62,6 +62,8 @@ window.NEGOCIO = {
   ],
 
   // Sólo Agenda Total (avanzado)
+  // Dirección del servicio de citas para este negocio: "https://citas.solidaaplicaciones.com/api/<id>". Vacía en el ejemplo.
+  citasApi: "",
   anticipo: 100,                       // pesos para apartar
   enlacePago: "",                      // el enlace de cobro DEL NEGOCIO (Mercado Pago, Stripe…); el dinero va a su cuenta
   // En el ejemplo, algunas horas salen ocupadas para que se vea cómo funciona. Un cliente real no lo usa.

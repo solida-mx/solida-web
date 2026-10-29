@@ -12,6 +12,20 @@
   var AGENDA = NIVEL === 'intermedio' || NIVEL === 'avanzado';
   var TOTAL = NIVEL === 'avanzado';
   var CLAVE = 'citas:' + N.nombre;
+  // Agenda Total de un cliente real: las citas viven en el servicio de citas de Solida (citasApi en datos.js).
+  // En el ejemplo se quedan en el propio teléfono, para que nadie deje sus datos en un negocio que no existe.
+  var SERVIDOR = (NIVEL === 'avanzado' || NIVEL === 'citas') && N.citasApi && !N.ejemplo ? String(N.citasApi).replace(/\/+$/, '') : '';
+  var ocupadoSrv = null;
+  function pide(ruta, op) {
+    op = op || {};
+    var h = { 'Content-Type': 'application/json' };
+    if (op.token) h.Authorization = 'Bearer ' + op.token;
+    return fetch(SERVIDOR + ruta, { method: op.metodo || 'GET', headers: h, body: op.body ? JSON.stringify(op.body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d }; }); });
+  }
+  function cargaOcupado() {
+    return pide('/ocupado?dias=31').then(function (x) { ocupadoSrv = x.status === 200 ? x.d.ocupado || [] : []; if (x.status !== 200) throw new Error(x.d.error || 'sin servicio'); });
+  }
 
   // ───── ayudantes ─────
   var esc = function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -46,7 +60,7 @@
   document.title = N.nombre + ' · ' + N.giro;
 
   // ───── la lista de citas del dueño (avanzado/citas) ─────
-  if (NIVEL === 'citas') { pintaCitas(); return; }
+  if (NIVEL === 'citas') { if (SERVIDOR) pintaCitasSrv(); else pintaCitas(); return; }
 
   // ───── la página ─────
   var disenos = NIVEL === 'basico' ? N.disenos.slice(0, 20) : N.disenos;
@@ -112,7 +126,7 @@
         (x[1] == null ? 'Cerrado' : esc(hora12(hhmm(x[1] * 60)) + ' – ' + hora12(hhmm(x[2] * 60)))) + '</span>';
     }).join('') + '</div></div></div></div></section>';
 
-  h += '<footer class="pie">' + (TOTAL ? '<a href="citas/" style="display:inline-flex;align-items:center;min-height:44px;margin-bottom:10px">Ver la lista de citas (uso del negocio) ›</a><br>' : '') +
+  h += '<footer class="pie">' + (TOTAL && N.ejemplo ? '<a href="citas/" style="display:inline-flex;align-items:center;min-height:44px;margin-bottom:10px">Ver la lista de citas (uso del negocio) ›</a><br>' : '') +
     esc(N.nombre) + ' · ' + esc(N.giro) + '<br>Página hecha por <a href="https://solidaaplicaciones.com" target="_blank" rel="noopener">Solida Aplicaciones</a></footer>';
   h += '<div class="velo" id="velo"></div><section class="hoja" id="hoja" role="dialog" aria-modal="true" aria-labelledby="hojaTit"></section><div class="toast" id="toast" role="status" aria-live="polite"></div>';
   document.body.innerHTML = h;
@@ -194,7 +208,14 @@
     var l = [];
     for (var m = hx[1] * 60; m + s.min <= hx[2] * 60; m += N.intervaloMin || 30) {
       var ocupada = false;
-      if (TOTAL) {
+      if (TOTAL && SERVIDOR) {
+        // Ocupada si TODAS las que pueden atender tienen algo a esa hora («cualquiera» = cualquiera del equipo)
+        var quienes = c.persona ? [c.persona] : ((N.equipo || []).length ? N.equipo.map(function (p) { return p.id; }) : ['']);
+        var ini = m, fin = m + s.min;
+        ocupada = quienes.every(function (q) {
+          return (ocupadoSrv || []).some(function (e) { return e.fecha === c.fecha && e.ini < fin && e.fin > ini && (e.persona === q || e.persona === '' || q === ''); });
+        });
+      } else if (TOTAL) {
         if (N.ejemplo && (N.ocupadasEjemplo || []).indexOf(hhmm(m)) >= 0) ocupada = true;
         guardadas.forEach(function (x) { var a = aMin(x.hora); if (m < a + x.min && a < m + s.min) ocupada = true; });
       }
@@ -203,7 +224,18 @@
     }
     return l;
   }
-  function agenda(c0) {
+  function agenda(c0, msgInicial) {
+    if (SERVIDOR && ocupadoSrv === null) {
+      abre('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">Agenda tu cita</h2>' + CERRAR + '</div><p class="aviso">Buscando horas libres…</p>');
+      hoja.querySelector('.cerrar').onclick = cierra;
+      cargaOcupado().then(function () { agenda(c0, msgInicial); }, function () {
+        ocupadoSrv = null;
+        abre('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">Agenda tu cita</h2>' + CERRAR + '</div><p class="falta">No pudimos ver las horas libres. Revisa tu conexión o escríbenos.</p>' +
+          '<a class="btn btn-negro btn-bloque" href="' + esc(wa('Hola ' + N.nombre + ' 👋 Quiero agendar una cita.')) + '" target="_blank" rel="noopener">Escribir por WhatsApp</a>');
+        hoja.querySelector('.cerrar').onclick = cierra;
+      });
+      return;
+    }
     var c = Object.assign({ persona: (N.equipo || []).length === 1 ? N.equipo[0].id : '' }, c0);
     var dias = diasDisponibles();
     if (!c.fecha) c.fecha = dias[0];
@@ -278,7 +310,7 @@
         confirma(c);
       };
     };
-    pinta();
+    pinta(msgInicial);
   }
 
   function confirma(c) {
@@ -291,7 +323,19 @@
       precio: precioDe(c), anticipo: TOTAL ? N.anticipo || 0 : 0,
       nombre: String(c.nombre).trim().slice(0, 60), tel: c.tel, creada: Date.now()
     };
+    if (SERVIDOR) {
+      var btn = hoja.querySelector('[data-confirma]'); if (btn) { btn.disabled = true; btn.textContent = 'Apartando…'; }
+      pide('/citas', { metodo: 'POST', body: Object.assign({}, cita, { equipo: (N.equipo || []).map(function (p) { return p.id; }) }) }).then(function (x) {
+        if (x.status === 201) { cita.folio = x.d.folio; cita.persona = x.d.persona || cita.persona; ocupadoSrv = null; muestraTicket(cita); return; }
+        if (x.status === 409) { ocupadoSrv = null; c.hora = ''; agenda(c, x.d.error || 'Esa hora ya se ocupó. Elige otra.'); return; }
+        agenda(c, x.d.error || 'No se pudo apartar. Inténtalo de nuevo.');
+      }, function () { agenda(c, 'Sin conexión. Inténtalo de nuevo.'); });
+      return;
+    }
     if (TOTAL) { var l = leeCitas(); l.push(cita); guardaCitas(l); }
+    muestraTicket(cita);
+  }
+  function muestraTicket(cita) {
     var p = cita.persona ? personaDe(cita.persona) : null;
     var texto = 'Hola ' + N.nombre + ' 👋 Quiero mi cita:\n' +
       '📅 ' + fechaLarga(cita.fecha) + ' · ' + hora12(cita.hora) + '\n' +
@@ -403,6 +447,111 @@
       x.fillStyle = 'rgba(201,169,110,.7)'; x.font = serif('italic 500', 17); x.fillText('Te esperamos', W / 2, by + 132);
       return cv;
     });
+  }
+
+  // ───── la agenda de la dueña con el servicio de citas (Agenda Total de un cliente) ─────
+  function pintaCitasSrv() {
+    var LLAVE = 'token:' + SERVIDOR;
+    var token = ''; try { token = localStorage.getItem(LLAVE) || ''; } catch (e) {}
+    var cab = '<header class="cab"><div class="envoltura"><a class="marca" href="../">' + marcaHtml + '</a>' +
+      (token ? '<button class="btn btn-claro" type="button" data-salir>Salir</button>' : '<a class="btn btn-claro" href="../">Ver la página</a>') + '</div></header>';
+    var pie = '<div class="toast" id="toast" role="status" aria-live="polite"></div>';
+    if (!token) {
+      document.body.innerHTML = cab + '<main class="envoltura" style="max-width:460px;padding-top:48px;padding-bottom:48px">' +
+        '<div class="sec-cab"><span class="etq">Sólo para ' + esc(N.nombre) + '</span><h1 class="titulo" style="font-size:42px;margin-top:8px">Tu agenda</h1><div class="filete"></div></div>' +
+        '<form id="fEntrar"><label class="campo">Tu clave<input id="clave" autocomplete="current-password" autocapitalize="characters" placeholder="XXXX-XXXX-XXXX" required></label>' +
+        '<p class="falta" id="falta" role="alert"></p><button class="btn btn-negro btn-bloque">Entrar</button></form>' +
+        '<p class="aviso">La clave te la da Solida Aplicaciones. Si la perdiste, escríbenos y te damos otra.</p></main>' + pie;
+      document.getElementById('fEntrar').onsubmit = function (e) {
+        e.preventDefault();
+        var b = e.target.querySelector('button'); b.disabled = true;
+        pide('/entrar', { metodo: 'POST', body: { clave: document.getElementById('clave').value } }).then(function (x) {
+          if (x.status === 200) { try { localStorage.setItem(LLAVE, x.d.token); } catch (er) {} location.reload(); return; }
+          document.getElementById('falta').textContent = x.d.error || 'No se pudo entrar.'; b.disabled = false;
+        }, function () { document.getElementById('falta').textContent = 'Sin conexión.'; b.disabled = false; });
+      };
+      return;
+    }
+    var salir = function () { try { localStorage.removeItem(LLAVE); } catch (e) {} location.reload(); };
+    document.body.innerHTML = cab + '<main class="envoltura" style="max-width:720px;padding-top:30px;padding-bottom:48px" id="agendaDueña"><p class="aviso">Cargando tu agenda…</p></main>' + pie;
+    document.querySelector('[data-salir]').onclick = salir;
+    var ESTADO = { apartada: ['Por confirmar', '#86672f'], confirmada: ['Confirmada', '#2f6b45'], cancelada: ['Cancelada', '#9a3b2b'] };
+    var nombreDe = function (id) { var p = personaDe(id); return p ? p.nombre : ''; };
+    function carga() {
+      pide('/agenda', { token: token }).then(function (x) {
+        if (x.status === 401) return salir();
+        if (x.status !== 200) throw new Error(x.d.error);
+        pinta(x.d);
+      }).catch(function () { document.getElementById('agendaDueña').innerHTML = '<p class="falta">No se pudo cargar tu agenda. Revisa tu conexión.</p>'; });
+    }
+    function pinta(d) {
+      var man = sumaDia(d.hoy, 1);
+      var futuras = d.citas.filter(function (c) { return c.fecha >= d.hoy; });
+      var dias = futuras.map(function (c) { return c.fecha; }).filter(function (f, i, a) { return a.indexOf(f) === i; });
+      var pendientes = futuras.filter(function (c) { return c.estado === 'apartada'; }).length;
+      var h = '<div class="sec-cab"><span class="etq">' + esc(N.nombre) + '</span><h1 class="titulo" style="font-size:42px;margin-top:8px">Tu agenda</h1><div class="filete"></div>' +
+        '<p class="aviso" style="margin-top:14px">' + (pendientes ? pendientes + (pendientes === 1 ? ' cita por confirmar' : ' citas por confirmar') : 'Todo confirmado') + ' · se actualiza sola</p></div>';
+      h += dias.length ? dias.map(function (f) {
+        return '<h2 class="etq" style="color:var(--oro-txt);margin:26px 0 10px">' + (f === d.hoy ? 'Hoy · ' : f === man ? 'Mañana · ' : '') + esc(fechaLarga(f)) + '</h2><div class="citas">' +
+          futuras.filter(function (c) { return c.fecha === f; }).map(function (c) {
+            var e = ESTADO[c.estado] || ESTADO.apartada, quien = nombreDe(c.persona);
+            var rec = 'Hola ' + c.nombre + ' 👋 Te recordamos tu cita en ' + N.nombre + ' el ' + fechaLarga(c.fecha) + ' a las ' + hora12(hhmm(c.inicio_min)) + '. ¡Te esperamos!';
+            var conf = 'Hola ' + c.nombre + ' 👋 Tu cita en ' + N.nombre + ' del ' + fechaLarga(c.fecha) + ' a las ' + hora12(hhmm(c.inicio_min)) + ' está confirmada.';
+            return '<div class="cita" style="' + (c.estado === 'cancelada' ? 'opacity:.6' : '') + '"><span class="etq" style="color:' + e[1] + '">' + e[0] + ' · Folio ' + esc(c.folio) + '</span>' +
+              '<b>' + esc(hora12(hhmm(c.inicio_min))) + ' – ' + esc(hora12(hhmm(c.fin_min))) + ' · ' + esc(c.nombre) + '</b>' +
+              '<span>' + esc(c.diseno ? c.diseno + ' (' + c.servicio + ')' : c.servicio) + (c.detalle ? ' · ' + esc(c.detalle) : '') + (quien ? ' · con ' + esc(quien) : '') + ' · ' + pesos(c.precio) +
+              (c.anticipo ? ' · anticipo ' + pesos(c.anticipo) : '') + '</span><span>WhatsApp ' + esc(c.tel) + (c.origen === 'negocio' ? ' · la capturaste tú' : '') + '</span>' +
+              (c.estado === 'cancelada' ? '' : '<div style="display:grid;grid-template-columns:repeat(' + (c.estado === 'apartada' ? 3 : 2) + ',minmax(0,1fr));gap:8px;margin-top:8px">' +
+                (c.estado === 'apartada' ? '<button class="btn btn-negro" type="button" data-estado="confirmada" data-folio="' + esc(c.folio) + '" data-aviso="' + esc(conf) + '" data-tel="' + esc(c.tel) + '" style="padding:0 8px">Confirmar</button>' : '') +
+                '<a class="btn btn-linea" href="' + esc(wa(rec, '52' + c.tel)) + '" target="_blank" rel="noopener" style="padding:0 8px">Recordar</a>' +
+                '<button class="btn btn-linea" type="button" data-estado="cancelada" data-folio="' + esc(c.folio) + '" style="padding:0 8px">Cancelar</button></div>') + '</div>';
+          }).join('') + '</div>';
+      }).join('') : '<p class="aviso" style="margin-top:20px">Todavía no hay citas. Las que se aparten en tu página aparecen aquí.</p>';
+      // Bloqueos
+      var opcPersona = '<option value="">Todo el negocio</option>' + (N.equipo || []).map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.nombre) + '</option>'; }).join('');
+      h += '<section style="margin-top:44px;border-top:1px solid var(--linea);padding-top:26px"><h2 class="titulo" style="font-size:30px">Cerrar horas o días</h2>' +
+        '<p class="aviso" style="text-align:left">Comida, un curso, vacaciones: lo que cierres aquí ya no se puede apartar en tu página.</p>' +
+        '<form id="fBloqueo" style="display:grid;gap:4px;margin-top:6px"><label class="campo">Día<input type="date" id="bFecha" required min="' + esc(d.hoy) + '"></label>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="campo">Desde<input type="time" id="bDesde" step="1800"></label><label class="campo">Hasta<input type="time" id="bHasta" step="1800"></label></div>' +
+        '<p class="aviso" style="text-align:left;margin:2px 0 0">Déjalos vacíos para cerrar el día entero.</p>' +
+        ((N.equipo || []).length > 1 ? '<label class="campo">¿De quién?<select id="bPersona" style="min-height:50px;border:1px solid var(--linea);background:#fff;padding:0 12px;font:400 16px var(--sans)">' + opcPersona + '</select></label>' : '') +
+        '<label class="campo">Motivo (sólo lo ves tú)<input id="bMotivo" maxlength="80" placeholder="Comida, vacaciones…"></label>' +
+        '<p class="falta" id="bFalta" role="alert"></p><button class="btn btn-negro btn-bloque">Cerrar ese horario</button></form>' +
+        (d.bloqueos.length ? '<div class="citas" style="margin-top:18px">' + d.bloqueos.filter(function (b) { return b.fecha >= d.hoy; }).map(function (b) {
+          var todo = b.inicio_min === 0 && b.fin_min === 1440;
+          return '<div class="cita"><b>' + esc(fechaLarga(b.fecha)) + '</b><span>' + (todo ? 'Todo el día' : esc(hora12(hhmm(b.inicio_min)) + ' – ' + hora12(hhmm(b.fin_min)))) +
+            (b.persona ? ' · ' + esc(nombreDe(b.persona) || b.persona) : ' · todo el negocio') + (b.motivo ? ' · ' + esc(b.motivo) : '') + '</span>' +
+            '<button class="btn btn-linea" type="button" data-abre="' + esc(String(b.id)) + '" style="margin-top:6px">Volver a abrir</button></div>';
+        }).join('') + '</div>' : '') + '</section>';
+      document.getElementById('agendaDueña').innerHTML = h;
+      document.querySelectorAll('[data-estado]').forEach(function (b) {
+        b.onclick = function () {
+          var est = b.getAttribute('data-estado');
+          if (est === 'cancelada' && !confirm('¿Cancelar esta cita? Su hora vuelve a quedar libre.')) return;
+          b.disabled = true;
+          pide('/citas/' + encodeURIComponent(b.getAttribute('data-folio')) + '/estado', { metodo: 'POST', token: token, body: { estado: est } }).then(function (x) {
+            if (x.status !== 200) { toast(x.d.error || 'No se pudo'); b.disabled = false; return; }
+            if (est === 'confirmada') window.open(wa(b.getAttribute('data-aviso'), '52' + b.getAttribute('data-tel')), '_blank', 'noopener');
+            toast(est === 'confirmada' ? 'Confirmada. Avísale por WhatsApp.' : 'Cancelada. La hora quedó libre.'); carga();
+          });
+        };
+      });
+      document.querySelectorAll('[data-abre]').forEach(function (b) {
+        b.onclick = function () { b.disabled = true; pide('/bloqueos/' + b.getAttribute('data-abre'), { metodo: 'DELETE', token: token }).then(function () { toast('Horario abierto otra vez'); carga(); }); };
+      });
+      document.getElementById('fBloqueo').onsubmit = function (e) {
+        e.preventDefault();
+        var cuerpo = { fecha: document.getElementById('bFecha').value, desde: document.getElementById('bDesde').value, hasta: document.getElementById('bHasta').value,
+          persona: (document.getElementById('bPersona') || {}).value || '', motivo: document.getElementById('bMotivo').value };
+        pide('/bloqueos', { metodo: 'POST', token: token, body: cuerpo }).then(function (x) {
+          if (x.status !== 201) { document.getElementById('bFalta').textContent = x.d.error || 'No se pudo'; return; }
+          toast('Listo: ese horario ya no se puede apartar'); carga();
+        });
+      };
+    }
+    function sumaDia(f, n) { var x = deIso(f); x.setDate(x.getDate() + n); return iso(x); }
+    carga();
+    setInterval(function () { if (document.visibilityState === 'visible' && !document.activeElement.matches('input,select')) carga(); }, 60000);
   }
 
   // ───── lista de citas del dueño (sólo avanzado, en /citas/) ─────
