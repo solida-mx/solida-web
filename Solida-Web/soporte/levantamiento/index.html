@@ -463,7 +463,7 @@ function buildMarkdown(){
   const mats = Array.from(document.querySelectorAll("#matChecks input:checked")).map(e=>e.value);
   md += `\n## Material que enviaré por WhatsApp\n`;
   md += mats.length ? mats.map(m=>`- [ ] ${m}`).join("\n")+"\n" : "_(sin material marcado)_\n";
-  md += `\n---\n_Generado desde solida-web.j23salva.workers.dev/soporte_\n`;
+  md += `\n---\n_Generado desde solidaaplicaciones.com/soporte_\n`;
   return {md, missing};
 }
 
