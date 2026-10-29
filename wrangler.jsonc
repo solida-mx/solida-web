@@ -5,9 +5,20 @@
   "observability": {
     "enabled": true
   },
+  "main": "worker.js",
   "assets": {
-    "directory": "Solida-Web"
+    "directory": "Solida-Web",
+    "binding": "ASSETS",
+    // El código corre antes que los archivos para poder mandar www a la dirección oficial.
+    "run_worker_first": true
   },
+  // Las dos direcciones del dominio. workers_dev: true para que la dirección de workers.dev siga funcionando
+  // (declarar routes la apaga si no se dice: le pasó a Mi Plan).
+  "routes": [
+    { "pattern": "solidaaplicaciones.com", "custom_domain": true },
+    { "pattern": "www.solidaaplicaciones.com", "custom_domain": true }
+  ],
+  "workers_dev": true,
   "compatibility_flags": [
     "nodejs_compat"
   ]
