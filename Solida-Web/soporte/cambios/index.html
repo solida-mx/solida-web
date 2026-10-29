@@ -103,7 +103,7 @@
     <div class="step-label"><div class="step-num">1</div><h2>¿De qué página se trata?</h2></div>
     <div class="panel">
       <div class="field"><label>Nombre de tu negocio <b>*</b></label><input id="f_negocio"></div>
-      <div class="field"><label>Dirección de tu página</label><input id="f_url" placeholder="solida-web.j23salva.workers.dev/..."></div>
+      <div class="field"><label>Dirección de tu página</label><input id="f_url" placeholder="solidaaplicaciones.com/..."></div>
       <div class="field"><label>Tu nombre <b>*</b></label><input id="f_solicita"></div>
       <div class="field"><label>WhatsApp donde te contactamos <b>*</b></label><input id="f_wa" placeholder="844 000 0000"></div>
     </div>
@@ -181,7 +181,7 @@ function buildMarkdown(){
   md += `**Tipo de cambio:** ${tipos.length? tipos.join(", ") : "—"}\n`;
   md += `\n## Cambio solicitado\n${v("f_desc")||"_(sin descripción)_"}\n`;
   if(v("f_fecha")) md += `\n**Lo necesito para:** ${v("f_fecha")}\n`;
-  md += `\n---\n_Generado desde solida-web.j23salva.workers.dev/soporte_\n`;
+  md += `\n---\n_Generado desde solidaaplicaciones.com/soporte_\n`;
   return md;
 }
 function refresh(){ $("preview").textContent = buildMarkdown(); }
