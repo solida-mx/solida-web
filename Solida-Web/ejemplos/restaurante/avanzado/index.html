@@ -172,7 +172,7 @@
   <div class="logo"><span class="fire" data-negocio="icono"></span> <span data-negocio="nombre"></span></div>
   <div class="tmr" id="tmr">⏱️ --:--</div>
 </header>
-<section class="hero"><div class="smoke"></div><div class="hero-in">
+<section class="hero" data-negocio-portada><div class="smoke"></div><div class="hero-in">
   <h1>Pide desde <span class="amp">tu</span> lugar</h1>
   <p>Arma tu orden, revisa tu cuenta y envíala a cocina.</p>
   <div id="heroTag"></div>
@@ -203,6 +203,7 @@
   </div>
 </div>
 
+<div class="wrap" data-negocio="resenas"></div>
 <footer class="hecho">Página hecha por <a href="https://solidaaplicaciones.com" target="_blank" rel="noopener">Solida Aplicaciones</a></footer>
 
 <div class="bar" id="bar">
@@ -239,7 +240,7 @@ if(NEGOCIO.ejemplo) document.getElementById("adminDemo").hidden=false;
 const MESA_QR=(new URLSearchParams(location.search).get("mesa")||"").replace(/[^0-9A-Za-z]/g,"").slice(0,6)||null;
 const BASE_MENU=location.origin+location.pathname; // para los QR de mesa
 
-const MENU=Object.fromEntries(NEGOCIO.menu.map(c=>[c.categoria,{em:c.icono,items:c.platillos.map(x=>({id:x.id,n:x.nombre,d:x.desc,p:x.precio,img:x.foto}))}]));
+const MENU=Object.fromEntries(NEGOCIO.menu.map(c=>[c.categoria,{em:c.icono,items:c.platillos.map(x=>({id:x.id,n:x.nombre,d:x.desc,p:x.precio,img:x.icono,foto:x.foto}))}]));
 const ALL={};Object.values(MENU).forEach(c=>c.items.forEach(it=>ALL[it.id]=it));
 const cart={};
 let orderType="mesa",pago="Efectivo";
@@ -292,7 +293,7 @@ Object.entries(MENU).forEach(([cat,data],i)=>{
   b.onclick=()=>$(cid).scrollIntoView({behavior:"smooth",block:"start"});nav.appendChild(b);
   const sec=document.createElement("section");sec.className="cat";sec.id=cid;
   sec.innerHTML=`<div class="cat-head"><span class="em">${esc(data.em)}</span><h2>${esc(cat)}</h2><span class="ln"></span></div>`+
-    data.items.map(it=>`<div class="dish"><div class="dimg">${esc(it.img)}</div>
+    data.items.map(it=>`<div class="dish"><div class="dimg">${it.foto?NEGOCIO.imgHtml(it.foto,it.n):esc(it.img)}</div>
       <div class="dbody"><div class="dname">${esc(it.n)}</div><div class="ddesc">${esc(it.d)}</div><div class="dprice">${fmt(it.p)}</div></div>
       <div class="ctrl" id="ctrl-${it.id}"></div></div>`).join("");
   menu.appendChild(sec);

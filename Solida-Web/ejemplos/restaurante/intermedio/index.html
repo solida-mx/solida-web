@@ -95,7 +95,7 @@
   <div class="status" id="status"><span class="dot"></span><span id="statusText">—</span></div>
 </header>
 
-<section class="hero">
+<section class="hero" data-negocio-portada>
   <div class="smoke"></div>
   <div class="hero-in">
     <div class="kick" data-negocio="giro"></div>
@@ -111,9 +111,11 @@
     <a class="btn btn-ghost" id="ubicacion" data-negocio-mapa target="_blank" rel="noopener">Cómo llegar</a>
   </div>
 
+  <div data-negocio="galeria" style="margin-top:18px"></div>
   <nav class="menu-nav" id="menuNav"></nav>
   <div id="menu"></div>
 
+  <div data-negocio="resenas"></div>
   <div class="infocard">
     <h3>Visítanos</h3>
     <div class="inforow">
@@ -138,7 +140,7 @@
 <script>
 // Menú y horarios salen de datos.js
 const esc=NEGOCIO.esc;
-const MENU=Object.fromEntries(NEGOCIO.menu.map(c=>[c.categoria,{em:c.icono,items:c.platillos.map(x=>({n:x.nombre,d:x.desc,p:NEGOCIO.pesos(x.precio),t:x.etiqueta,pop:x.destacado,img:x.foto}))}]));
+const MENU=Object.fromEntries(NEGOCIO.menu.map(c=>[c.categoria,{em:c.icono,items:c.platillos.map(x=>({n:x.nombre,d:x.desc,p:NEGOCIO.pesos(x.precio),t:x.etiqueta,pop:x.destacado,img:x.icono,foto:x.foto}))}]));
 const HOURS=NEGOCIO.horarios;
 const now=new Date();const dow=(now.getDay()+6)%7;const h=now.getHours()+now.getMinutes()/60;
 const today=HOURS[dow];const isOpen=today[2]!==null&&h>=today[2]&&h<today[3];
@@ -157,7 +159,7 @@ Object.entries(MENU).forEach(([cat,data],i)=>{
   nav.appendChild(b);
   const sec=document.createElement('section');sec.className='cat';sec.id=id;
   sec.innerHTML='<div class="cat-head"><span class="em">'+esc(data.em)+'</span><h2>'+esc(cat)+'</h2><span class="ln"></span></div>'+
-    data.items.map(it=>`<div class="dish"><div class="dish-img">${esc(it.img)}</div><div class="dish-body">
+    data.items.map(it=>`<div class="dish"><div class="dish-img">${it.foto?NEGOCIO.imgHtml(it.foto,it.n):esc(it.img)}</div><div class="dish-body">
       <div class="dish-top"><div class="dish-name">${esc(it.n)}</div><div class="dish-price">${esc(it.p)}</div></div>
       <div class="dish-desc">${esc(it.d)}</div>${it.t?`<span class="tagline${it.pop?' pop':''}">${esc(it.t)}</span>`:''}</div></div>`).join('');
   menu.appendChild(sec);

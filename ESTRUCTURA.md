@@ -25,6 +25,14 @@ Un giro ya convertido tiene **un archivo de datos** y las páginas sólo lo leen
 Para la página de un cliente se copia la plantilla y se escribe su `datos.js` con `ejemplo: false`. Las páginas de clientes **no viven
 aquí**: van en su propio espacio y se dan de alta en el panel (fase 1, paso 2).
 
+**Fotos y reseñas (restaurante):** `fotoPortada`, `galeria`, la `foto` de cada platillo y `resenas` (el enlace «Pedir reseñas» de
+Google). Lo que esté vacío no sale: sin fotos la página se ve con iconos, como siempre.
+
+**Uñas y pestañas** (`ejemplos/unas/`) ya nace como plantilla: `datos.js` + `estilo.css` + `plantilla.js`, y cada nivel es una página de
+diez líneas. La agenda (intermedio y avanzado) arma la cita como **ticket en imagen** con el logo del negocio (`logo` en sus datos, o sus
+iniciales en un sello) para mandarla por WhatsApp. En el ejemplo, el avanzado guarda las citas en el propio teléfono; para un cliente real
+la Agenda Total necesita guardarlas en el servidor (pendiente).
+
 Pendientes de convertir: profesional, taller, nutriólogo, invitación, uniformes y barbería.
 
 ## Direcciones viejas
