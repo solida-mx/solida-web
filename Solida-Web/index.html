@@ -14,7 +14,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
   :root{
     --navy:#1B396B;
@@ -159,32 +158,20 @@
     background:var(--navy);color:#fff;font-family:"Sora";font-weight:700;font-size:14px;border-radius:999px;transition:transform .12s}
   .tier.reco .tier-cta{background:var(--teal-deep)}
   .tier-cta:active{transform:translateY(1px)}
-  .tier-start{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:9px;min-height:44px;
-    text-decoration:none;font-family:"Sora";font-weight:700;font-size:13px;color:var(--teal-deep);
-    border:1.5px solid var(--teal-deep);border-radius:999px;padding:0 14px;transition:background .15s,color .15s}
-  .tier-start:hover{background:var(--teal-deep);color:#fff}
+  .tier-demo{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;width:100%;margin-bottom:9px;
+    text-decoration:none;font-family:"Sora";font-weight:700;font-size:14px;color:var(--teal-deep);
+    border:1.5px solid var(--teal-deep);border-radius:999px;transition:background .15s,color .15s}
+  .tier-demo:hover{background:var(--teal-deep);color:#fff}
+  .tier-demo svg{flex:none}
+  .tier-start{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;min-height:44px;
+    text-decoration:none;font-weight:700;font-size:13px;color:var(--teal-deep)}
+  .tier-start:hover{text-decoration:underline}
+  .qr-linea{margin-top:16px;display:flex;gap:12px;align-items:center;background:var(--card);border:1.5px dashed #c7d6df;border-radius:14px;
+    padding:12px 14px;font-size:13.5px;color:#33445f;font-weight:600;line-height:1.45}
+  .qr-linea svg{flex:none;color:var(--navy)}
   .note{margin-top:16px;background:var(--mist);border-radius:14px;padding:14px 16px;
     display:flex;gap:11px;align-items:flex-start;font-size:13px;color:#245a52;font-weight:600;line-height:1.45}
   .note svg{flex:none;margin-top:1px}
-
-  /* ---------- EJEMPLO CON QR ---------- */
-  .demo-block{margin:18px auto 0;max-width:560px;background:var(--navy);border-radius:20px;padding:24px 20px;
-    color:#fff;text-align:center;box-shadow:var(--shadow)}
-  .demo-block h4{font-family:"Sora";font-weight:700;font-size:17px}
-  .demo-block p{font-size:13px;color:#c6d6ec;margin-top:6px;font-weight:500;max-width:36ch;margin-left:auto;margin-right:auto}
-  .qr-frame{margin:18px auto 0;width:196px;height:196px;background:#fff;border-radius:16px;
-    padding:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(0,0,0,.28)}
-  .qr-frame canvas{width:100%;height:100%;border-radius:6px;display:block}
-  .qr-frame.qr-tap{cursor:pointer;transition:transform .12s,box-shadow .18s}
-  .qr-frame.qr-tap:active{transform:scale(.97)}
-  .qr-frame.qr-tap:focus-visible{outline:3px solid var(--teal-bright);outline-offset:3px}
-  .qr-pending{font-size:12.5px;color:#9fb4d3;font-weight:600;line-height:1.5;padding:0 8px}
-  .qr-pending code{background:rgba(27,57,107,.08);padding:2px 6px;border-radius:5px;color:var(--navy);font-size:11px;word-break:break-all}
-  .demo-scan{margin-top:14px;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-bright);font-weight:700}
-  .demo-tabs{display:flex;gap:8px;margin:16px 0 2px;justify-content:center;flex-wrap:wrap}
-  .demo-tab{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.28);color:#fff;min-height:44px;
-    font-family:inherit;font-weight:700;font-size:13.5px;padding:0 18px;border-radius:999px;cursor:pointer;transition:all .15s}
-  .demo-tab.active{background:var(--teal-bright);border-color:var(--teal-bright);color:var(--navy-3)}
 
   /* ---------- APPS ---------- */
   .apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:20px}
@@ -455,15 +442,6 @@ const { SITIO, WHATSAPP, SEGMENTS } = window.SOLIDA;
 // De aquí salen nombre, dirección y precio de cada app (lo que tengas en el panel).
 const CATALOGO = "https://admin.solidaaplicaciones.com/api/catalogo";
 const prefersReduced = ()=> (window.matchMedia? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false);
-const DEMO_LINKS = {
-  restaurantes:  SITIO+"/ejemplos/restaurante",
-  profesionales: SITIO+"/ejemplos/profesional",
-  talleres:      SITIO+"/ejemplos/taller",
-  nutriologos:   SITIO+"/ejemplos/nutriologo",
-  invitaciones:  SITIO+"/ejemplos/invitacion",
-  uniformes:     SITIO+"/ejemplos/uniformes",
-  barberias:     SITIO+"/ejemplos/barberia"
-};
 
 /* ---- Íconos (line icons) ---- */
 const ICONS = {
@@ -480,6 +458,10 @@ const ICONS = {
 /* ---- Helpers ---- */
 const CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f7f73" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>';
 const waLink = (txt)=>`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(txt)}`;
+// El ejemplo se abre en el mismo sitio en el que estás (solidaaplicaciones.com, o workers.dev si entras por ahí).
+const rutaDe = (u)=>{ try { return new URL(u).pathname; } catch(e){ return u; } };
+const OJO = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+const QR_SVG = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>';
 const APARTE = "invitaciones";   // tiene su propia sección; no va en los giros
 const finalCta=document.getElementById('finalCta');
 
@@ -522,24 +504,12 @@ function pintaPaquetes(key, cont){
       <div class="price"><span class="amt">${t.amount}</span><span class="unit">${t.unit}</span>${t.plus?`<span class="plus">${t.plus}</span>`:''}</div>
       <ul class="feats">${t.feats.map(f=>`<li>${CHECK}<span>${f}</span></li>`).join('')}</ul>
       <div class="tier-acts">
+        ${t.demo?`<a class="tier-demo" href="${rutaDe(t.demo)}" target="_blank" rel="noopener">${OJO}Ver ejemplo</a>`:''}
         <a class="tier-cta" target="_blank" rel="noopener" href="${waLink(`Hola Solida Aplicaciones 👋 Me interesa el paquete "${t.name}" (${s.label}). ¿Me dan más información?`)}">Me interesa este</a>
         <a class="tier-start" href="soporte/levantamiento/?giro=${key}&nivel=${ti}">Quiero empezar ▸</a>
       </div>
     </div>`).join('');
 
-  const demoTabLabel=(url)=>{const seg=url.split('/').filter(Boolean).pop();
-    return ({basico:'Básico',intermedio:'Intermedio',avanzado:'Avanzado'})[seg]||'Ver ejemplo';};
-  const demoOpts = s.tiers.some(t=>t.demo)
-    ? s.tiers.filter(t=>t.demo).map(t=>({label:demoTabLabel(t.demo),url:t.demo}))
-    : (DEMO_LINKS[key]?[{label:'Ver ejemplo',url:DEMO_LINKS[key]}]:[]);
-  const demoHtml = demoOpts.length ? `
-    <div class="demo-block">
-      <h4>Mira un ejemplo real</h4>
-      <p>Elige una versión y escanea el código con la cámara de tu celular, o tócalo para abrirlo.</p>
-      <div class="demo-tabs">${demoOpts.map(o=>`<button type="button" class="demo-tab" data-url="${o.url}">${o.label}</button>`).join('')}</div>
-      <div class="qr-frame"><div class="qr-pending">Elige una versión ▸</div></div>
-      <div class="demo-scan" style="visibility:hidden">▸ escanéalo o tócalo para abrirlo ◂</div>
-    </div>` : '';
 
   cont.innerHTML=`
     <div class="seg-intro"><h3>${s.intro}</h3><p>${s.blurb}</p></div>
@@ -548,28 +518,10 @@ function pintaPaquetes(key, cont){
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f7f73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
       <span>${s.note}</span>
     </div>
-    ${demoHtml}`;
+    <div class="qr-linea">${QR_SVG}<span>Cada página trae su <b>código QR</b> listo para imprimir: en tus mesas, mostrador, tarjetas o volantes. Tus clientes la abren con la cámara del celular.</span></div>`;
 
-  const tabs=cont.querySelector('.demo-tabs');
-  if(tabs){
-    const frame=cont.querySelector('.qr-frame');
-    tabs.querySelectorAll('.demo-tab').forEach(btn=>btn.onclick=()=>{
-      tabs.querySelectorAll('.demo-tab').forEach(b=>b.classList.toggle('active',b===btn));
-      frame.innerHTML='<canvas></canvas>';
-      drawBrandedQR(frame.querySelector('canvas'), frame, btn.dataset.url);
-      // El QR también es botón: tocarlo abre la misma página que abre al escanearlo
-      frame.classList.add('qr-tap');
-      frame.setAttribute('role','link');
-      frame.setAttribute('tabindex','0');
-      frame.setAttribute('aria-label','Abrir ejemplo '+btn.textContent.trim());
-      const openDemo=()=>window.open(btn.dataset.url,'_blank','noopener');
-      frame.onclick=openDemo;
-      frame.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openDemo();}};
-      const sc=cont.querySelector('.demo-scan'); if(sc) sc.style.visibility='visible';
-    });
-  }
   if(!prefersReduced()){
-    const cards=cont.querySelectorAll('.tier,.note,.demo-block');
+    const cards=cont.querySelectorAll('.tier,.note,.qr-linea');
     cards.forEach(el=>el.classList.add('anim-in'));
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       cards.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),70*i));
@@ -625,38 +577,6 @@ fetch(CATALOGO).then(r=>r.ok?r.json():null).then(d=>{
   els.forEach((e,i)=>{e.style.transitionDelay=(i%4)*0.05+'s';io.observe(e);});
 })();
 
-/* ---- QR con el logo de la marca ---- */
-function roundRect(ctx,x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
-}
-function drawBrandedQR(canvas, frame, text){
-  if(!canvas) return;
-  if(typeof qrcode==='undefined'){
-    frame.innerHTML='<div class="qr-pending">No se pudo generar el QR sin conexión.<br>Enlace:<br><code></code></div>';
-    frame.querySelector('code').textContent=text;
-    return;
-  }
-  const qr=qrcode(0,'H');qr.addData(text);qr.make();
-  const n=qr.getModuleCount();
-  const scale=12,margin=4;
-  const off=margin*scale;
-  const size=(n+margin*2)*scale;
-  canvas.width=size;canvas.height=size;
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,size,size);
-  ctx.fillStyle='#1B396B';
-  for(let r=0;r<n;r++)for(let c=0;c<n;c++){
-    if(qr.isDark(r,c)) ctx.fillRect(off+c*scale,off+r*scale,scale,scale);
-  }
-  const L=Math.round(size*0.22), lx=(size-L)/2, ly=(size-L)/2;
-  ctx.fillStyle='#ffffff';roundRect(ctx,lx-8,ly-8,L+16,L+16,14);ctx.fill();
-  ctx.fillStyle='#1B396B';roundRect(ctx,lx,ly,L,L,12);ctx.fill();
-  const bh=L*0.15, gap=L*0.12, bx=lx+L*0.5;
-  const bars=[[0.40,'#2A9D8E',ly+L*0.24],[0.56,'#E8F6F6',ly+L*0.24+bh+gap],[0.72,'#2A9D8E',ly+L*0.24+2*(bh+gap)]];
-  bars.forEach(([w,col,y])=>{const bw=L*w;ctx.fillStyle=col;roundRect(ctx,bx-bw/2,y,bw,bh,bh/2);ctx.fill();});
-}
 </script>
 </body>
 </html>
