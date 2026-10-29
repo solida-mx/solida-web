@@ -115,6 +115,11 @@
   .seg-btn[aria-pressed="true"]{background:var(--f);border:2.5px solid var(--c);padding:15px 13px 13px;box-shadow:0 14px 30px rgba(16,39,74,.14)}
   .seg-btn[aria-pressed="true"] .seg-ok{display:flex}
   @media (min-width:760px){.seg-btn{min-height:150px;padding:20px 18px 18px}.seg-btn[aria-pressed="true"]{padding:19px 17px 17px}}
+  .seg-new{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--c);padding:3px 8px;border-radius:999px}
+  .seg-txt{display:flex;flex-direction:column;align-items:flex-start;gap:8px;flex:1;width:100%;min-width:0}
+  .seg-btn.solo{grid-column:1/-1;flex-direction:row;align-items:center;min-height:0}
+  .seg-btn.solo .seg-txt{gap:4px}
+  .seg-btn.solo .seg-p{margin-top:0}
   .seg-sel{display:flex;align-items:center;gap:10px;margin-top:22px}
   .seg-sel::before,.seg-sel::after{content:"";height:1px;flex:1;background:#d5e2ea}
   .seg-sel span{font-size:12px;font-weight:800;color:var(--ink-soft);letter-spacing:.08em;text-transform:uppercase;text-align:center}
@@ -451,7 +456,8 @@ const ICONS = {
   nutriologos:'<path d="M12 8c-1.6-2.8-6-2.4-6 1.6 0 4 3.4 8.4 6 8.4s6-4.4 6-8.4c0-4-4.4-4.4-6-1.6Z"/><path d="M12 8c0-2 1.2-3.6 3.2-4"/>',
   invitaciones:'<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><path d="m3.5 7 8.5 5.5L20.5 7"/>',
   uniformes:'<path d="M4 20 15 9"/><path d="M14 6.5 17.5 10"/><circle cx="18.5" cy="5.5" r="2"/><path d="M17.2 6.8 15 9l-1.5-1.5 2.2-2.2"/><path d="m4 20 1.2-3.2L8 19.5 4 20Z"/>',
-  barberias:'<circle cx="6.5" cy="7" r="2.5"/><circle cx="6.5" cy="17" r="2.5"/><path d="M8.6 8.8 19.5 19"/><path d="M8.6 15.2 19.5 5"/>'
+  barberias:'<circle cx="6.5" cy="7" r="2.5"/><circle cx="6.5" cy="17" r="2.5"/><path d="M8.6 8.8 19.5 19"/><path d="M8.6 15.2 19.5 5"/>',
+  unas:'<path d="M9 21v-8.5a3 3 0 0 1 6 0V21"/><path d="M9 15h6"/><path d="M10.4 9.6C10 6.4 11 4 12 3.4c1 .6 2 3 1.6 6.2"/>'
 };
 
 
@@ -473,7 +479,8 @@ const COLORES = {
   talleres:      { c:'#3d4b5e', t:'#e6eaf0', f:'#f2f4f7' },
   nutriologos:   { c:'#2f7a3d', t:'#e3f4e6', f:'#eef8f0' },
   uniformes:     { c:'#5e40a8', t:'#efe9fc', f:'#f5f1fd' },
-  barberias:     { c:'#a3365a', t:'#fbe8ee', f:'#fdf0f4' }
+  barberias:     { c:'#a3365a', t:'#fbe8ee', f:'#fdf0f4' },
+  unas:          { c:'#6e5326', t:'#efe6d6', f:'#f7f2e9' }
 };
 const OK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
 const segWrap = document.getElementById('segments');
@@ -486,10 +493,17 @@ Object.entries(SEGMENTS).filter(([key])=>key!==APARTE).forEach(([key,s])=>{
   const col=COLORES[key]||COLORES.talleres;
   b.style.setProperty('--c',col.c); b.style.setProperty('--t',col.t); b.style.setProperty('--f',col.f);
   b.innerHTML=`<span class="seg-ok">${OK_SVG}</span><span class="seg-ico"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[key]}</svg></span>`+
-    `<span class="seg-t">${s.label}</span><span class="seg-d">${s.short}</span><span class="seg-p">desde ${s.tiers[0].amount}</span>`;
+    `<span class="seg-txt">${s.nuevo?'<span class="seg-new">Nuevo</span>':''}<span class="seg-t">${s.label}</span><span class="seg-d">${s.short}</span><span class="seg-p">desde ${s.tiers[0].amount}</span></span>`;
   b.addEventListener('click',()=>selectSegment(key,true));
   segWrap.appendChild(b);
 });
+// Si el último cuadro queda solo en su renglón, ocupa el renglón entero (2 columnas en celular, 3 en computadora).
+function acomodaSolo(){
+  const bs=[...segWrap.children], cols=getComputedStyle(segWrap).gridTemplateColumns.split(' ').length;
+  bs.forEach(b=>b.classList.remove('solo'));
+  if(bs.length%cols===1) bs[bs.length-1].classList.add('solo');
+}
+acomodaSolo(); addEventListener('resize',acomodaSolo);
 
 /* ---- Paquetes de un giro, dentro de la caja que se le pase ---- */
 function pintaPaquetes(key, cont){
