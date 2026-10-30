@@ -23,6 +23,8 @@ async function api(ruta, { metodo = 'GET', body, token, maestra, ip } = {}) {
   return { status: r.status, cors: r.headers.get('access-control-allow-origin'), d: await r.json().catch(() => null) };
 }
 // Un día que exista y no sea hoy: mañana y pasado, en la zona del negocio
+// El primer día (desde dentro de n días) que cae en ese día de la semana (1 = lunes … 7 = domingo)
+const elDia = (wd, n = 1) => { for (let i = n; i < n + 8; i++) { const f = fecha(i); const d = new Date(f + 'T12:00:00Z').getUTCDay() || 7; if (d === wd) return f; } };
 const fecha = (n) => { const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Monterrey' }).format(new Date(Date.now() + n * 86400000)); return f; };
 
 try {
@@ -181,9 +183,14 @@ try {
     assert.equal(await pg.getAttribute('a.btn[href^="https://ateliermia"]', 'href'), 'https://ateliermia.solidaaplicaciones.com/');
     // Cerrar un horario desde la app y que la página ya no pueda apartarlo
     const F9 = fecha(9);
-    await pg.fill('#bFecha', F9); await pg.fill('#bDesde', '10:00'); await pg.fill('#bHasta', '12:00'); await pg.fill('#bMotivo', 'Dentista');
-    await pg.click('#fBloqueo button');
-    await pg.waitForFunction(() => /Dentista/.test(document.body.textContent));
+    await pg.click('[data-vista="tiempos"]'); await pg.waitForSelector('#apartar');
+    await pg.click('#apartar'); await pg.waitForSelector('#fAp');
+    await pg.click('[data-tipo="una"]'); await pg.fill('#apFecha', F9); await pg.selectOption('#apDe', '10:00'); await pg.selectOption('#apA', '12:00');
+    await pg.fill('#apMotivo', 'Dentista'); await pg.click('[data-quien=""]'); await pg.click('#apOk');
+    await pg.waitForFunction(() => !document.getElementById('velo') || document.getElementById('hojaListo'));
+    if (await pg.$('#hojaListo')) await pg.click('#hojaListo');
+    await pg.waitForFunction(() => /Dentista/.test(document.querySelector('main').textContent));
+    await pg.click('[data-vista="citas"]'); await pg.waitForSelector('.cifras');
     assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...cita, fecha: F9, hora: '10:30', persona: 'mia', nombre: 'Iris', tel: '8440000014' }, ip: '8.8.8.20' })).status, 409);
     // Confirmar una cita pendiente
     const pendientes = await pg.$$('[data-estado="confirmada"]');
@@ -203,6 +210,150 @@ try {
     assert.ok((await ej.$$('.cita')).length >= 6); assert.ok(!(await ej.$('#clave')), 'la muestra no pide clave');
     const ancho = await ej.evaluate(() => document.documentElement.scrollWidth); assert.ok(ancho <= 390, 'sin scroll de lado: ' + ancho);
     paso('la agenda de muestra (/ejemplo/) abre sin clave, con citas de ejemplo, para el catálogo');
+
+    // ───── Mis tiempos ─────
+    const L = (k) => ({ fecha: elDia(k, 15), nombre: 'Prueba', tel: '8440000200' });   // días de la semana que viene, lejos de lo de arriba
+    const sem = { 1: [600, 1140], 2: [600, 1140], 3: [600, 1140], 4: [600, 1140], 5: [600, 1140], 6: [600, 840], 7: null };
+    assert.equal((await api('/api/atelier-mia/horario', { metodo: 'PUT', body: { persona: 'mia', semana: sem } })).status, 401, 'sin clave, no');
+    const tok = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.6.7' })).d.token;
+    assert.equal((await api('/api/atelier-mia/horario', { metodo: 'PUT', token: tok, body: { persona: 'nadie', semana: sem } })).status, 400, 'sólo personas de su equipo');
+    assert.equal((await api('/api/atelier-mia/horario', { metodo: 'PUT', token: tok, body: { persona: 'mia', semana: { ...sem, 1: [700, 600] } } })).status, 400);
+    assert.equal((await api('/api/atelier-mia/horario', { metodo: 'PUT', token: tok, body: { persona: 'mia', semana: sem } })).status, 200);
+    assert.equal((await api('/api/atelier-mia/horario', { metodo: 'PUT', token: tok, body: { persona: 'fer', semana: { ...sem, 1: null, 7: [600, 840] } } })).status, 200);
+    const base = { ...cita, min: 60, equipo: ['mia', 'fer'] };
+    const lunes = L(1).fecha, domingo = L(7).fecha;
+    let x = await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, ...L(1), hora: '09:00', persona: 'mia' }, ip: '10.0.0.1' });
+    assert.equal(x.status, 409, 'antes de que entre Mía, no');
+    assert.match(x.d.error, /ya no está disponible/);
+    x = await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, ...L(1), hora: '18:30', persona: 'mia' }, ip: '10.0.0.1' });
+    assert.equal(x.status, 409, 'una cita que termina después de su salida, no');
+    assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, ...L(1), hora: '10:00', persona: 'fer' }, ip: '10.0.0.1' })).status, 409, 'Fernanda descansa los lunes');
+    x = await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, ...L(1), hora: '10:00', persona: '' }, ip: '10.0.0.1' });
+    assert.equal(x.status, 201); assert.equal(x.d.persona, 'mia', '«cualquiera» el lunes le toca a Mía');
+    x = await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, ...L(7), hora: '11:00', persona: '' }, ip: '10.0.0.2' });
+    assert.equal(x.status, 201); assert.equal(x.d.persona, 'fer', 'el domingo sólo trabaja Fernanda');
+    x = await api('/api/atelier-mia/citas', { metodo: 'POST', token: tok, body: { ...base, ...L(1), hora: '08:00', persona: 'mia', nombre: 'Por teléfono' } });
+    assert.equal(x.status, 201, 'la dueña sí puede apartar fuera de su horario (se lo pidieron por teléfono)');
+    const oc2 = await api(`/api/atelier-mia/ocupado?desde=${lunes}&dias=7`);
+    assert.deepEqual(oc2.d.horario.mia['7'], null); assert.deepEqual(oc2.d.horario.fer['7'], [600, 840]);
+    assert.ok(oc2.d.ocupado.some((o) => o.fecha === lunes && o.persona === 'fer' && o.ini === 0 && o.fin === 1440), 'el lunes de Fernanda sale ocupado todo el día');
+    assert.ok(oc2.d.ocupado.some((o) => o.fecha === lunes && o.persona === 'mia' && o.ini === 1140 && o.fin === 1440));
+    assert.ok(!JSON.stringify(oc2.d).includes('Prueba'), 'lo público sigue sin nombres');
+    paso('Mis tiempos: con su horario guardado, la página no aparta antes de que entre, después de que salga ni en su día de descanso; la dueña sí puede');
+
+    const rep = await api('/api/atelier-mia/repetidos', { metodo: 'POST', token: tok, body: { persona: 'mia', dias: [1, 3, 5], desde: '13:00', hasta: '14:00', motivo: 'Recoger a Santi' } });
+    assert.equal(rep.status, 201);
+    assert.equal((await api('/api/atelier-mia/repetidos', { metodo: 'POST', token: tok, body: { persona: 'mia', dias: [], desde: '13:00', hasta: '14:00' } })).status, 400);
+    assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, ...L(1), hora: '12:30', persona: 'mia' }, ip: '10.0.0.3' })).status, 409, 'se encima con recoger a Santi');
+    assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, ...L(2), hora: '13:00', persona: 'mia' }, ip: '10.0.0.3' })).status, 201, 'el martes no se repite');
+    const oc3 = await api(`/api/atelier-mia/ocupado?desde=${lunes}&dias=7`);
+    assert.ok(oc3.d.ocupado.some((o) => o.fecha === L(3).fecha && o.ini === 780 && o.fin === 840 && o.persona === 'mia'), 'el miércoles sale ocupado');
+    assert.ok(!JSON.stringify(oc3.d).includes('Santi'), 'el motivo nunca sale en lo público');
+    const ag3 = await api('/api/atelier-mia/agenda', { token: tok });
+    assert.equal(ag3.d.repetidos.length, 1); assert.equal(ag3.d.repetidos[0].motivo, 'Recoger a Santi'); assert.deepEqual(ag3.d.horario.mia, { ...sem });
+    assert.equal((await api(`/api/atelier-mia/repetidos/${rep.d.id}`, { metodo: 'DELETE', token: tok })).status, 200);
+    assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, ...L(3), hora: '13:00', persona: 'mia' }, ip: '10.0.0.4' })).status, 201, 'quitarlo vuelve a abrir esas horas');
+    const vac = await api('/api/atelier-mia/bloqueos', { metodo: 'POST', token: tok, body: { fecha: fecha(40), fechaFin: fecha(46), motivo: 'Vacaciones' } });
+    assert.equal(vac.status, 201); assert.equal(vac.d.ids.length, 7, 'un renglón por día');
+    assert.equal((await api('/api/atelier-mia/bloqueos', { metodo: 'POST', token: tok, body: { fecha: fecha(40), fechaFin: fecha(39) } })).status, 400);
+    assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, fecha: fecha(43), hora: '11:00', persona: '' }, ip: '10.0.0.5' })).status, 409, 'en vacaciones de todo el negocio no se aparta');
+    paso('Mis tiempos: un plan que se repite ocupa sus días (sin que el motivo salga en lo público) y se puede quitar; las vacaciones cierran varios días de un jalón');
+
+    // La página de uñas obedece el horario de la agenda: ofrece el domingo de Fernanda aunque su datos.js diga «cerrado»
+    const { createServer } = await import('node:http');
+    const RAIZ = new URL('../../../Solida-Web/', import.meta.url).pathname;
+    const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+    const web = createServer((q, s) => {
+      let ruta = decodeURIComponent(q.url.split('?')[0]); if (ruta.endsWith('/')) ruta += 'index.html';
+      try { const b = readFileSync(RAIZ + ruta); s.writeHead(200, { 'Content-Type': TIPOS[ruta.slice(ruta.lastIndexOf('.'))] || 'application/octet-stream' }); s.end(b); } catch { s.writeHead(404); s.end(); }
+    });
+    await new Promise((r) => web.listen(8812, '127.0.0.1', r));
+    try {
+      const pw = await ctx.newPage();
+      await pw.route('**/ejemplos/unas/datos.js', async (r) => {
+        const orig = readFileSync(RAIZ + 'ejemplos/unas/datos.js', 'utf8');
+        r.fulfill({ contentType: 'text/javascript', body: orig + `\nwindow.NEGOCIO.ejemplo = false; window.NEGOCIO.citasApi = ${JSON.stringify(URL0 + '/api/atelier-mia')};` });
+      });
+      await pw.goto('http://127.0.0.1:8812/ejemplos/unas/avanzado/');
+      await pw.click('[data-agendar]');
+      await pw.waitForSelector('[data-serv]');
+      await pw.click('[data-serv="gelish"]');
+      await pw.waitForSelector('[data-fecha]');
+      const dias = await pw.$$eval('[data-fecha]', (b) => b.map((x) => x.getAttribute('data-fecha')));
+      const dom1 = elDia(7, 1);
+      assert.ok(dias.includes(dom1), 'ofrece el domingo: Fernanda trabaja aunque la página diga cerrado');
+      await pw.click(`[data-persona="mia"]`);
+      await pw.click(`[data-fecha="${dom1}"]`);
+      const libresMiaDom = await pw.$$eval('[data-hora]:not([disabled])', (b) => b.length);
+      assert.equal(libresMiaDom, 0, 'con Mía el domingo no hay horas: descansa');
+      await pw.click(`[data-persona="fer"]`);
+      const horasFer = await pw.$$eval('[data-hora]:not([disabled])', (b) => b.map((x) => x.getAttribute('data-hora')));
+      assert.ok(horasFer.length > 0 && horasFer.every((h) => h >= '10:00' && h <= '13:00'), 'el domingo de Fernanda es de 10 a 2: ' + horasFer.join(' '));
+      await pw.close();
+    } finally { web.close(); }
+    paso('la página de uñas ofrece los días y horas del horario que la dueña puso en su agenda, persona por persona');
+
+    // La agenda de la dueña: Mis tiempos en el navegador
+    await pg.goto(URL0 + '/atelier-mia/#tiempos'); await pg.reload(); await pg.waitForSelector('#apartar');
+    assert.match(await pg.textContent('main'), /Cuándo trabaja Mía/);
+    assert.match(await pg.textContent('main'), /Descansas/);
+    const barras = await pg.$$eval('.barra i', (l) => l.map((x) => x.getBoundingClientRect().width));
+    assert.ok(barras.length >= 5 && barras.every((w) => w > 20), 'las barras de la semana se pintan (la política de seguridad deja sus anchos): ' + barras.join(','));
+    await pg.click('[data-persona="fer"]'); await pg.waitForFunction(() => /Cuándo trabaja Fernanda/.test(document.querySelector('main').textContent));
+    await pg.click('[data-persona="mia"]');
+    // Editar el horario: el sábado deja de trabajar
+    await pg.click('#editaHorario'); await pg.waitForSelector('#fHor');
+    await pg.uncheck('[data-trabaja="6"]'); await pg.click('#horOk');
+    await pg.waitForFunction(() => !document.getElementById('velo') || /Listo/.test(document.getElementById('velo').textContent));
+    if (await pg.$('#hojaListo')) await pg.click('#hojaListo');
+    const ag4 = await api('/api/atelier-mia/agenda', { token: tok });
+    assert.equal(ag4.d.horario.mia['6'], null, 'el sábado quedó como descanso'); assert.deepEqual(ag4.d.horario.mia['1'], [600, 1140]);
+    // Apartar tiempo que se repite, y que avise de la cita que ya estaba ahí (la del lunes a las 10:00)
+    await pg.click('#apartar'); await pg.waitForSelector('#fAp');
+    await pg.fill('#apMotivo', 'Gimnasio');
+    await pg.click('[data-dia="1"]');
+    await pg.selectOption('#apDe', '09:30'); await pg.selectOption('#apA', '10:30');
+    assert.match(await pg.textContent('#apOk'), /1 día por semana/);
+    await pg.click('[data-quien="mia"]');
+    await pg.click('#apOk');
+    await pg.waitForSelector('#hojaListo');
+    assert.match(await pg.textContent('.ojo'), /Prueba/, 'avisa de la cita que ya estaba a esa hora');
+    assert.ok((await pg.$$eval('.choque a', (l) => l.map((x) => x.href))).some((h) => /wa\.me\/528440000200/.test(h)), 'con su WhatsApp para moverla');
+    await pg.click('#hojaListo');
+    await pg.waitForFunction(() => /Gimnasio/.test(document.querySelector('main').textContent));
+    assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, ...L(1), hora: '09:30', persona: 'mia', fecha: elDia(1, 22) }, ip: '10.0.0.6' })).status, 409);
+    // Quitarlo
+    pg.once('dialog', (dl) => dl.accept());
+    await pg.click('[data-quitarep]');
+    await pg.waitForFunction(() => !/Gimnasio/.test(document.querySelector('main').textContent));
+    // Días enteros
+    await pg.click('#apartar'); await pg.waitForSelector('#fAp');
+    await pg.click('[data-motivo="Vacaciones"]');
+    assert.equal(await pg.getAttribute('[data-tipo="dias"]', 'aria-pressed'), 'true', '«Vacaciones» elige días enteros');
+    await pg.fill('#apDel', fecha(60)); await pg.fill('#apAl', fecha(62)); await pg.click('[data-quien=""]'); await pg.click('#apOk');
+    await pg.waitForFunction(() => !document.getElementById('velo') || document.getElementById('hojaListo'));
+    if (await pg.$('#hojaListo')) await pg.click('#hojaListo');
+    await pg.waitForFunction(() => /todo el día/.test(document.querySelector('main').textContent));
+    const ancho2 = await pg.evaluate(() => document.documentElement.scrollWidth); assert.ok(ancho2 <= 390, 'sin scroll de lado: ' + ancho2);
+    if (CAP) await pg.screenshot({ path: CAP + '/ag-tiempos.png', fullPage: true });
+    assert.deepEqual(errores, []);
+    paso('en el navegador: Mis tiempos enseña la semana de cada quien, edita el horario, aparta tiempo que se repite (avisando de la cita que ya estaba) y vacaciones');
+
+    // La muestra también tiene Mis tiempos
+    await ej.click('[data-vista="tiempos"]'); await ej.waitForSelector('#apartar');
+    assert.match(await ej.textContent('main'), /Recoger a Santi/); assert.match(await ej.textContent('main'), /Vacaciones/);
+    await ej.click('#apartar'); await ej.click('[data-dia="2"]');
+    if (CAP) { await ej.setViewportSize({ width: 320, height: 700 }); await ej.screenshot({ path: CAP + '/ag-apartar-320.png' }); await ej.setViewportSize({ width: 390, height: 844 }); }
+    const anchoHoja = await ej.evaluate(() => document.querySelector('.hoja').scrollWidth - document.querySelector('.hoja').clientWidth);
+    assert.ok(anchoHoja <= 0, 'la hoja no se sale de lado');
+    await ej.click('#apOk');
+    await ej.waitForFunction(() => !document.getElementById('velo') || document.getElementById('hojaListo'));
+    if (await ej.$('#hojaListo')) await ej.click('#hojaListo');
+    if (CAP) await ej.screenshot({ path: CAP + '/ag-tiempos-ejemplo.png', fullPage: true });
+    await ej.click('#editaHorario'); await ej.waitForSelector('#fHor');
+    if (CAP) { await ej.setViewportSize({ width: 320, height: 700 }); await ej.screenshot({ path: CAP + '/ag-horario-320.png' }); }
+    assert.ok(await ej.evaluate(() => document.querySelector('.hoja').scrollWidth <= document.querySelector('.hoja').clientWidth), 'el horario cabe a 320 px');
+    paso('la muestra del catálogo también tiene Mis tiempos y se puede tocar todo');
   } finally { await nav.close(); }
 
   console.log(`\n${pasos.length} pasos correctos.`);
