@@ -22,6 +22,6 @@
   ],
   // Una vez al día se borran las citas de hace más de 120 días; cada 15 minutos se vuelven a leer los calendarios.
   "triggers": { "crons": ["41 10 * * *", "*/15 * * * *"] },
-  // Secretos (npx wrangler secret put …): SECRETO firma las sesiones de las dueñas; MAESTRA da de alta negocios.
+  // Secretos (npx wrangler secret put …): SECRETO cifra las direcciones de calendario; MAESTRA da de alta negocios.
   "observability": { "enabled": true }
 }

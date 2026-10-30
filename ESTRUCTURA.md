@@ -74,5 +74,14 @@ Cada sitio de cliente lleva su `manifest.webmanifest` y su `sw.js` (copia de `ej
 encimarlas) y se la aparta (estado `propuesta`). Le avisa por su app, por correo si lo dejó, o la dueña le manda el WhatsApp
 con su enlace. La clienta contesta en `agenda.solidaaplicaciones.com/<negocio>/cita/<folio>?t=…`: me queda, otra hora o cancelar.
 
+**Entrar y seguridad de la dueña.** Entra con su clave (los guiones se ponen solos) y la sesión dura **7 días**; vive en el
+servidor (tabla `sesiones`, token `s.<id>.<secreto>`, sólo se guarda el hash). Después de entrar se le ofrece **Face ID / huella**
+(WebAuthn, `src/webauthn.js`, sin librerías; tabla `llaves` con la llave pública, sólo en `agenda.solidaaplicaciones.com`).
+Opcional: «Pedir Face ID al abrir» (candado al abrir y al volver tras 5 minutos; se guarda sólo en ese teléfono). En
+«Seguridad y dispositivos» ve dónde está abierta su agenda y qué teléfonos tienen Face ID, y quita los que no quiera o
+cierra todos los demás. Si ya no puede entrar en ninguno, Solida le da una clave nueva desde el panel: eso cierra todas las
+sesiones y borra todos los Face ID. Las pruebas usan un autenticador simulado de Chromium en `http://localhost`
+(`WEBAUTHN_PRUEBA=1`, sólo en `.dev.vars`).
+
 **Página de prueba:** `/prueba-agenda/` está conectada a la agenda `prueba-solida` (no indexada). Se borra al terminar las pruebas.
 

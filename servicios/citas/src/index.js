@@ -4,7 +4,10 @@
 //   GET  /api/:negocio/ocupado?desde=AAAA-MM-DD&dias=14   horas ocupadas, sin datos de nadie
 //   POST /api/:negocio/citas                              apartar una cita (no deja apartar una hora ocupada)
 // De la dueña (con la clave que le da Solida):
-//   POST /api/:negocio/entrar {clave}                     → {token} para 30 días
+//   POST /api/:negocio/entrar {clave}                     → {token} de una sesión de 7 días
+//   POST /api/:negocio/passkey/opciones-entrar · …/passkey/entrar   entrar con Face ID / huella
+//   POST …/passkey/opciones-alta · …/passkey/alta · …/passkey/desbloquear   (con sesión) activar Face ID / pedirlo al abrir
+//   GET  …/dispositivos · DELETE …/dispositivos/sesion/:id · …/dispositivos/llave/:id · POST …/dispositivos/cerrar-otras · POST …/salir
 //   GET  /api/:negocio/agenda?desde=&hasta=               citas y bloqueos con sus datos
 //   POST /api/:negocio/citas/:folio/estado {estado}       confirmar o cancelar
 //   POST /api/:negocio/citas/:folio/recordada              ya se le mandó su recordatorio
@@ -33,6 +36,7 @@ import ARCHIVOS from './agenda.generados.js';
 import { horasOcupadas, aInstante } from './ical.js';
 import { validaEndpoint, vapidPublica, avisa, pendientes, correoValido, correoDisponible, avisaCitaNueva, avisaPrueba, mandaCorreo } from './avisos.js';
 import { correoPropuesta, correoCancelada } from './correos.js';
+import { verificaAlta, verificaEntrada, ErrorLlave, b64url } from './webauthn.js';
 
 const DIAS_GUARDADO = 120;
 const CRON_CALENDARIOS = '*/15 * * * *';
@@ -102,7 +106,20 @@ async function enrutar(request, env, ctx) {
     const d = await cuerpo(request);
     const clave = normalizaClave(d.clave);
     if (!clave || await sha256(clave) !== neg.clave_hash) throw new ErrorHttp(401, 'Esa clave no es la de este negocio.');
-    return json({ token: await firmaToken(env, neg.id), nombre: neg.nombre });
+    return json({ ...(await creaSesion(env, neg, request, 'clave')), nombre: neg.nombre });
+  }
+  if (sub === '/passkey/opciones-entrar' && m === 'POST') {
+    const rp = rpDe(url, env, request);
+    await limita(env, 'llave:' + neg.id + ':' + await ipDe(request, env), 30, 3600, 'Demasiados intentos. Espera un rato.');
+    const l = (await env.DB.prepare('SELECT id FROM llaves WHERE negocio_id=?').bind(neg.id).all()).results;
+    if (!l.length) return json({ sinLlaves: true });
+    return json({ challenge: await nuevoReto(env, neg.id, 'entrar'), rpId: rp.id, timeout: 60000, userVerification: 'required', allowCredentials: l.map((x) => ({ type: 'public-key', id: x.id })) });
+  }
+  if (sub === '/passkey/entrar' && m === 'POST') {
+    const rp = rpDe(url, env, request);
+    await limita(env, 'entrar:' + neg.id + ':' + await ipDe(request, env), 8, 3600, 'Demasiados intentos. Espera una hora e inténtalo de nuevo.');
+    const llave = await usaLlave(env, neg, rp, await cuerpo(request), 'entrar');
+    return json({ ...(await creaSesion(env, neg, request, 'llave', llave.nombre)), nombre: neg.nombre });
   }
 
   // ── de la clienta ──
@@ -146,7 +163,48 @@ async function enrutar(request, env, ctx) {
   }
 
   // De aquí en adelante, sólo la dueña
-  if (!(await tokenValido(request, env, neg.id))) throw new ErrorHttp(401, 'Entra con tu clave.');
+  const sesion = await tokenValido(request, env, neg.id);
+  if (!sesion) throw new ErrorHttp(401, 'Entra con tu clave.');
+  if (sub === '/salir' && m === 'POST') { await env.DB.prepare('UPDATE sesiones SET revocada=1 WHERE id=?').bind(sesion.id).run(); return json({ ok: true }); }
+  if (sub === '/dispositivos' && m === 'GET') return json(await dispositivos(env, neg, sesion));
+  if ((p = sub.match(/^\/dispositivos\/sesion\/([A-Za-z0-9]{8,40})$/)) && m === 'DELETE') {
+    await env.DB.prepare('UPDATE sesiones SET revocada=1 WHERE negocio_id=? AND id=?').bind(neg.id, p[1]).run();
+    return json(await dispositivos(env, neg, sesion));
+  }
+  if ((p = sub.match(/^\/dispositivos\/llave\/([A-Za-z0-9_-]{8,400})$/)) && m === 'DELETE') {
+    await env.DB.prepare('DELETE FROM llaves WHERE negocio_id=? AND id=?').bind(neg.id, p[1]).run();
+    return json(await dispositivos(env, neg, sesion));
+  }
+  if (sub === '/dispositivos/cerrar-otras' && m === 'POST') {
+    await env.DB.prepare('UPDATE sesiones SET revocada=1 WHERE negocio_id=? AND id<>?').bind(neg.id, sesion.id).run();
+    return json(await dispositivos(env, neg, sesion));
+  }
+  if (sub === '/passkey/opciones-alta' && m === 'POST') {
+    const rp = rpDe(url, env, request);
+    const l = (await env.DB.prepare('SELECT id FROM llaves WHERE negocio_id=?').bind(neg.id).all()).results;
+    if (l.length >= 10) throw new ErrorHttp(400, 'Ya hay muchas llaves. Quita alguna que ya no uses.');
+    return json({
+      challenge: await nuevoReto(env, neg.id, 'alta'), rp: { id: rp.id, name: 'Tu agenda · ' + neg.nombre },
+      user: { id: b64url(new TextEncoder().encode(neg.id)), name: neg.id, displayName: neg.nombre },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }], timeout: 60000, attestation: 'none',
+      authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'preferred', userVerification: 'required' },
+      excludeCredentials: l.map((x) => ({ type: 'public-key', id: x.id })),
+    });
+  }
+  if (sub === '/passkey/alta' && m === 'POST') {
+    const rp = rpDe(url, env, request), d = await cuerpo(request);
+    const reto = await gastaReto(env, neg.id, 'alta', retoDe(d.credencial));
+    let a; try { a = await verificaAlta({ credencial: d.credencial, reto, origen: rp.origen, rpId: rp.id }); } catch (e) { throw e instanceof ErrorLlave ? new ErrorHttp(400, e.message) : e; }
+    const nombre = texto(d.nombre, 60) || nombreDispositivo(request);
+    await env.DB.prepare('INSERT INTO llaves (id, negocio_id, nombre, jwk, alg, contador, creado) VALUES (?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING')
+      .bind(a.id, neg.id, nombre, JSON.stringify(a.jwk), a.alg, a.contador, ahora()).run();
+    return json({ ok: true, id: a.id });
+  }
+  if (sub === '/passkey/desbloquear' && m === 'POST') {
+    const rp = rpDe(url, env, request);
+    await usaLlave(env, neg, rp, await cuerpo(request), 'entrar');
+    return json({ ok: true });
+  }
   if (sub === '/agenda' && m === 'GET') return json(await agenda(env, neg, url));
   if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/estado$/)) && m === 'POST') {
     const d = await cuerpo(request);
@@ -453,6 +511,12 @@ async function altaNegocio(env, d) {
   await env.DB.prepare(`INSERT INTO negocios (id, nombre, clave_hash, zona, activo, creado) VALUES (?,?,?,?,1,?)
       ON CONFLICT(id) DO UPDATE SET nombre=excluded.nombre, clave_hash=excluded.clave_hash, zona=excluded.zona, activo=1`)
     .bind(id, nombre, await sha256(clave), zona, ahora()).run();
+  // Clave nueva (perdió su teléfono, se lo robaron o alguien más sabía la clave): se cierran todas sus sesiones
+  // y se borran sus llaves de Face ID / huella, porque un teléfono robado también trae la suya. Las vuelve a activar al entrar.
+  await env.DB.batch([
+    env.DB.prepare('UPDATE sesiones SET revocada=1 WHERE negocio_id=?').bind(id),
+    env.DB.prepare('DELETE FROM llaves WHERE negocio_id=?').bind(id),
+  ]);
   // Equipo y página sólo si vienen: darle una clave nueva no borra lo que ya tenía.
   if (d.equipo !== undefined || d.pagina !== undefined) {
     await env.DB.prepare('UPDATE negocios SET equipo=COALESCE(?,equipo), pagina=COALESCE(?,pagina) WHERE id=?')
@@ -492,21 +556,68 @@ export function generaClave() {
 export const normalizaClave = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3');
 function aleatorio(n) { const b = crypto.getRandomValues(new Uint8Array(n)); return Array.from(b, (x) => LETRAS[x % LETRAS.length]).join(''); }
 export async function sha256(t) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(t)))].map((x) => x.toString(16).padStart(2, '0')).join(''); }
-async function hmac(env, t) {
-  if (!env.SECRETO || env.SECRETO.length < 24) throw new ErrorHttp(500, 'Falta configurar SECRETO');
-  const k = await crypto.subtle.importKey('raw', enc.encode(env.SECRETO), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  return btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(t))))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+// ── sesiones de la dueña: guardadas en el servidor para poder verlas y quitarlas ──
+const DIAS_SESION = 7;
+export async function creaSesion(env, neg, request, metodo, nombreLlave) {
+  const id = aleatorio(16), secreto = aleatorio(32), t = ahora(), expira = t + DIAS_SESION * 86400;
+  await env.DB.prepare('INSERT INTO sesiones (id, negocio_id, hash, nombre, metodo, creado, ultimo, expira) VALUES (?,?,?,?,?,?,?,?)')
+    .bind(id, neg.id, await sha256(secreto), nombreDispositivo(request), metodo, t, t, expira).run();
+  // Máximo 20 sesiones vivas: la más vieja sale.
+  await env.DB.prepare('UPDATE sesiones SET revocada=1 WHERE negocio_id=? AND revocada=0 AND id NOT IN (SELECT id FROM sesiones WHERE negocio_id=? AND revocada=0 ORDER BY creado DESC LIMIT 20)').bind(neg.id, neg.id).run();
+  return { token: 's.' + id + '.' + secreto, expira, sesion: id };
 }
-export async function firmaToken(env, negocio, dias = 30) { const exp = ahora() + dias * 86400; return `${negocio}.${exp}.${await hmac(env, negocio + '.' + exp)}`; }
 export async function tokenValido(request, env, negocio) {
   const a = request.headers.get('Authorization') || '';
-  const t = a.startsWith('Bearer ') ? a.slice(7) : '';
-  const [n, exp, firma] = t.split('.');
-  if (!firma || n !== negocio || Number(exp) < ahora()) return false;
-  const bien = await hmac(env, n + '.' + exp);
-  if (bien.length !== firma.length) return false;
-  let dif = 0; for (let i = 0; i < bien.length; i++) dif |= bien.charCodeAt(i) ^ firma.charCodeAt(i);
-  return dif === 0;
+  const m = a.match(/^Bearer s\.([A-Za-z0-9]{8,40})\.([A-Za-z0-9]{20,64})$/);
+  if (!m) return false;
+  const s = await env.DB.prepare('SELECT * FROM sesiones WHERE id=? AND negocio_id=?').bind(m[1], negocio).first();
+  if (!s || s.revocada || s.expira < ahora()) return false;
+  const bien = await sha256(m[2]);
+  let dif = bien.length ^ s.hash.length; for (let i = 0; i < bien.length; i++) dif |= bien.charCodeAt(i) ^ (s.hash.charCodeAt(i) || 0);
+  if (dif) return false;
+  if (ahora() - s.ultimo > 300) await env.DB.prepare('UPDATE sesiones SET ultimo=? WHERE id=?').bind(ahora(), s.id).run();
+  return s;
+}
+export function nombreDispositivo(request) {
+  const ua = request.headers.get('User-Agent') || '';
+  const que = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Navegador';
+  const nav = /EdgA?\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : '';
+  return que + (nav ? ' · ' + nav : '');
+}
+async function dispositivos(env, neg, actual) {
+  const ses = (await env.DB.prepare('SELECT id, nombre, metodo, creado, ultimo, expira FROM sesiones WHERE negocio_id=? AND revocada=0 AND expira>? ORDER BY ultimo DESC').bind(neg.id, ahora()).all()).results;
+  const ll = (await env.DB.prepare('SELECT id, nombre, creado, ultimo FROM llaves WHERE negocio_id=? ORDER BY creado').bind(neg.id).all()).results;
+  return { sesiones: ses.map((x) => ({ ...x, actual: x.id === actual.id })), llaves: ll };
+}
+// ── Face ID / huella ──
+function rpDe(url, env, request) {
+  if (url.hostname === 'agenda.solidaaplicaciones.com') return { id: url.hostname, origen: url.origin };
+  // En las pruebas (wrangler dev cambia el host de la dirección): sólo http://localhost:<puerto>
+  const o = request.headers.get('Origin') || '';
+  if (env.WEBAUTHN_PRUEBA === '1' && /^http:\/\/localhost:\d+$/.test(o)) return { id: 'localhost', origen: o };
+  throw new ErrorHttp(400, 'Abre tu agenda en agenda.solidaaplicaciones.com para usar Face ID o huella.');
+}
+async function nuevoReto(env, negocio, tipo) {
+  const id = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  await env.DB.prepare('INSERT INTO retos (id, negocio_id, tipo, creado) VALUES (?,?,?,?)').bind(id, negocio, tipo, ahora()).run();
+  return id;
+}
+function retoDe(credencial) {
+  try { return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(String(credencial.response.clientDataJSON).replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((String(credencial.response.clientDataJSON).length + 3) % 4)), (c) => c.charCodeAt(0)))).challenge; } catch { return ''; }
+}
+async function gastaReto(env, negocio, tipo, id) {
+  const r = id ? await env.DB.prepare('DELETE FROM retos WHERE id=? AND negocio_id=? AND tipo=? AND creado>? RETURNING id').bind(String(id), negocio, tipo, ahora() - 300).first() : null;
+  if (!r) throw new ErrorHttp(400, 'La solicitud ya venció. Inténtalo de nuevo.');
+  return r.id;
+}
+async function usaLlave(env, neg, rp, d, tipo) {
+  const c = d.credencial || {};
+  const llave = await env.DB.prepare('SELECT * FROM llaves WHERE negocio_id=? AND id=?').bind(neg.id, String(c.id || '')).first();
+  const reto = await gastaReto(env, neg.id, tipo, retoDe(c));
+  if (!llave) throw new ErrorHttp(401, 'Esa llave ya no está activa. Entra con tu clave.');
+  let r; try { r = await verificaEntrada({ credencial: c, reto, origen: rp.origen, rpId: rp.id, llave }); } catch (e) { throw e instanceof ErrorLlave ? new ErrorHttp(401, e.message) : e; }
+  await env.DB.prepare('UPDATE llaves SET contador=?, ultimo=? WHERE id=?').bind(r.contador, ahora(), llave.id).run();
+  return llave;
 }
 async function exigeMaestra(request, env) {
   const a = request.headers.get('Authorization') || '';
@@ -526,6 +637,8 @@ async function limpia(env) {
     env.DB.prepare('DELETE FROM bloqueos WHERE fecha < ?').bind(corte),
     env.DB.prepare("DELETE FROM repetidos WHERE hasta <> '' AND hasta < ?").bind(corte),
     env.DB.prepare('DELETE FROM avisos WHERE creado < ?').bind(ahora() - 7 * 86400),
+    env.DB.prepare('DELETE FROM retos WHERE creado < ?').bind(ahora() - 3600),
+    env.DB.prepare('DELETE FROM sesiones WHERE expira < ? OR (revocada=1 AND ultimo < ?)').bind(ahora() - 30 * 86400, ahora() - 30 * 86400),
     env.DB.prepare('DELETE FROM cal_ocupado WHERE fecha < ?').bind(sumaDias(hoyEn('America/Monterrey').fecha, -1)),
     env.DB.prepare('DELETE FROM intentos WHERE ventana < ?').bind(Math.floor(ahora() / 3600) - 48),
   ]);
