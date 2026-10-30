@@ -504,7 +504,7 @@
   // ───── la app de la clienta (sólo con el servicio de citas): Mis citas, avisos e instalarla ─────
   if (SERVIDOR) {
     window.__cita = { agenda: agenda, abre: abre, cierra: cierra, toast: toast, pide: pide, esc: esc, disp: dispCliente, yo: yo,
-      hora12: function (m) { return hora12(hhmm(m)); }, fechaLarga: fechaLarga, hhmm: hhmm, servicioDe: servicioDe, personaDe: personaDe, CERRAR: CERRAR };
+      hora12: function (m) { return hora12(hhmm(m)); }, fechaLarga: fechaLarga, hhmm: hhmm, servicioDe: servicioDe, personaDe: personaDe, CERRAR: CERRAR, muestraTicket: muestraTicket };
     var sc = document.createElement('script');
     sc.src = (document.currentScript && document.currentScript.src ? document.currentScript.src : (N.base || '') + 'plantilla.js').replace(/plantilla\.js(\?.*)?$/, 'app-clienta.js');
     document.body.appendChild(sc);

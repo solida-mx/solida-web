@@ -30,9 +30,14 @@
   // ── avisos en su teléfono ──
   var puedePush = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   function b64aU8(s) { var t = (s + '===='.slice((s.length + 3) % 4 + 1)).replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(t), function (c) { return c.charCodeAt(0); }); }
+  // Si el teléfono ya tiene avisos, se le vuelve a decir al servidor cada vez que abre (por si alguna vez no le llegó).
+  // Así «Te avisamos» sólo sale cuando el servidor de verdad sabe de este teléfono.
   function revisaAvisos() {
     if (!puedePush) return Promise.resolve();
-    return registro.then(function (r) { return r ? r.pushManager.getSubscription() : null; }).then(function (s) { suscrito = !!s; }).catch(function () {});
+    return registro.then(function (r) { return r ? r.pushManager.getSubscription() : null; }).then(function (s) {
+      if (!s || !C.disp()) { suscrito = false; return; }
+      return C.pide('/mis-avisos', { metodo: 'POST', disp: true, body: { endpoint: s.endpoint } }).then(function (x) { suscrito = x.status === 200; }, function () { suscrito = false; });
+    }).catch(function () { suscrito = false; });
   }
   function activaAvisos() {
     if (!C.disp()) return Promise.reject(new Error('Primero aparta una cita.'));
@@ -106,12 +111,13 @@
       h += '<div class="envoltura"><span class="etq" style="color:var(--oro-txt)">Mis citas</span><h2 class="titulo" style="font-size:30px;margin-top:4px">' + (y.nombre ? 'Hola, ' + esc(String(y.nombre).split(' ')[0]) : 'Tus citas') + '</h2>';
       if (p) {
         var e = ESTADO[p.estado] || ESTADO.apartada, d = deIso(p.fecha);
-        h += '<div class="cl-prox"><span class="etq" style="color:var(--oro-txt)">Tu próxima cita</span><div class="cl-fila"><div class="cl-dia"><small>' + esc(DIAS[d.getDay()].toUpperCase()) + '</small><b>' + d.getDate() + '</b><small>' + esc(MESES[d.getMonth()].toUpperCase()) + '</small></div>' +
+        h += '<div class="cl-prox"><span class="etq" style="color:var(--oro-txt)">Tu próxima cita</span><div class="cl-fila" role="button" tabindex="0" data-cl="ticket" data-folio="' + esc(p.folio) + '" aria-label="Ver mi ticket"><div class="cl-dia"><small>' + esc(DIAS[d.getDay()].toUpperCase()) + '</small><b>' + d.getDate() + '</b><small>' + esc(MESES[d.getMonth()].toUpperCase()) + '</small></div>' +
           '<div style="flex:1;min-width:0"><b class="cl-t">' + esc(C.hora12(p.ini) + ' · ' + (p.diseno ? p.diseno : p.servicio)) + '</b><span class="cl-s">' + esc((p.con ? 'Con ' + p.con + ' · ' : '') + '$' + Number(p.precio || 0).toLocaleString('es-MX')) + '</span>' +
           '<span class="cl-pill" style="color:' + e[1] + ';background:' + e[2] + '">' + esc(e[0]) + '</span></div></div>' +
           (p.estado === 'propuesta' && p.enlace ? '<div class="cl-prop">' + (p.antesFecha ? 'Antes: <s>' + esc(corta(p.antesFecha) + ' · ' + C.hora12(p.antesIni)) + '</s><br>' : '') + esc(N.nombre) + ' te propone esta hora. ' +
             '<a class="btn btn-negro btn-bloque" href="' + esc(p.enlace) + '" style="margin-top:8px">Contestar</a></div>'
-            : '<div class="cl-acc">' + (N.mapa ? '<a class="btn btn-linea" href="' + esc(N.mapa) + '" target="_blank" rel="noopener">Cómo llegar</a>' : '') + '<button class="btn btn-linea" type="button" data-cl="cambiar" data-folio="' + esc(p.folio) + '">Cambiar o cancelar</button></div>') +
+            : '<div class="cl-acc"><button class="btn btn-negro" type="button" data-cl="ticket" data-folio="' + esc(p.folio) + '">Ver mi ticket</button>' +
+              (N.mapa ? '<a class="btn btn-linea" href="' + esc(N.mapa) + '" target="_blank" rel="noopener">Cómo llegar</a>' : '') + '<button class="btn btn-linea" type="button" data-cl="cambiar" data-folio="' + esc(p.folio) + '">Cambiar o cancelar</button></div>') +
           bloqueApp(true) + '</div>';
       }
       if (ultima) h += '<button class="btn btn-oro btn-bloque cl-repite" type="button" data-cl="repetir">↻ Repetir mi última cita</button><p class="aviso" style="margin:6px 0 0">' + esc((ultima.diseno || ultima.servicio) + (ultima.con ? ' con ' + ultima.con : '')) + ' · sólo eliges día y hora</p>';
@@ -143,8 +149,16 @@
         if (q === 'avisos') { b.disabled = true; activaAvisos().then(function () { C.toast('Listo: te avisamos antes de tu cita'); pinta(); var t = document.getElementById('clientaTicket'); if (t) enTicket(t); }, function (e) { b.disabled = false; C.toast(e.message || 'No se pudo'); }); }
         if (q === 'repetir') repetir();
         if (q === 'cambiar') cambiar(b.getAttribute('data-folio'));
+        if (q === 'ticket') verTicket(b.getAttribute('data-folio'));
       };
     });
+  }
+  // Volver a ver el ticket de una cita (con el botón de avisos abajo)
+  function verTicket(folio) {
+    var c = datos && datos.citas.filter(function (x) { return x.folio === folio; })[0]; if (!c || !C.muestraTicket) return;
+    var y = C.yo();
+    C.muestraTicket({ folio: c.folio, fecha: c.fecha, hora: C.hhmm(c.ini), min: c.fin - c.ini, persona: c.persona || '', servicio: c.servicio, diseno: c.diseno || '',
+      largo: c.detalle || '', precio: c.precio || 0, anticipo: c.anticipo || 0, nombre: c.nombre || y.nombre || '', tel: y.tel || '' });
   }
   function copiar(t) {
     var ok = function () { C.toast('Enlace copiado. Pégalo en ' + (esIos ? 'Safari' : 'Chrome') + '.'); };
