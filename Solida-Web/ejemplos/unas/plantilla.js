@@ -15,7 +15,7 @@
   // Agenda Total de un cliente real: las citas viven en el servicio de citas de Solida (citasApi en datos.js).
   // En el ejemplo se quedan en el propio teléfono, para que nadie deje sus datos en un negocio que no existe.
   var SERVIDOR = (NIVEL === 'avanzado' || NIVEL === 'citas') && N.citasApi && !N.ejemplo ? String(N.citasApi).replace(/\/+$/, '') : '';
-  var ocupadoSrv = null;
+  var ocupadoSrv = null, horarioSrv = null;   // horarioSrv: el que la dueña puso en su agenda («Mis tiempos»), si puso uno
   var AGENDA = (function () {
     if (N.agendaUrl) return N.agendaUrl;
     var m = SERVIDOR.match(/^https:\/\/citas\.([^/]+)\/api\/([a-z0-9-]+)$/);
@@ -29,7 +29,10 @@
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d }; }); });
   }
   function cargaOcupado() {
-    return pide('/ocupado?dias=31').then(function (x) { ocupadoSrv = x.status === 200 ? x.d.ocupado || [] : []; if (x.status !== 200) throw new Error(x.d.error || 'sin servicio'); });
+    return pide('/ocupado?dias=45').then(function (x) {
+      ocupadoSrv = x.status === 200 ? x.d.ocupado || [] : []; horarioSrv = x.status === 200 ? x.d.horario || null : null;
+      if (x.status !== 200) throw new Error(x.d.error || 'sin servicio');
+    });
   }
 
   // ───── ayudantes ─────
@@ -49,6 +52,14 @@
   var deIso = function (s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); };
   var fechaLarga = function (s) { var d = deIso(s); return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()]; };
   var horarioDe = function (d) { var i = (d.getDay() + 6) % 7; return N.horarios[i]; };   // horarios empieza en lunes
+  // Para ofrecer citas manda el horario de la agenda de la dueña: el día cuenta si alguien del equipo trabaja,
+  // y las horas de cada quien fuera de su turno ya vienen como ocupadas. Sin horario en la agenda, el de datos.js.
+  var horarioCita = function (d) {
+    if (!horarioSrv) return horarioDe(d);
+    var wd = String(d.getDay() || 7), a = null, z = null;
+    Object.keys(horarioSrv).forEach(function (p) { var x = horarioSrv[p] && horarioSrv[p][wd]; if (x) { a = a == null ? x[0] : Math.min(a, x[0]); z = z == null ? x[1] : Math.max(z, x[1]); } });
+    return a == null ? [horarioDe(d)[0], null, null] : [horarioDe(d)[0], a / 60, z / 60];
+  };
   function foto(src, nombre, extra) {
     return src ? '<div class="foto ' + (extra || '') + '"><img src="' + esc(src) + '" alt="' + esc(nombre) + '" loading="lazy" decoding="async"></div>'
       : '<div class="foto vacia ' + (extra || '') + '" role="img" aria-label="' + esc(nombre) + '"><span class="nom">' + esc(nombre) + '</span></div>';
@@ -203,13 +214,13 @@
     var l = [], d = new Date(); d.setHours(0, 0, 0, 0);
     for (var i = 0; l.length < 14 && i < 40; i++) {
       var x = new Date(d); x.setDate(d.getDate() + i);
-      if (horarioDe(x)[1] != null) l.push(iso(x));
+      if (horarioCita(x)[1] != null) l.push(iso(x));
     }
     return l;
   }
   function horasDe(c) {
     var s = servicioDe(c.servicio); if (!s || !c.fecha) return [];
-    var hx = horarioDe(deIso(c.fecha)); if (hx[1] == null) return [];
+    var hx = horarioCita(deIso(c.fecha)); if (hx[1] == null) return [];
     var ahora = new Date(), esHoy = c.fecha === iso(ahora), minAhora = ahora.getHours() * 60 + ahora.getMinutes();
     var guardadas = TOTAL ? leeCitas().filter(function (x) { return x.fecha === c.fecha && (!c.persona || !x.persona || x.persona === c.persona); }) : [];
     var l = [];

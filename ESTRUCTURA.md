@@ -38,6 +38,10 @@ iniciales en un sello) para mandarla por WhatsApp. En el ejemplo, el avanzado gu
 `/citas/` de la página sólo redirige ahí. La de muestra para el catálogo es `agenda.solidaaplicaciones.com/ejemplo/` (citas inventadas,
 sin clave); en la portada, el paquete que la incluye enseña «Su página» y «Su agenda».
 
+**Mis tiempos.** En su agenda, la dueña pone el horario de cada persona y aparta su tiempo (una vez, que se repite o días
+enteros). El servidor de citas no deja apartar fuera de eso, y la página de uñas pide el horario al servidor (`horario` en
+`/ocupado`): si la dueña abre un domingo, la página lo ofrece sola. Sin horario guardado, la página usa el de su `datos.js`.
+
 Pendientes de convertir: profesional, taller, nutriólogo, invitación, uniformes y barbería.
 
 ## Direcciones viejas

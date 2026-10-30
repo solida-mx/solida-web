@@ -88,3 +88,76 @@ a{color:inherit}
   padding:12px 18px;font-size:14px;max-width:calc(100% - 32px);transition:.25s;z-index:20}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+/* Secciones: Citas · Mis tiempos */
+.cab-txt{margin:12px 0 0;font:300 14px/1.45 var(--sans);color:var(--gris-claro)}
+.vistas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin-top:16px;padding:4px;background:var(--negro2)}
+.vistas button{min-height:44px;border:0;background:transparent;color:var(--gris-claro);font:500 11.5px var(--sans);letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.vistas button[aria-pressed="true"]{background:var(--oro);color:var(--negro)}
+.ir-tiempos{display:flex;align-items:center;gap:12px;width:100%;margin-top:28px;padding:16px;background:var(--papel);border:1px solid var(--linea);text-align:left;cursor:pointer}
+.ir-tiempos > span:first-child{flex:1;display:flex;flex-direction:column;gap:2px}
+.ir-tiempos b{font:600 20px var(--serif)}
+.ir-tiempos span span{font-size:13px;color:var(--gris)}
+
+/* Mis tiempos */
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.tab{min-height:44px;padding:0 16px;border:1px solid var(--linea);background:transparent;font:500 11.5px var(--sans);letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.tab[aria-pressed="true"]{background:var(--negro);border-color:var(--negro);color:var(--marfil)}
+.sec-fila{display:flex;justify-content:space-between;align-items:center;margin-top:20px}
+.sec-fila h2,.sec-tit{margin:0}
+.sec-tit{margin:28px 0 4px;color:var(--oro-txt)}
+.enlace{min-height:44px;padding:0 4px;border:0;background:transparent;color:var(--oro-txt);font:500 12.5px var(--sans);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.enlace.rojo{color:var(--rojo)}
+.escala{position:relative;height:16px;margin:6px 110px 0 48px;font:400 11px var(--sans);color:var(--gris)}
+.escala span{position:absolute;transform:translateX(-50%)}
+.dia{display:flex;align-items:center;gap:10px;min-height:46px;border-bottom:1px solid var(--linea)}
+.dia b{width:38px;flex:none;font:500 12.5px var(--sans);letter-spacing:.08em;text-transform:uppercase}
+.barra{flex:1;height:10px;background:#ece4d6;position:relative;overflow:hidden}
+.barra i,.barra u{position:absolute;top:0;bottom:0}
+.barra i{background:var(--negro)}
+.barra u{background:var(--oro);text-decoration:none}
+.dia > span{width:100px;flex:none;text-align:right;font-size:12.5px;color:var(--gris);white-space:nowrap}
+.dia > span.descansa{color:var(--rojo)}
+.leyenda{display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--gris)}
+.leyenda i{display:inline-block;width:12px;height:8px;margin-right:6px}
+.l-a{background:var(--negro)} .l-t{background:var(--oro)}
+.planes{display:flex;flex-direction:column}
+.plan{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--linea)}
+.plan .c{width:4px;align-self:stretch;background:var(--oro);flex:none}
+.plan.una .c{background:var(--negro)}
+.plan > div{flex:1;min-width:0}
+.plan b{display:block;font:600 19px/1.15 var(--serif);overflow-wrap:anywhere}
+.plan > div span{font-size:12.5px;color:var(--gris)}
+.libres{margin-top:24px;padding:14px 16px;background:var(--oro-suave);border:1px solid #e7d3a8}
+.libres-n{font:600 26px var(--serif);margin-top:4px}
+
+/* Hoja que sube desde abajo */
+.velo{position:fixed;inset:0;background:rgba(22,20,18,.55);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.hoja{background:var(--marfil);width:100%;max-width:560px;max-height:92vh;overflow:auto;padding:8px 18px calc(22px + env(safe-area-inset-bottom));overscroll-behavior:contain}
+.asa{width:44px;height:4px;border-radius:4px;background:var(--linea2);margin:0 auto 8px}
+.hoja-cab{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hoja-cab .titulo{font-size:30px;line-height:1.1}
+.cerrar{width:44px;height:44px;flex:none;border:0;background:transparent;font-size:20px;cursor:pointer}
+.campo-h{display:flex;flex-direction:column;gap:8px;padding:14px 0;border-bottom:1px solid var(--linea)}
+.campo-h .etq,.hoja label .etq{color:var(--oro-txt)}
+.hoja label{display:flex;flex-direction:column;gap:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:44px;min-width:44px;padding:0 12px;border:1px solid var(--linea2);background:transparent;font:500 13px var(--sans);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--negro);border-color:var(--negro);color:var(--marfil)}
+.semana{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.semana .chip{min-width:0;padding:0}
+select.campo{appearance:auto}
+[hidden]{display:none!important}
+.btn.grande{min-height:52px;margin-top:16px}
+.ojo{margin-top:14px;padding:12px 14px;background:var(--oro-suave);border:1px solid #e7d3a8;font:400 13.5px/1.45 var(--sans)}
+.ojo b{font-weight:600}
+.choque{display:flex;flex-direction:column;gap:2px;padding-top:10px;margin-top:10px;border-top:1px solid #e7d3a8}
+.choque span{font-weight:500}
+.choque a{color:var(--oro-txt);font-weight:500;min-height:32px;display:inline-flex;align-items:center}
+.hor-dia{display:flex;align-items:center;gap:10px;min-height:56px;border-bottom:1px solid var(--linea)}
+.hor-si{flex-direction:row!important;align-items:center;gap:8px!important;width:76px;flex:none;min-height:44px;cursor:pointer}
+.hor-si input{width:22px;height:22px;accent-color:var(--negro);margin:0}
+.hor-si span{font:500 12.5px var(--sans);letter-spacing:.08em;text-transform:uppercase}
+.hor-horas{flex:1;display:flex;align-items:center;gap:6px;min-width:0}
+.hor-horas .campo{min-height:44px;padding:0 6px;font-size:15px;min-width:0}
+.hor-no{flex:1;color:var(--rojo);font-size:14px}

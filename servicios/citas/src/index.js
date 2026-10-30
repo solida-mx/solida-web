@@ -7,7 +7,9 @@
 //   POST /api/:negocio/entrar {clave}                     → {token} para 30 días
 //   GET  /api/:negocio/agenda?desde=&hasta=               citas y bloqueos con sus datos
 //   POST /api/:negocio/citas/:folio/estado {estado}       confirmar o cancelar
-//   POST /api/:negocio/bloqueos · DELETE /api/:negocio/bloqueos/:id
+//   POST /api/:negocio/bloqueos {fecha, fechaFin?, desde?, hasta?} · DELETE /api/:negocio/bloqueos/:id
+//   PUT  /api/:negocio/horario {persona, semana}            cuándo trabaja cada quien (Mis tiempos)
+//   POST /api/:negocio/repetidos · DELETE /api/:negocio/repetidos/:id   planes que se repiten
 //   GET  /api/:negocio/perfil                             nombre, equipo y página (lo que la agenda pinta)
 // De Solida (con la clave maestra):
 //   POST /api/admin/negocios {id, nombre, equipo?, pagina?}  dar de alta un negocio (o cambiarle la clave)
@@ -96,6 +98,12 @@ async function enrutar(request, env) {
     return json({ ok: true });
   }
   if (sub === '/bloqueos' && m === 'POST') return json(await bloquear(env, neg, await cuerpo(request)), 201);
+  if (sub === '/horario' && m === 'PUT') return json(await guardaHorario(env, neg, await cuerpo(request)));
+  if (sub === '/repetidos' && m === 'POST') return json(await repetir(env, neg, await cuerpo(request)), 201);
+  if ((p = sub.match(/^\/repetidos\/(\d+)$/)) && m === 'DELETE') {
+    await env.DB.prepare('DELETE FROM repetidos WHERE negocio_id=? AND id=?').bind(neg.id, Number(p[1])).run();
+    return json({ ok: true });
+  }
   if ((p = sub.match(/^\/bloqueos\/(\d+)$/)) && m === 'DELETE') {
     await env.DB.prepare('DELETE FROM bloqueos WHERE negocio_id=? AND id=?').bind(neg.id, Number(p[1])).run();
     return json({ ok: true });
@@ -128,7 +136,96 @@ async function ocupado(env, neg, url) {
     .bind(neg.id, desde, hasta).all()).results;
   const b = (await env.DB.prepare('SELECT fecha, inicio_min ini, fin_min fin, persona FROM bloqueos WHERE negocio_id=? AND fecha>=? AND fecha<?')
     .bind(neg.id, desde, hasta).all()).results;
-  return { desde, hasta, ocupado: c.concat(b) };
+  const rep = await repetidosDe(env, neg.id, desde);
+  const t = tiemposOcupados(neg, rep, desde, hasta);
+  return { desde, hasta, ocupado: c.concat(b, t.ocupado), horario: t.horario };
+}
+
+// ───────── Mis tiempos: horario por persona y planes que se repiten ─────────
+
+export const diaSemana = (fecha) => { const d = new Date(fecha + 'T12:00:00Z').getUTCDay(); return d === 0 ? 7 : d; };   // 1 = lunes … 7 = domingo
+const personasDe = (neg) => { const e = perfilDe(neg).equipo.map((x) => x.id); return e.length ? e : ['']; };
+export function leeHorario(neg) {
+  let h = {}; try { h = JSON.parse(neg.horario || '{}'); } catch {}
+  return h && typeof h === 'object' && !Array.isArray(h) ? h : {};
+}
+// El horario que vale para una persona: el suyo o, si no tiene, el de todo el negocio. null = sin horario (no se restringe).
+const horarioPara = (h, persona) => h[persona] || h[''] || null;
+
+// Lo que no se puede apartar por horario y por planes repetidos, día por día, como «ocupado» (sin decir por qué).
+// También devuelve el horario de cada quien para que la página ofrezca sólo esos días y horas.
+export function tiemposOcupados(neg, repetidos, desde, hasta) {
+  const h = leeHorario(neg), personas = personasDe(neg), ocupado = [];
+  for (let f = desde; f < hasta; f = sumaDias(f, 1)) {
+    const wd = String(diaSemana(f));
+    for (const p of personas) {
+      const sem = horarioPara(h, p);
+      if (!sem) continue;
+      const d = sem[wd];
+      if (!d) { ocupado.push({ fecha: f, ini: 0, fin: 1440, persona: p }); continue; }
+      if (d[0] > 0) ocupado.push({ fecha: f, ini: 0, fin: d[0], persona: p });
+      if (d[1] < 1440) ocupado.push({ fecha: f, ini: d[1], fin: 1440, persona: p });
+    }
+    for (const r of repetidos) {
+      if (r.dias.includes(wd) && r.desde <= f && (!r.hasta || r.hasta >= f)) ocupado.push({ fecha: f, ini: r.inicio_min, fin: r.fin_min, persona: r.persona });
+    }
+  }
+  const horario = {};
+  for (const p of personas) { const sem = horarioPara(h, p); if (sem) horario[p] = sem; }
+  return { ocupado, horario: Object.keys(horario).length ? horario : null };
+}
+export function fueraDeHorario(neg, fecha, ini, fin, persona) {
+  const sem = horarioPara(leeHorario(neg), persona);
+  if (!sem) return false;
+  const d = sem[String(diaSemana(fecha))];
+  return !d || ini < d[0] || fin > d[1];
+}
+async function repetidosDe(env, negocio, desde) {
+  return (await env.DB.prepare("SELECT id, persona, dias, inicio_min, fin_min, desde, hasta, motivo FROM repetidos WHERE negocio_id=? AND (hasta='' OR hasta>=?) ORDER BY inicio_min")
+    .bind(negocio, desde).all()).results;
+}
+const HM = (v) => { const m = String(v || '').match(/^(\d{2}):(\d{2})$/); return m && +m[1] <= 24 && +m[2] < 60 ? Math.min(1440, +m[1] * 60 + +m[2]) : null; };
+function personaValida(neg, v) {
+  const p = ident(v);
+  const eq = perfilDe(neg).equipo;
+  if (p && eq.length && !eq.some((x) => x.id === p)) throw new ErrorHttp(400, 'Esa persona no está en tu equipo');
+  return p;
+}
+export function limpiaSemana(sem) {
+  if (!sem || typeof sem !== 'object') throw new ErrorHttp(400, 'Falta el horario');
+  const out = {};
+  for (let i = 1; i <= 7; i++) {
+    const d = sem[i] ?? sem[String(i)];
+    if (d == null || d === false) { out[i] = null; continue; }
+    const a = Array.isArray(d) ? d.map(Number) : [HM(d.desde), HM(d.hasta)];
+    if (a.length !== 2 || !a.every((x) => Number.isInteger(x) && x >= 0 && x <= 1440) || a[1] <= a[0]) throw new ErrorHttp(400, 'Revisa el horario: la hora de salida va después de la de entrada');
+    out[i] = a;
+  }
+  return out;
+}
+async function guardaHorario(env, neg, d) {
+  const persona = personaValida(neg, d.persona);
+  const h = leeHorario(neg);
+  if (d.semana === null) delete h[persona]; else h[persona] = limpiaSemana(d.semana);
+  await env.DB.prepare('UPDATE negocios SET horario=? WHERE id=?').bind(JSON.stringify(h), neg.id).run();
+  return { horario: h };
+}
+async function repetir(env, neg, d) {
+  const persona = personaValida(neg, d.persona);
+  const dias = [...new Set((Array.isArray(d.dias) ? d.dias : []).map(Number).filter((x) => Number.isInteger(x) && x >= 1 && x <= 7))].sort().join('');
+  if (!dias) throw new ErrorHttp(400, 'Elige qué días se repite');
+  const ini = HM(d.desde), fin = HM(d.hasta);
+  if (ini == null || fin == null) throw new ErrorHttp(400, 'Pon la hora de inicio y de fin');
+  if (fin <= ini) throw new ErrorHttp(400, 'La hora de fin va después de la de inicio');
+  const hoy = hoyEn(neg.zona).fecha;
+  const desdeF = FECHA.test(d.desdeFecha || '') && d.desdeFecha > hoy ? d.desdeFecha : hoy;
+  const hastaF = FECHA.test(d.hastaFecha || '') ? d.hastaFecha : '';
+  if (hastaF && hastaF < desdeF) throw new ErrorHttp(400, 'La fecha de fin va después de la de inicio');
+  const n = await env.DB.prepare('SELECT COUNT(*) n FROM repetidos WHERE negocio_id=?').bind(neg.id).first();
+  if (n && n.n >= 60) throw new ErrorHttp(400, 'Ya tienes muchos planes repetidos. Quita alguno que ya no uses.');
+  const r = await env.DB.prepare('INSERT INTO repetidos (negocio_id, persona, dias, inicio_min, fin_min, desde, hasta, motivo, creado) VALUES (?,?,?,?,?,?,?,?,?)')
+    .bind(neg.id, persona, dias, ini, fin, desdeF, hastaF, texto(d.motivo, 80), ahora()).run();
+  return { id: r.meta.last_row_id };
 }
 
 export function validaCita(d, zona, t = Date.now()) {
@@ -159,29 +256,34 @@ async function apartar(env, neg, d, deLaDueña) {
   // Con quién: la que eligió, o la primera del equipo que esté libre. Sin equipo, el negocio es un solo lugar.
   const candidatas = c.persona ? [c.persona] : (c.equipo.length ? c.equipo : ['']);
   const folio = 'C-' + aleatorio(6);
+  const wd = String(diaSemana(c.fecha));
   for (const persona of candidatas) {
+    // La dueña puede apartar fuera de su horario o encima de sus tiempos (se lo pidieron por teléfono y ella sabe); la página no.
+    if (!deLaDueña && fueraDeHorario(neg, c.fecha, c.ini, c.fin, persona)) continue;
     // Un solo INSERT … WHERE NOT EXISTS: dos personas apartando la misma hora al mismo tiempo no pueden ganar las dos.
     const r = await env.DB.prepare(`INSERT INTO citas (negocio_id, folio, fecha, inicio_min, fin_min, persona, servicio, diseno, detalle, precio, anticipo, nombre, tel, estado, origen, creada)
       SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16
       WHERE NOT EXISTS (SELECT 1 FROM citas WHERE negocio_id=?1 AND fecha=?3 AND estado<>'cancelada' AND inicio_min < ?5 AND fin_min > ?4
                           AND (persona=?6 OR persona='' OR ?6=''))
-        AND NOT EXISTS (SELECT 1 FROM bloqueos WHERE negocio_id=?1 AND fecha=?3 AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona=''))`)
+        AND (?17 = 1 OR NOT EXISTS (SELECT 1 FROM bloqueos WHERE negocio_id=?1 AND fecha=?3 AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))
+        AND (?17 = 1 OR NOT EXISTS (SELECT 1 FROM repetidos WHERE negocio_id=?1 AND instr(dias, ?18) > 0 AND desde <= ?3 AND (hasta = '' OR hasta >= ?3)
+                                      AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))`)
       .bind(neg.id, folio, c.fecha, c.ini, c.fin, persona, c.servicio, c.diseno, c.detalle, c.precio, c.anticipo, c.nombre, c.tel,
-        deLaDueña ? 'confirmada' : 'apartada', deLaDueña ? 'negocio' : 'pagina', ahora()).run();
+        deLaDueña ? 'confirmada' : 'apartada', deLaDueña ? 'negocio' : 'pagina', ahora(), deLaDueña ? 1 : 0, wd).run();
     if (r.meta.changes) return { folio, persona, estado: deLaDueña ? 'confirmada' : 'apartada' };
   }
-  throw new ErrorHttp(409, 'Alguien acaba de apartar esa hora. Elige otra.');
+  throw new ErrorHttp(409, 'Esa hora ya no está disponible. Elige otra.');
 }
 
 async function agenda(env, neg, url) {
   const hoy = hoyEn(neg.zona).fecha;
   const desde = FECHA.test(url.searchParams.get('desde') || '') ? url.searchParams.get('desde') : sumaDias(hoy, -1);
-  const hasta = FECHA.test(url.searchParams.get('hasta') || '') ? url.searchParams.get('hasta') : sumaDias(hoy, 60);
+  const hasta = FECHA.test(url.searchParams.get('hasta') || '') ? url.searchParams.get('hasta') : sumaDias(hoy, DIAS_MAX_ADELANTE);
   const citas = (await env.DB.prepare(`SELECT folio, fecha, inicio_min, fin_min, persona, servicio, diseno, detalle, precio, anticipo, nombre, tel, estado, origen, creada
       FROM citas WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min`).bind(neg.id, desde, hasta).all()).results;
   const bloqueos = (await env.DB.prepare('SELECT id, fecha, inicio_min, fin_min, persona, motivo FROM bloqueos WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min')
     .bind(neg.id, desde, hasta).all()).results;
-  return { hoy, citas, bloqueos };
+  return { hoy, citas, bloqueos, horario: leeHorario(neg), repetidos: await repetidosDe(env, neg.id, hoy) };
 }
 
 async function bloquear(env, neg, d) {
@@ -194,9 +296,15 @@ async function bloquear(env, neg, d) {
     ini = Number(a[1]) * 60 + Number(a[2]); fin = Number(b[1]) * 60 + Number(b[2]);
     if (fin <= ini) throw new ErrorHttp(400, 'La hora de fin va después de la de inicio');
   }
-  const r = await env.DB.prepare('INSERT INTO bloqueos (negocio_id, fecha, inicio_min, fin_min, persona, motivo, creado) VALUES (?,?,?,?,?,?,?)')
-    .bind(neg.id, fecha, ini, fin, ident(d.persona), texto(d.motivo, 80), ahora()).run();
-  return { id: r.meta.last_row_id };
+  // Varios días seguidos (vacaciones): un renglón por día, hasta dos meses.
+  const fechaFin = FECHA.test(d.fechaFin || '') ? d.fechaFin : fecha;
+  if (fechaFin < fecha) throw new ErrorHttp(400, 'El último día va después del primero');
+  const dias = []; for (let f = fecha; f <= fechaFin; f = sumaDias(f, 1)) { dias.push(f); if (dias.length > 62) throw new ErrorHttp(400, 'Son demasiados días de una vez: máximo dos meses'); }
+  const persona = personaValida(neg, d.persona), motivo = texto(d.motivo, 80), t = ahora();
+  const st = env.DB.prepare('INSERT INTO bloqueos (negocio_id, fecha, inicio_min, fin_min, persona, motivo, creado) VALUES (?,?,?,?,?,?,?) RETURNING id');
+  const res = await env.DB.batch(dias.map((f) => st.bind(neg.id, f, ini, fin, persona, motivo, t)));
+  const ids = res.map((x) => x.results[0].id);
+  return { id: ids[0], ids };
 }
 
 // ───────── alta de negocios (Solida) ─────────
@@ -284,6 +392,7 @@ async function limpia(env) {
   await env.DB.batch([
     env.DB.prepare('DELETE FROM citas WHERE fecha < ?').bind(corte),
     env.DB.prepare('DELETE FROM bloqueos WHERE fecha < ?').bind(corte),
+    env.DB.prepare("DELETE FROM repetidos WHERE hasta <> '' AND hasta < ?").bind(corte),
     env.DB.prepare('DELETE FROM intentos WHERE ventana < ?').bind(Math.floor(ahora() / 3600) - 48),
   ]);
 }
@@ -293,7 +402,7 @@ async function limpia(env) {
 // se arman por negocio para que, instalada, lleve su nombre y sus iniciales.
 
 const SEGURIDAD = {
-  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
   'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY',
 };
 const EJEMPLO = { id: 'ejemplo', nombre: 'Atelier Mía', activo: 1 };
