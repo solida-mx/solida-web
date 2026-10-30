@@ -199,6 +199,7 @@
       if (String(r.dias).indexOf(String(dsem(f))) >= 0 && r.desde <= f && (!r.hasta || r.hasta >= f)) l.push({ ini: r.inicio_min, fin: r.fin_min, persona: r.persona, motivo: r.motivo, rep: true });
     });
     (d.bloqueos || []).forEach(function (b) { if (b.fecha === f) l.push({ ini: b.inicio_min, fin: b.fin_min, persona: b.persona, motivo: b.motivo }); });
+    (d.calOcupado || []).forEach(function (b) { if (b.fecha === f) l.push({ ini: b.inicio_min, fin: b.fin_min, persona: b.persona, motivo: 'Ocupada en tu calendario', cal: true }); });
     return l;
   }
   // Huecos libres de cada quien dentro de su horario (de 30 min o más). Sin horario guardado no se calculan.
@@ -233,7 +234,7 @@
     var items = citas.map(function (c) { return { ini: c.inicio_min, o: c.estado === 'cancelada' ? 3 : 0, html: filaCita(c, f, man) }; })
       .concat(tiempos.map(function (t) {
         return { ini: t.ini, o: 1, html: '<div class="fila"><span class="hora">' + esc(hhmm(t.ini)) + '</span><div class="mio"><b>' + esc(t.motivo || 'Tiempo para ti') + '</b><span>' +
-          esc(rango(t.ini, t.fin) + (equipo().length ? ' · ' + (t.persona ? nombreDe(t.persona) : 'todo el negocio') : '') + (t.rep ? ' · se repite' : '')) + ' · sólo tú lo ves</span></div></div>' };
+          esc(rango(t.ini, t.fin) + (equipo().length ? ' · ' + (t.persona ? nombreDe(t.persona) : 'todo el negocio') : '') + (t.rep ? ' · se repite' : '') + (t.cal ? ' · de Google' : '')) + ' · sólo tú lo ves</span></div></div>' };
       }))
       .concat(libres.map(function (l) {
         return { ini: l.ini, o: 2, html: '<div class="fila"><span class="hora">' + esc(hhmm(l.ini)) + '</span><button type="button" class="libre" data-libre="' + esc(f + '|' + l.ini + '|' + l.persona) + '">' +
@@ -329,6 +330,7 @@
       var marca = function (a, b) { for (var m = Math.max(a, x[0]); m < Math.min(b, x[1]); m++) ocup[m] = 1; };
       (d.repetidos || []).forEach(function (r) { if (tocaA(r.persona, p) && String(r.dias).indexOf(String(dsem(f))) >= 0 && r.desde <= f && (!r.hasta || r.hasta >= f)) marca(r.inicio_min, r.fin_min); });
       (d.bloqueos || []).forEach(function (b) { if (b.fecha === f && tocaA(b.persona, p)) marca(b.inicio_min, b.fin_min); });
+      (d.calOcupado || []).forEach(function (b) { if (b.fecha === f && tocaA(b.persona, p)) marca(b.inicio_min, b.fin_min); });
       var ocupLibre = 0; for (var m = x[0]; m < x[1]; m++) ocupLibre += ocup[m];
       d.citas.forEach(function (c) { if (c.fecha === f && c.estado !== 'cancelada' && tocaA(c.persona, p)) { citas++; marca(c.inicio_min, c.fin_min); } });
       var ocupTodo = 0; for (m = x[0]; m < x[1]; m++) ocupTodo += ocup[m];
@@ -387,10 +389,82 @@
         '<button type="button" class="enlace rojo" data-quitabl="' + esc(g.ids.join(',')) + '" aria-label="Quitar ' + esc(g.motivo || 'este tiempo') + '">Quitar</button></div>';
     }).join('') + '</div>' : '<p class="nota" style="text-align:left">Nada todavía. El dentista, un curso o tus vacaciones van aquí.</p>');
 
+    h += tarjetaCalendario(d, p);
     var lb = libresDe(d, p);
     if (lb) h += '<section class="libres"><span class="etq" style="color:var(--oro-txt)">En los próximos 7 días te quedan libres</span>' +
       '<div class="libres-n">' + esc(horas(lb.libres)) + ' para citas</div><div class="nota" style="text-align:left">De ' + esc(horas(lb.trabaja)) + ' que atiendes · ' + lb.citas + (lb.citas === 1 ? ' cita ya apartada' : ' citas ya apartadas') + '</div></section>';
     return h;
+  }
+
+  // ───── su calendario de Google (sólo horas ocupadas) ─────
+  function calDe(d, p) { return (d.calendarios || []).filter(function (c) { return c.persona === p; })[0] || null; }
+  function haceCuanto(t) {
+    var m = Math.max(0, Math.round((Date.now() / 1000 - t) / 60));
+    return m < 1 ? 'hace un momento' : m < 60 ? 'hace ' + m + ' min' : m < 1440 ? 'hace ' + Math.round(m / 60) + ' h' : 'hace ' + Math.round(m / 1440) + ' días';
+  }
+  function minCalSemana(d, p) {
+    var fin = sumaDia(d.hoy, 7);
+    return (d.calOcupado || []).filter(function (b) { return b.persona === p && b.fecha >= d.hoy && b.fecha < fin; }).reduce(function (s, b) { return s + b.fin_min - b.inicio_min; }, 0);
+  }
+  var ICO_CAL = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="1.5"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h3"/></svg>';
+  function tarjetaCalendario(d, p) {
+    var c = calDe(d, p), quien = equipo().length > 1 ? ' de ' + nombreDe(p) : '';
+    var estado = !c ? '<span>Si ya anotas tu vida ahí, no la captures dos veces: lo que tengas, tu página lo da por ocupado.</span>'
+      : c.estado === 'ok' ? '<span class="ok">Conectado · revisado ' + esc(haceCuanto(c.revisado)) + ' · ' + esc(horas(minCalSemana(d, p))) + ' ocupadas esta semana</span>'
+        : '<span class="mal">No pudimos leerlo: ' + esc(c.error) + '</span>';
+    return '<button type="button" class="cal-card" id="abreCal"><span class="cal-ico">' + ICO_CAL + '</span><span class="cal-txt"><b>' + (c ? 'Mi calendario' : 'Conectar mi calendario') + esc(quien) + '</b>' + estado + '</span><span aria-hidden="true">›</span></button>';
+  }
+  function abreCalendario(d, p) {
+    var c = calDe(d, p);
+    var guardamos = '<section class="guardamos"><span class="etq" style="color:var(--oro)">Lo que guardamos</span>' +
+      '<p>Sólo <b>de qué hora a qué hora estás ocupada</b>. Nunca el nombre de tus eventos, ni con quién, ni dónde. La dirección se guarda cifrada.</p>' +
+      '<p class="suave">Para cortarlo: «Desconectar» aquí, o en Google le das «Restablecer» a esa dirección y deja de servir al instante.</p>' +
+      '<p class="suave"><a href="https://solidaaplicaciones.com/privacidad.html" target="_blank" rel="noopener">Aviso de privacidad ›</a></p></section>';
+    var forma = '<form id="fCal" novalidate>' +
+      '<div class="paso"><span class="n">1</span><div><b>Abre Google Calendar en la computadora</b><span>Configuración → tu calendario → «Integrar el calendario».</span></div></div>' +
+      '<div class="paso"><span class="n">2</span><div><b>Copia la «Dirección secreta en formato iCal»</b><span>Es la que termina en <i>basic.ics</i>. Sólo sirve para leer: con ella no se puede cambiar nada de tu calendario.</span></div></div>' +
+      '<div class="paso"><span class="n">3</span><div style="flex:1;min-width:0"><b>Pégala aquí</b><input class="campo" id="calUrl" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" style="margin-top:8px"></div></div>' +
+      '<p class="falta" id="calFalta" role="alert"></p><button class="btn negro bloque grande" id="calOk">' + (c ? 'Cambiar por esta' : 'Conectar') + '</button>' +
+      '<p class="nota">También funciona con iPhone (iCloud, calendario público) y Outlook.</p></form>';
+    var estado = c ? '<div class="filas">' +
+      '<div class="fila-dato"><span>Estado</span><b class="' + (c.estado === 'ok' ? 'ok' : 'mal') + '">' + (c.estado === 'ok' ? 'Conectado' : 'No se pudo leer') + '</b></div>' +
+      (c.estado !== 'ok' ? '<div class="fila-dato"><span>Qué pasó</span><b>' + esc(c.error) + '</b></div>' : '') +
+      '<div class="fila-dato"><span>Revisado</span><b>' + esc(haceCuanto(c.revisado)) + ' · cada 15 min</b></div>' +
+      '<div class="fila-dato"><span>Esta semana</span><b>' + esc(horas(minCalSemana(d, p))) + ' ocupadas</b></div>' +
+      '<div class="fila-dato"><span>De</span><b>' + esc(c.host) + '</b></div>' +
+      '<div class="fila-dato"><span>Ojo</span><b>Lo que anotes en tu calendario tarda hasta 15 min en bloquearse en tu página.</b></div></div>' +
+      '<div class="dos" style="margin-top:12px"><button type="button" class="btn" id="calRevisa">Revisar ahora</button><button type="button" class="btn rojo-linea" id="calQuita">Desconectar</button></div>' +
+      '<details class="cambiar"><summary>Cambiar la dirección</summary>' + forma + '</details>' : forma;
+    var hoja = abreHoja('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">Mi calendario' + (equipo().length > 1 ? ' · ' + esc(nombreDe(p)) : '') + '</h2>' + CERRAR + '</div>' +
+      '<p class="nota" style="text-align:left;margin-top:2px">Lo que tengas en tu calendario, tu página lo da por ocupado.</p>' + estado + guardamos);
+    var f = document.getElementById('fCal');
+    f.onsubmit = function (e) {
+      e.preventDefault();
+      var falta = document.getElementById('calFalta'), b = document.getElementById('calOk'), url = document.getElementById('calUrl').value.trim();
+      falta.textContent = '';
+      if (!url) { falta.textContent = 'Pega la dirección de tu calendario.'; return; }
+      b.disabled = true; b.textContent = 'Leyendo tu calendario…';
+      envia('/calendarios', { metodo: 'POST', body: { url: url, persona: p } }).then(function (x) {
+        if (x.status === 401) return salir();
+        if (x.status !== 201) { falta.textContent = x.d.error || 'No se pudo'; b.disabled = false; b.textContent = c ? 'Cambiar por esta' : 'Conectar'; return; }
+        cierraHoja(); toast('Listo: tu página ya da por ocupado lo de tu calendario'); carga();
+      }, function () { falta.textContent = 'Sin conexión.'; b.disabled = false; b.textContent = 'Conectar'; });
+    };
+    var rv = document.getElementById('calRevisa');
+    if (rv) rv.onclick = function () {
+      rv.disabled = true; rv.textContent = 'Revisando…';
+      envia('/calendarios/' + c.id + '/revisar', { metodo: 'POST' }).then(function (x) {
+        if (x.status !== 200) { toast(x.d.error || 'No se pudo'); rv.disabled = false; rv.textContent = 'Revisar ahora'; return; }
+        toast(x.d.estado === 'ok' ? 'Listo: revisado ahora' : 'No pudimos leerlo: ' + x.d.error);
+        carga(); cierraHoja();
+      }, function () { toast('Sin conexión'); rv.disabled = false; rv.textContent = 'Revisar ahora'; });
+    };
+    var qt = document.getElementById('calQuita');
+    if (qt) qt.onclick = function () {
+      if (!confirm('¿Desconectar tu calendario? Lo que tengas ahí deja de bloquear horas en tu página.')) return;
+      qt.disabled = true;
+      envia('/calendarios/' + c.id, { metodo: 'DELETE' }).then(function () { cierraHoja(); toast('Listo: desconectado'); carga(); }, function () { toast('Sin conexión'); qt.disabled = false; });
+    };
   }
 
   // ───── hoja (lo que se abre desde abajo) ─────
@@ -664,6 +738,7 @@
     raiz.querySelectorAll('[data-persona]').forEach(function (b) { b.onclick = function () { personaSel = b.getAttribute('data-persona'); pinta(ultimo); }; });
     var ap = document.getElementById('apartar'); if (ap) ap.onclick = function () { abreApartar(ultimo); };
     var eh = document.getElementById('editaHorario'); if (eh) eh.onclick = function () { abreHorario(ultimo, personaSel); };
+    var ac = document.getElementById('abreCal'); if (ac) ac.onclick = function () { abreCalendario(ultimo, personaSel); };
     raiz.querySelectorAll('[data-estado]').forEach(function (b) {
       b.onclick = function () {
         var est = b.getAttribute('data-estado'), folio = b.getAttribute('data-folio');
@@ -731,6 +806,12 @@
         c(sumaDia(hoy, 5), 12, 60, 'Fernanda Ríos', 'Relleno de pestañas', '', 'fer', 450, 0, 'confirmada'),
       ],
       horario: { mia: { 1: lv, 2: lv, 3: lv, 4: jv, 5: jv, 6: [540, 900], 7: null }, fer: { 1: null, 2: lv, 3: lv, 4: jv, 5: jv, 6: [540, 900], 7: null } },
+      calendarios: [{ id: 7, persona: 'mia', host: 'calendar.google.com', estado: 'ok', error: '', revisado: Math.floor(Date.now() / 1000) - 360, bloques: 3 }],
+      calOcupado: [
+        { fecha: man, inicio_min: 1140, fin_min: 1200, persona: 'mia' },
+        { fecha: pas, inicio_min: 540, fin_min: 600, persona: 'mia' },
+        { fecha: sumaDia(hoy, 4), inicio_min: 600, fin_min: 720, persona: 'mia' },
+      ],
       repetidos: [
         { id: 1, persona: 'mia', dias: '135', inicio_min: 780, fin_min: 840, desde: hoy, hasta: '', motivo: 'Recoger a Santi de la escuela' },
         { id: 2, persona: 'mia', dias: '24', inicio_min: 840, fin_min: 900, desde: hoy, hasta: '', motivo: 'Comida' },
@@ -760,6 +841,20 @@
     if (ruta === '/repetidos' && op.metodo === 'POST') {
       d.repetidos.push({ id: ++demoId, persona: b.persona, dias: b.dias.slice().sort().join(''), inicio_min: aMin(b.desde), fin_min: aMin(b.hasta), desde: d.hoy, hasta: b.hastaFecha || '', motivo: b.motivo });
       return { status: 201, d: { id: demoId } };
+    }
+    if (ruta === '/calendarios' && op.metodo === 'POST') {
+      if (!/^(https|webcal):\/\/.+/.test(b.url || '')) return { status: 400, d: { error: 'Esa dirección no se ve completa. Cópiala otra vez de tu calendario.' } };
+      d.calendarios = d.calendarios.filter(function (c) { return c.persona !== b.persona; });
+      d.calendarios.push({ id: ++demoId, persona: b.persona, host: 'calendar.google.com', estado: 'ok', error: '', revisado: Math.floor(Date.now() / 1000), bloques: 1 });
+      d.calOcupado.push({ fecha: sumaDia(d.hoy, 1), inicio_min: 720, fin_min: 780, persona: b.persona });
+      return { status: 201, d: d.calendarios[d.calendarios.length - 1] };
+    }
+    if ((m = ruta.match(/^\/calendarios\/(\d+)\/revisar$/))) { var cc = d.calendarios.filter(function (c) { return String(c.id) === m[1]; })[0]; if (cc) cc.revisado = Math.floor(Date.now() / 1000); return { status: 200, d: cc }; }
+    if ((m = ruta.match(/^\/calendarios\/(\d+)$/))) {
+      var quita = d.calendarios.filter(function (c) { return String(c.id) === m[1]; })[0];
+      d.calendarios = d.calendarios.filter(function (c) { return c !== quita; });
+      if (quita) d.calOcupado = d.calOcupado.filter(function (x) { return x.persona !== quita.persona; });
+      return { status: 200, d: { ok: true } };
     }
     if ((m = ruta.match(/^\/repetidos\/(\d+)$/))) { d.repetidos = d.repetidos.filter(function (r) { return String(r.id) !== m[1]; }); return { status: 200, d: { ok: true } }; }
     if (ruta === '/bloqueos' && op.metodo === 'POST') {

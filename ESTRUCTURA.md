@@ -46,6 +46,10 @@ enteros). El servidor de citas no deja apartar fuera de eso, y la página de uñ
 (tocar uno aparta ahí una cita por teléfono, ya confirmada). «Semana» resume los próximos 7 días. «Para mañana» lista a quién
 falta recordarle; mandar el recordatorio queda marcado en el servidor (`recordada`), así se ve desde cualquier teléfono.
 
+**Su calendario.** En «Mis tiempos» la dueña pega la dirección secreta en formato iCal de su Google Calendar (también iCloud
+u Outlook). Se guarda cifrada (AES-GCM con una llave sacada de `SECRETO`); cada 15 minutos el servicio la lee (`src/ical.js`)
+y guarda sólo de qué hora a qué hora está ocupada en los próximos 90 días (`cal_ocupado`), nunca títulos ni lugares.
+
 Pendientes de convertir: profesional, taller, nutriólogo, invitación, uniformes y barbería.
 
 ## Direcciones viejas

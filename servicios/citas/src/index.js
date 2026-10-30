@@ -11,6 +11,7 @@
 //   POST /api/:negocio/bloqueos {fecha, fechaFin?, desde?, hasta?} · DELETE /api/:negocio/bloqueos/:id
 //   PUT  /api/:negocio/horario {persona, semana}            cuándo trabaja cada quien (Mis tiempos)
 //   POST /api/:negocio/repetidos · DELETE /api/:negocio/repetidos/:id   planes que se repiten
+//   POST /api/:negocio/calendarios {url, persona} · DELETE …/:id · POST …/:id/revisar   su calendario de Google (sólo horas ocupadas)
 //   GET  /api/:negocio/perfil                             nombre, equipo y página (lo que la agenda pinta)
 // De Solida (con la clave maestra):
 //   POST /api/admin/negocios {id, nombre, equipo?, pagina?}  dar de alta un negocio (o cambiarle la clave)
@@ -21,8 +22,10 @@
 // Una vez al día se borran las citas de hace más de 120 días: no guardamos datos de nadie más de lo necesario.
 
 import ARCHIVOS from './agenda.generados.js';
+import { horasOcupadas } from './ical.js';
 
 const DIAS_GUARDADO = 120;
+const CRON_CALENDARIOS = '*/15 * * * *';
 const AGENDA = 'https://agenda.solidaaplicaciones.com';
 const DIAS_MAX_ADELANTE = 90;
 const ahora = () => Math.floor(Date.now() / 1000);
@@ -41,8 +44,9 @@ export default {
       return cors(json({ error: 'Error interno' }, 500), request);
     }
   },
-  async scheduled(_c, env, ctx) {
-    ctx.waitUntil(limpia(env));
+  async scheduled(c, env, ctx) {
+    // Cada 15 minutos se vuelven a leer los calendarios; una vez al día, además, se limpia lo viejo.
+    ctx.waitUntil(c.cron === CRON_CALENDARIOS ? sincronizaTodos(env) : limpia(env));
   },
 };
 
@@ -104,6 +108,22 @@ async function enrutar(request, env) {
     return json({ ok: true });
   }
   if (sub === '/bloqueos' && m === 'POST') return json(await bloquear(env, neg, await cuerpo(request)), 201);
+  if (sub === '/calendarios' && m === 'POST') return json(await conectaCalendario(env, neg, await cuerpo(request)), 201);
+  if ((p = sub.match(/^\/calendarios\/(\d+)$/)) && m === 'DELETE') {
+    const id = Number(p[1]);
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM cal_ocupado WHERE negocio_id=? AND calendario_id=?').bind(neg.id, id),
+      env.DB.prepare('DELETE FROM calendarios WHERE negocio_id=? AND id=?').bind(neg.id, id),
+    ]);
+    return json({ ok: true });
+  }
+  if ((p = sub.match(/^\/calendarios\/(\d+)\/revisar$/)) && m === 'POST') {
+    const cal = await env.DB.prepare('SELECT * FROM calendarios WHERE negocio_id=? AND id=?').bind(neg.id, Number(p[1])).first();
+    if (!cal) throw new ErrorHttp(404, 'No existe ese calendario');
+    await limita(env, 'cal:' + cal.id, 6, 600, 'Ya lo revisamos hace un momento. Espera unos minutos.');
+    await sincroniza(env, neg, cal);
+    return json(await calendarioPublico(env, cal.id));
+  }
   if (sub === '/horario' && m === 'PUT') return json(await guardaHorario(env, neg, await cuerpo(request)));
   if (sub === '/repetidos' && m === 'POST') return json(await repetir(env, neg, await cuerpo(request)), 201);
   if ((p = sub.match(/^\/repetidos\/(\d+)$/)) && m === 'DELETE') {
@@ -144,7 +164,9 @@ async function ocupado(env, neg, url) {
     .bind(neg.id, desde, hasta).all()).results;
   const rep = await repetidosDe(env, neg.id, desde);
   const t = tiemposOcupados(neg, rep, desde, hasta);
-  return { desde, hasta, ocupado: c.concat(b, t.ocupado), horario: t.horario };
+  const cal = (await env.DB.prepare('SELECT fecha, inicio_min ini, fin_min fin, persona FROM cal_ocupado WHERE negocio_id=? AND fecha>=? AND fecha<?')
+    .bind(neg.id, desde, hasta).all()).results;
+  return { desde, hasta, ocupado: c.concat(b, t.ocupado, cal), horario: t.horario };
 }
 
 // ───────── Mis tiempos: horario por persona y planes que se repiten ─────────
@@ -273,7 +295,8 @@ async function apartar(env, neg, d, deLaDueña) {
                           AND (persona=?6 OR persona='' OR ?6=''))
         AND (?17 = 1 OR NOT EXISTS (SELECT 1 FROM bloqueos WHERE negocio_id=?1 AND fecha=?3 AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))
         AND (?17 = 1 OR NOT EXISTS (SELECT 1 FROM repetidos WHERE negocio_id=?1 AND instr(dias, ?18) > 0 AND desde <= ?3 AND (hasta = '' OR hasta >= ?3)
-                                      AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))`)
+                                      AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))
+        AND (?17 = 1 OR NOT EXISTS (SELECT 1 FROM cal_ocupado WHERE negocio_id=?1 AND fecha=?3 AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))`)
       .bind(neg.id, folio, c.fecha, c.ini, c.fin, persona, c.servicio, c.diseno, c.detalle, c.precio, c.anticipo, c.nombre, c.tel,
         deLaDueña ? 'confirmada' : 'apartada', deLaDueña ? 'negocio' : 'pagina', ahora(), deLaDueña ? 1 : 0, wd).run();
     if (r.meta.changes) return { folio, persona, estado: deLaDueña ? 'confirmada' : 'apartada' };
@@ -289,7 +312,11 @@ async function agenda(env, neg, url) {
       FROM citas WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min`).bind(neg.id, desde, hasta).all()).results;
   const bloqueos = (await env.DB.prepare('SELECT id, fecha, inicio_min, fin_min, persona, motivo FROM bloqueos WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min')
     .bind(neg.id, desde, hasta).all()).results;
-  return { hoy, citas, bloqueos, horario: leeHorario(neg), repetidos: await repetidosDe(env, neg.id, hoy) };
+  const calOcupado = (await env.DB.prepare('SELECT fecha, inicio_min, fin_min, persona FROM cal_ocupado WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min')
+    .bind(neg.id, desde, hasta).all()).results;
+  const calendarios = (await env.DB.prepare('SELECT id FROM calendarios WHERE negocio_id=? ORDER BY id').bind(neg.id).all()).results;
+  return { hoy, citas, bloqueos, horario: leeHorario(neg), repetidos: await repetidosDe(env, neg.id, hoy), calOcupado,
+    calendarios: await Promise.all(calendarios.map((x) => calendarioPublico(env, x.id))) };
 }
 
 async function bloquear(env, neg, d) {
@@ -399,8 +426,105 @@ async function limpia(env) {
     env.DB.prepare('DELETE FROM citas WHERE fecha < ?').bind(corte),
     env.DB.prepare('DELETE FROM bloqueos WHERE fecha < ?').bind(corte),
     env.DB.prepare("DELETE FROM repetidos WHERE hasta <> '' AND hasta < ?").bind(corte),
+    env.DB.prepare('DELETE FROM cal_ocupado WHERE fecha < ?').bind(sumaDias(hoyEn('America/Monterrey').fecha, -1)),
     env.DB.prepare('DELETE FROM intentos WHERE ventana < ?').bind(Math.floor(ahora() / 3600) - 48),
   ]);
+}
+
+// ───────── su calendario de Google, iCloud u Outlook ─────────
+// La dueña pega la «dirección secreta en formato iCal» (sólo lectura). Se guarda cifrada; cada 15 minutos se lee
+// y se guardan nada más las horas ocupadas de los próximos 90 días. Lo que anote ahí, su página lo da por ocupado.
+
+const HOSTS_CALENDARIO = [/^calendar\.google\.com$/, /^([a-z0-9-]+\.)*icloud\.com$/, /^outlook\.(live|office|office365)\.com$/];
+const TAMANO_MAX = 4 * 1024 * 1024;
+export function validaUrlCalendario(v, env = {}) {
+  let t = String(v || '').trim().replace(/^webcal:\/\//i, 'https://');
+  if (!t) throw new ErrorHttp(400, 'Pega la dirección de tu calendario');
+  let u; try { u = new URL(t); } catch { throw new ErrorHttp(400, 'Esa dirección no se ve completa. Cópiala otra vez de tu calendario.'); }
+  const prueba = env.CALENDARIOS_PRUEBA === '1' && u.protocol === 'http:' && u.hostname === '127.0.0.1';
+  if (!prueba && (u.protocol !== 'https:' || !HOSTS_CALENDARIO.some((x) => x.test(u.hostname)))) {
+    throw new ErrorHttp(400, 'Por ahora funciona con Google Calendar, iCloud (iPhone) y Outlook. Copia la dirección secreta en formato iCal.');
+  }
+  if (/calendar\.google\.com$/.test(u.hostname) && !/\/ical\/.+\.ics$/.test(u.pathname)) {
+    throw new ErrorHttp(400, 'Ésa no es la dirección secreta. En Google Calendar es la que termina en «basic.ics».');
+  }
+  return u.href;
+}
+async function llaveCalendarios(env) {
+  if (!env.SECRETO || env.SECRETO.length < 24) throw new ErrorHttp(500, 'Falta configurar SECRETO');
+  const raw = await crypto.subtle.digest('SHA-256', enc.encode(env.SECRETO + '|calendarios'));
+  return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
+}
+const b64 = (u8) => btoa(String.fromCharCode(...u8));
+const deB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+export async function cifra(env, texto) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const c = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await llaveCalendarios(env), enc.encode(texto)));
+  return b64(iv) + '.' + b64(c);
+}
+export async function descifra(env, t) {
+  const [iv, c] = String(t).split('.');
+  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: deB64(iv) }, await llaveCalendarios(env), deB64(c)));
+}
+async function bajaCalendario(url) {
+  let r;
+  try { r = await fetch(url, { headers: { Accept: 'text/calendar, */*' }, signal: AbortSignal.timeout(12000), cf: { cacheTtl: 0 } }); }
+  catch { throw new ErrorHttp(502, 'Tu calendario no contestó. Lo volvemos a intentar en unos minutos.'); }
+  if (r.status === 404 || r.status === 401 || r.status === 403) throw new ErrorHttp(400, 'Tu calendario ya no deja leerse con esa dirección. Si la restableciste en Google, pega la nueva.');
+  if (!r.ok) throw new ErrorHttp(502, 'Tu calendario contestó con un error (' + r.status + '). Lo volvemos a intentar en unos minutos.');
+  if (Number(r.headers.get('content-length') || 0) > TAMANO_MAX) throw new ErrorHttp(400, 'Tu calendario es demasiado grande para leerlo.');
+  const t = await r.text();
+  if (t.length > TAMANO_MAX) throw new ErrorHttp(400, 'Tu calendario es demasiado grande para leerlo.');
+  if (!/BEGIN:VCALENDAR/.test(t)) throw new ErrorHttp(400, 'Esa dirección no es un calendario. Copia la «dirección secreta en formato iCal».');
+  return t;
+}
+async function sincroniza(env, neg, cal) {
+  const hoy = hoyEn(neg.zona).fecha;
+  try {
+    const texto = await bajaCalendario(await descifra(env, cal.url_cifrada));
+    const horas = horasOcupadas(texto, neg.zona, hoy, sumaDias(hoy, DIAS_MAX_ADELANTE + 1)).slice(0, 3000);
+    const ins = env.DB.prepare('INSERT INTO cal_ocupado (calendario_id, negocio_id, persona, fecha, inicio_min, fin_min) VALUES (?,?,?,?,?,?)');
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM cal_ocupado WHERE calendario_id=?').bind(cal.id),
+      ...horas.map((x) => ins.bind(cal.id, neg.id, cal.persona, x.fecha, x.ini, x.fin)),
+      env.DB.prepare("UPDATE calendarios SET estado='ok', error='', revisado=?, bloques=? WHERE id=?").bind(ahora(), horas.length, cal.id),
+    ]);
+    return { ok: true, bloques: horas.length };
+  } catch (e) {
+    // Si falla, se queda lo que ya se había leído: mejor horas ocupadas de hace un rato que ninguna.
+    const msg = e instanceof ErrorHttp ? e.message : 'No pudimos leer tu calendario.';
+    if (!(e instanceof ErrorHttp)) console.error(e);
+    await env.DB.prepare("UPDATE calendarios SET estado='error', error=?, revisado=? WHERE id=?").bind(msg, ahora(), cal.id).run();
+    return { ok: false, error: msg };
+  }
+}
+async function calendarioPublico(env, id) {
+  const c = await env.DB.prepare('SELECT id, persona, host, estado, error, revisado, bloques FROM calendarios WHERE id=?').bind(id).first();
+  return c;   // nunca la dirección
+}
+async function conectaCalendario(env, neg, d) {
+  const persona = personaValida(neg, d.persona);
+  const url = validaUrlCalendario(d.url, env);
+  const n = await env.DB.prepare('SELECT COUNT(*) n FROM calendarios WHERE negocio_id=? AND persona<>?').bind(neg.id, persona).first();
+  if (n && n.n >= 10) throw new ErrorHttp(400, 'Ya hay muchos calendarios conectados.');
+  // Uno por persona: conectar otro reemplaza al anterior.
+  const viejos = (await env.DB.prepare('SELECT id FROM calendarios WHERE negocio_id=? AND persona=?').bind(neg.id, persona).all()).results;
+  const r = await env.DB.prepare('INSERT INTO calendarios (negocio_id, persona, url_cifrada, host, creado) VALUES (?,?,?,?,?)')
+    .bind(neg.id, persona, await cifra(env, url), new URL(url).hostname, ahora()).run();
+  const cal = await env.DB.prepare('SELECT * FROM calendarios WHERE id=?').bind(r.meta.last_row_id).first();
+  const s = await sincroniza(env, neg, cal);
+  if (!s.ok) {
+    await env.DB.prepare('DELETE FROM calendarios WHERE id=?').bind(cal.id).run();
+    throw new ErrorHttp(400, s.error);
+  }
+  for (const v of viejos) await env.DB.batch([
+    env.DB.prepare('DELETE FROM cal_ocupado WHERE calendario_id=?').bind(v.id), env.DB.prepare('DELETE FROM calendarios WHERE id=?').bind(v.id)]);
+  return calendarioPublico(env, cal.id);
+}
+async function sincronizaTodos(env) {
+  const l = (await env.DB.prepare('SELECT c.*, n.zona, n.nombre, n.equipo, n.horario FROM calendarios c JOIN negocios n ON n.id=c.negocio_id WHERE n.activo=1 AND c.revisado < ? ORDER BY c.revisado LIMIT 40')
+    .bind(ahora() - (env.CALENDARIOS_PRUEBA === '1' ? -60 : 13 * 60)).all()).results;
+  for (const c of l) await sincroniza(env, { id: c.negocio_id, zona: c.zona }, c);
 }
 
 // ───────── la agenda de la dueña (app instalable) ─────────

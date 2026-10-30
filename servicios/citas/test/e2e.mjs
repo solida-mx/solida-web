@@ -10,7 +10,7 @@ const MAESTRA = 'maestra-de-prueba-0123456789abcdef', SECRETO = 'secreto-de-prue
 const persist = mkdtempSync(join(tmpdir(), 'solida-citas-'));
 const devVars = new URL('../.dev.vars', import.meta.url);
 const previo = existsSync(devVars) ? readFileSync(devVars) : null;
-writeFileSync(devVars, `MAESTRA=${MAESTRA}\nSECRETO=${SECRETO}\n`);
+writeFileSync(devVars, `MAESTRA=${MAESTRA}\nSECRETO=${SECRETO}\nCALENDARIOS_PRUEBA=1\n`);
 const pasos = []; const paso = (t) => { pasos.push(t); console.log('  ✓ ' + t); };
 let w;
 
@@ -30,7 +30,7 @@ const fecha = (n) => { const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'A
 
 try {
   execFileSync('npx', ['wrangler', 'd1', 'migrations', 'apply', 'solida-citas', '--local', '--persist-to', persist], { stdio: 'ignore' });
-  w = spawn('npx', ['wrangler', 'dev', '--ip', '127.0.0.1', '--port', String(PUERTO), '--persist-to', persist, '--show-interactive-dev-session=false'],
+  w = spawn('npx', ['wrangler', 'dev', '--ip', '127.0.0.1', '--port', String(PUERTO), '--persist-to', persist, '--show-interactive-dev-session=false', '--test-scheduled'],
     { detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, NO_PROXY: '127.0.0.1,localhost', no_proxy: '127.0.0.1,localhost' } });
   let log = ''; w.stdout.on('data', (x) => (log += x)); w.stderr.on('data', (x) => (log += x));
   for (let i = 0; i < 120; i++) { try { if ((await fetch(URL0 + '/')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 500)); if (i === 119) throw new Error('wrangler dev no arrancó\n' + log); }
@@ -390,6 +390,67 @@ try {
     if (CAP) { await pg.click('[data-vista="hoy"]'); await pg.click(`[data-dia="${MARTES}"]`); await pg.screenshot({ path: CAP + '/ag-hoy.png', fullPage: true }); await pg.click('[data-vista="semana"]'); await pg.screenshot({ path: CAP + '/ag-semana.png', fullPage: true }); }
     assert.deepEqual(errores, []);
 
+    // ───── Su calendario de Google ─────
+    // Un calendario de mentira servido aquí (el contenedor no alcanza a Google); el Worker de prueba deja leer 127.0.0.1.
+    const MIE = elDia(3, 1);
+    const ymd = (f) => f.replace(/-/g, '');
+    let ics = (hora) => `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:den-1\r\nSUMMARY:Dentista Dr. Secreto\r\nLOCATION:Calle Privada 123\r\nDTSTART;TZID=America/Monterrey:${ymd(MIE)}T${hora}0000\r\nDTEND;TZID=America/Monterrey:${ymd(MIE)}T${String(+hora + 1).padStart(2, '0')}0000\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`;
+    let calHora = '15', calStatus = 200;
+    const calSrv = createServer((q, s2) => { if (calStatus !== 200) { s2.writeHead(calStatus); return s2.end(); } s2.writeHead(200, { 'Content-Type': 'text/calendar' }); s2.end(ics(calHora)); });
+    await new Promise((r2) => calSrv.listen(8813, '127.0.0.1', r2));
+    try {
+      const CAL_URL = 'http://127.0.0.1:8813/calendar/ical/mia%40gmail.com/private-abc/basic.ics';
+      assert.equal((await api('/api/atelier-mia/calendarios', { metodo: 'POST', token: tok, body: { url: 'https://evil.example/cal.ics', persona: 'mia' } })).status, 400, 'sólo Google, iCloud u Outlook');
+      const noSecreta = await api('/api/atelier-mia/calendarios', { metodo: 'POST', token: tok, body: { url: 'https://calendar.google.com/calendar/u/0/r', persona: 'mia' } });
+      assert.equal(noSecreta.status, 400); assert.match(noSecreta.d.error, /basic\.ics/);
+      assert.equal((await api('/api/atelier-mia/calendarios', { metodo: 'POST', body: { url: CAL_URL, persona: 'mia' } })).status, 401);
+      const con = await api('/api/atelier-mia/calendarios', { metodo: 'POST', token: tok, body: { url: CAL_URL, persona: 'mia' } });
+      assert.equal(con.status, 201, JSON.stringify(con.d)); assert.equal(con.d.estado, 'ok'); assert.equal(con.d.bloques, 1);
+      const ag7 = await api('/api/atelier-mia/agenda', { token: tok });
+      const todo = JSON.stringify(ag7.d);
+      assert.ok(!todo.includes('Secreto') && !todo.includes('Privada') && !todo.includes('private-abc'), 'nunca se guarda ni se devuelve el título, el lugar ni la dirección');
+      assert.deepEqual(ag7.d.calOcupado.filter((x) => x.fecha === MIE), [{ fecha: MIE, inicio_min: 900, fin_min: 960, persona: 'mia' }]);
+      assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, fecha: MIE, hora: '15:30', persona: 'mia', nombre: 'Cal', tel: '8440000300' }, ip: '10.0.1.1' })).status, 409, 'la página no aparta encima de su dentista');
+      assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, fecha: MIE, hora: '15:30', persona: 'fer', nombre: 'Cal', tel: '8440000300' }, ip: '10.0.1.1' })).status, 201, 'el calendario de Mía no cierra a Fernanda');
+      const pub = await api(`/api/atelier-mia/ocupado?desde=${MIE}&dias=1`);
+      assert.ok(pub.d.ocupado.some((o) => o.ini === 900 && o.fin === 960 && o.persona === 'mia') && !JSON.stringify(pub.d).includes('Dentista'));
+      paso('su calendario de Google: se conecta con la dirección secreta, la página da por ocupado lo que tenga ahí, y nunca se guarda el título, el lugar ni la dirección');
+
+      // Lo cambia en Google: cada 15 minutos se vuelve a leer
+      calHora = '17';
+      assert.equal((await fetch(URL0 + '/__scheduled?cron=' + encodeURIComponent('*/15 * * * *'))).status, 200);
+      for (let i = 0; i < 20; i++) { const a = await api('/api/atelier-mia/agenda', { token: tok }); if (a.d.calOcupado.some((x) => x.fecha === MIE && x.inicio_min === 1020)) break; await new Promise((r2) => setTimeout(r2, 300)); if (i === 19) throw new Error('el cron no volvió a leer el calendario'); }
+      assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, fecha: MIE, hora: '15:00', persona: 'mia', nombre: 'Cal2', tel: '8440000301' }, ip: '10.0.1.2' })).status, 201, 'las 3 quedaron libres otra vez');
+      // Deja de contestar: se avisa y se queda lo que ya se tenía
+      calStatus = 404;
+      const rv = await api(`/api/atelier-mia/calendarios/${con.d.id}/revisar`, { metodo: 'POST', token: tok });
+      assert.equal(rv.d.estado, 'error'); assert.match(rv.d.error, /ya no deja leerse/);
+      assert.ok((await api('/api/atelier-mia/agenda', { token: tok })).d.calOcupado.some((x) => x.fecha === MIE && x.inicio_min === 1020), 'si falla, se queda lo que ya se había leído');
+      calStatus = 200;
+      paso('su calendario se vuelve a leer cada 15 minutos; si deja de contestar se le avisa y se quedan las horas que ya se tenían');
+
+      // En la app: conectar desde Mis tiempos y verlo en Hoy
+      assert.equal((await api(`/api/atelier-mia/calendarios/${con.d.id}`, { metodo: 'DELETE', token: tok })).status, 200);
+      assert.equal((await api('/api/atelier-mia/agenda', { token: tok })).d.calOcupado.length, 0, 'desconectar borra sus horas');
+      calHora = '11';
+      await pg.click('[data-vista="tiempos"]'); await pg.waitForSelector('#abreCal');
+      await pg.click('[data-persona="mia"]'); await pg.waitForSelector('#abreCal');
+      assert.match(await pg.textContent('#abreCal'), /Conectar mi calendario/);
+      await pg.click('#abreCal'); await pg.waitForSelector('#fCal');
+      await pg.click('#calOk'); assert.match(await pg.textContent('#calFalta'), /Pega/);
+      await pg.fill('#calUrl', CAL_URL); await pg.click('#calOk');
+      await pg.waitForFunction(() => !document.getElementById('velo'));
+      await pg.waitForFunction(() => /Conectado/.test(document.getElementById('abreCal').textContent));
+      await pg.click('[data-vista="hoy"]'); await pg.click(`[data-dia="${MIE}"]`);
+      await pg.waitForFunction(() => /Ocupada en tu calendario/.test(document.querySelector('main').textContent));
+      assert.ok(!/Secreto/.test(await pg.textContent('main')));
+      await pg.click('[data-vista="tiempos"]'); await pg.click('#abreCal'); await pg.waitForSelector('#calRevisa');
+      pg.once('dialog', (dl) => dl.accept());
+      await pg.click('#calQuita'); await pg.waitForFunction(() => !document.getElementById('velo') && /Conectar mi calendario/.test(document.getElementById('abreCal').textContent));
+      assert.deepEqual(errores, []);
+      paso('en el navegador: «Conectar mi calendario» desde Mis tiempos; lo ocupado sale en Hoy como «Ocupada en tu calendario», sin títulos; y se desconecta');
+    } finally { calSrv.close(); }
+
     // La muestra también tiene Mis tiempos
     await ej.click('[data-vista="tiempos"]'); await ej.waitForSelector('#apartar');
     assert.match(await ej.textContent('main'), /Recoger a Santi/); assert.match(await ej.textContent('main'), /Vacaciones/);
@@ -401,6 +462,10 @@ try {
     await ej.waitForFunction(() => !document.getElementById('velo') || document.getElementById('hojaListo'));
     if (await ej.$('#hojaListo')) await ej.click('#hojaListo');
     if (CAP) await ej.screenshot({ path: CAP + '/ag-tiempos-ejemplo.png', fullPage: true });
+    assert.match(await ej.textContent('#abreCal'), /Conectado/, 'en la muestra, el calendario de Mía ya está conectado');
+    await ej.click('#abreCal'); await ej.waitForSelector('#calRevisa');
+    if (CAP) await ej.screenshot({ path: CAP + '/ag-calendario.png', fullPage: true });
+    await ej.keyboard.press('Escape');
     await ej.click('#editaHorario'); await ej.waitForSelector('#fHor');
     if (CAP) { await ej.setViewportSize({ width: 320, height: 700 }); await ej.screenshot({ path: CAP + '/ag-horario-320.png' }); }
     assert.ok(await ej.evaluate(() => document.querySelector('.hoja').scrollWidth <= document.querySelector('.hoja').clientWidth), 'el horario cabe a 320 px');
