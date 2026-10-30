@@ -12,6 +12,8 @@
 //   PUT  /api/:negocio/horario {persona, semana}            cuándo trabaja cada quien (Mis tiempos)
 //   POST /api/:negocio/repetidos · DELETE /api/:negocio/repetidos/:id   planes que se repiten
 //   POST /api/:negocio/calendarios {url, persona} · DELETE …/:id · POST …/:id/revisar   su calendario de Google (sólo horas ocupadas)
+//   GET  /api/:negocio/avisos · POST …/avisos/suscribir · …/quitar · PUT …/avisos/correo · POST …/avisos/prueba   avisos al celular y por correo
+//   POST /api/:negocio/avisos/pendientes {endpoint}       (sin clave) lo que el teléfono enseña al despertar
 //   GET  /api/:negocio/perfil                             nombre, equipo y página (lo que la agenda pinta)
 // De Solida (con la clave maestra):
 //   POST /api/admin/negocios {id, nombre, equipo?, pagina?}  dar de alta un negocio (o cambiarle la clave)
@@ -23,6 +25,7 @@
 
 import ARCHIVOS from './agenda.generados.js';
 import { horasOcupadas } from './ical.js';
+import { validaEndpoint, vapidPublica, avisa, pendientes, correoValido, correoDisponible, avisaCitaNueva, avisaPrueba } from './avisos.js';
 
 const DIAS_GUARDADO = 120;
 const CRON_CALENDARIOS = '*/15 * * * *';
@@ -34,10 +37,10 @@ const enc = new TextEncoder();
 export class ErrorHttp extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') return cors(new Response(null, { status: 204 }), request);
     try {
-      return cors(await enrutar(request, env), request);
+      return cors(await enrutar(request, env, ctx), request);
     } catch (e) {
       if (e instanceof ErrorHttp) return cors(json({ error: e.message }, e.status), request);
       console.error(e);
@@ -46,11 +49,11 @@ export default {
   },
   async scheduled(c, env, ctx) {
     // Cada 15 minutos se vuelven a leer los calendarios; una vez al día, además, se limpia lo viejo.
-    ctx.waitUntil(c.cron === CRON_CALENDARIOS ? sincronizaTodos(env) : limpia(env));
+    ctx.waitUntil(c.cron === CRON_CALENDARIOS ? Promise.all([sincronizaTodos(env), resumenesDeLaNoche(env)]) : limpia(env));
   },
 };
 
-async function enrutar(request, env) {
+async function enrutar(request, env, ctx) {
   const url = new URL(request.url);
   const ruta = url.pathname.replace(/\/+$/, '');
   const m = request.method;
@@ -81,7 +84,10 @@ async function enrutar(request, env) {
   if (sub === '/citas' && m === 'POST') {
     const dueña = await tokenValido(request, env, neg.id);
     if (!dueña) await limita(env, 'cita:' + neg.id + ':' + await ipDe(request, env), 6, 3600, 'Ya apartaste varias citas. Si necesitas otra, escríbele al negocio por WhatsApp.');
-    return json(await apartar(env, neg, await cuerpo(request), dueña), 201);
+    const { cita, ...res } = await apartar(env, neg, await cuerpo(request), dueña);
+    // La que llega de la página se le avisa a la dueña (celular y correo). La que capturó ella, no: ya la sabe.
+    if (!dueña) { const av = avisaCitaNueva(env, neg, { ...cita, folio: res.folio, persona: res.persona }, AGENDA, (id) => nombreEnEquipo(neg, id)).catch((e) => console.error('aviso', e)); if (ctx) ctx.waitUntil(av); else await av; }
+    return json(res, 201);
   }
   if (sub === '/entrar' && m === 'POST') {
     const ip = await ipDe(request, env);
@@ -90,6 +96,14 @@ async function enrutar(request, env) {
     const clave = normalizaClave(d.clave);
     if (!clave || await sha256(clave) !== neg.clave_hash) throw new ErrorHttp(401, 'Esa clave no es la de este negocio.');
     return json({ token: await firmaToken(env, neg.id), nombre: neg.nombre });
+  }
+
+  if (sub === '/avisos/pendientes' && m === 'POST') {
+    await limita(env, 'pend:' + neg.id + ':' + await ipDe(request, env), 120, 3600, 'Demasiadas consultas');
+    const ep = validaEndpoint((await cuerpo(request)).endpoint, env);
+    const l = ep ? await pendientes(env, neg.id, ep) : null;
+    if (!l) throw new ErrorHttp(404, 'No existe');
+    return json({ avisos: l });
   }
 
   // De aquí en adelante, sólo la dueña
@@ -108,6 +122,34 @@ async function enrutar(request, env) {
     return json({ ok: true });
   }
   if (sub === '/bloqueos' && m === 'POST') return json(await bloquear(env, neg, await cuerpo(request)), 201);
+  if (sub === '/avisos' && m === 'GET') return json(await estadoAvisos(env, neg));
+  if (sub === '/avisos/suscribir' && m === 'POST') {
+    const ep = validaEndpoint((await cuerpo(request)).endpoint, env);
+    if (!ep) throw new ErrorHttp(400, 'Ese teléfono no dio una dirección de avisos válida');
+    const ultimo = await env.DB.prepare('SELECT COALESCE(MAX(id),0) n FROM avisos WHERE negocio_id=?').bind(neg.id).first();
+    await env.DB.prepare('INSERT INTO suscripciones (negocio_id, endpoint, visto, creado) VALUES (?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET negocio_id=excluded.negocio_id, fallos=0')
+      .bind(neg.id, ep, ultimo.n, ahora()).run();
+    // Hasta 10 teléfonos por negocio: el más viejo sale.
+    await env.DB.prepare('DELETE FROM suscripciones WHERE negocio_id=? AND id NOT IN (SELECT id FROM suscripciones WHERE negocio_id=? ORDER BY id DESC LIMIT 10)').bind(neg.id, neg.id).run();
+    return json(await estadoAvisos(env, neg));
+  }
+  if (sub === '/avisos/quitar' && m === 'POST') {
+    const ep = validaEndpoint((await cuerpo(request)).endpoint, env);
+    if (ep) await env.DB.prepare('DELETE FROM suscripciones WHERE negocio_id=? AND endpoint=?').bind(neg.id, ep).run();
+    return json(await estadoAvisos(env, neg));
+  }
+  if (sub === '/avisos/correo' && m === 'PUT') {
+    const d = await cuerpo(request);
+    const correo = d.correo === undefined ? neg.correo : correoValido(d.correo);
+    if (d.correo !== undefined && String(d.correo).trim() && !correo) throw new ErrorHttp(400, 'Ese correo no se ve bien escrito');
+    const activo = d.activo !== undefined ? (d.activo && correo ? 1 : 0) : (neg.aviso_correo && correo ? 1 : 0);
+    await env.DB.prepare('UPDATE negocios SET correo=?, aviso_correo=? WHERE id=?').bind(correo || '', activo, neg.id).run();
+    return json(await estadoAvisos(env, { ...neg, correo: correo || '', aviso_correo: activo }));
+  }
+  if (sub === '/avisos/prueba' && m === 'POST') {
+    await limita(env, 'prueba:' + neg.id, 5, 3600, 'Ya mandaste varias pruebas. Espera un rato.');
+    return json(await avisaPrueba(env, neg, AGENDA));
+  }
   if (sub === '/calendarios' && m === 'POST') return json(await conectaCalendario(env, neg, await cuerpo(request)), 201);
   if ((p = sub.match(/^\/calendarios\/(\d+)$/)) && m === 'DELETE') {
     const id = Number(p[1]);
@@ -299,7 +341,7 @@ async function apartar(env, neg, d, deLaDueña) {
         AND (?17 = 1 OR NOT EXISTS (SELECT 1 FROM cal_ocupado WHERE negocio_id=?1 AND fecha=?3 AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))`)
       .bind(neg.id, folio, c.fecha, c.ini, c.fin, persona, c.servicio, c.diseno, c.detalle, c.precio, c.anticipo, c.nombre, c.tel,
         deLaDueña ? 'confirmada' : 'apartada', deLaDueña ? 'negocio' : 'pagina', ahora(), deLaDueña ? 1 : 0, wd).run();
-    if (r.meta.changes) return { folio, persona, estado: deLaDueña ? 'confirmada' : 'apartada' };
+    if (r.meta.changes) return { folio, persona, estado: deLaDueña ? 'confirmada' : 'apartada', cita: c };
   }
   throw new ErrorHttp(409, 'Esa hora ya no está disponible. Elige otra.');
 }
@@ -426,9 +468,31 @@ async function limpia(env) {
     env.DB.prepare('DELETE FROM citas WHERE fecha < ?').bind(corte),
     env.DB.prepare('DELETE FROM bloqueos WHERE fecha < ?').bind(corte),
     env.DB.prepare("DELETE FROM repetidos WHERE hasta <> '' AND hasta < ?").bind(corte),
+    env.DB.prepare('DELETE FROM avisos WHERE creado < ?').bind(ahora() - 7 * 86400),
     env.DB.prepare('DELETE FROM cal_ocupado WHERE fecha < ?').bind(sumaDias(hoyEn('America/Monterrey').fecha, -1)),
     env.DB.prepare('DELETE FROM intentos WHERE ventana < ?').bind(Math.floor(ahora() / 3600) - 48),
   ]);
+}
+
+// ───────── avisos ─────────
+function nombreEnEquipo(neg, id) { const p = perfilDe(neg).equipo.find((x) => x.id === id); return p ? p.nombre : ''; }
+async function estadoAvisos(env, neg) {
+  const n = await env.DB.prepare('SELECT COUNT(*) n FROM suscripciones WHERE negocio_id=?').bind(neg.id).first();
+  return { vapid: vapidPublica(env), telefonos: n ? n.n : 0, correo: neg.correo || '', avisoCorreo: !!neg.aviso_correo, correoDisponible: correoDisponible(env) };
+}
+// A partir de las 8 de la noche (hora del negocio), una vez al día: «Mañana tienes N citas».
+async function resumenesDeLaNoche(env) {
+  const negs = (await env.DB.prepare("SELECT n.* FROM negocios n WHERE n.activo=1 AND EXISTS (SELECT 1 FROM suscripciones s WHERE s.negocio_id=n.id)").all()).results;
+  for (const neg of negs) {
+    const h = hoyEn(neg.zona);
+    if ((h.min < 20 * 60 && env.RESUMEN_PRUEBA !== '1') || neg.resumen === h.fecha) continue;
+    await env.DB.prepare('UPDATE negocios SET resumen=? WHERE id=?').bind(h.fecha, neg.id).run();
+    const man = sumaDias(h.fecha, 1);
+    const r = await env.DB.prepare("SELECT COUNT(*) n, SUM(CASE WHEN recordada=0 THEN 1 ELSE 0 END) sin FROM citas WHERE negocio_id=? AND fecha=? AND estado<>'cancelada'").bind(neg.id, man).first();
+    if (!r || !r.n) continue;
+    await avisa(env, neg.id, { titulo: 'Mañana tienes ' + r.n + (r.n === 1 ? ' cita' : ' citas'),
+      cuerpo: r.sin ? 'Toca para mandarles su recordatorio por WhatsApp.' : 'Ya les mandaste su recordatorio a todas.', url: '/' + neg.id + '/' });
+  }
 }
 
 // ───────── su calendario de Google, iCloud u Outlook ─────────

@@ -14,3 +14,27 @@ self.addEventListener('fetch', (e) => {
     return r;
   }).catch(() => caches.match(e.request)));
 });
+
+// Avisos: llega una señal sin datos; se le pregunta al servidor qué hay de nuevo y se enseña.
+const NEGOCIO = new URL(self.registration.scope).pathname.split('/')[1];
+self.addEventListener('push', (e) => {
+  e.waitUntil(self.registration.pushManager.getSubscription()
+    .then((sub) => sub ? fetch('/api/' + NEGOCIO + '/avisos/pendientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) })
+      .then((r) => (r.ok ? r.json() : { avisos: [] })) : { avisos: [] })
+    .catch(() => ({ avisos: [] }))
+    .then((d) => {
+      const l = d.avisos || [];
+      const op = (a) => ({ body: a.cuerpo, icon: '/_app/icono-192.png', badge: '/_app/icono-192.png', tag: 'aviso-' + a.id, data: { url: a.url || '/' + NEGOCIO + '/' } });
+      if (!l.length) return self.registration.showNotification('Tu agenda', { body: 'Tienes novedades en tu agenda.', icon: '/_app/icono-192.png', tag: 'agenda', data: { url: '/' + NEGOCIO + '/' } });
+      return Promise.all(l.map((a) => self.registration.showNotification(a.titulo, op(a))));
+    }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || '/' + NEGOCIO + '/', self.location.origin).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ws) => {
+    const w = ws.find((x) => new URL(x.url).pathname.startsWith('/' + NEGOCIO + '/'));
+    if (w) return w.focus().then(() => (w.navigate ? w.navigate(url) : null)).catch(() => self.clients.openWindow(url));
+    return self.clients.openWindow(url);
+  }));
+});

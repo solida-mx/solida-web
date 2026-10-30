@@ -229,3 +229,14 @@ select.campo{appearance:auto}
 .cambiar{margin-top:14px}
 .cambiar summary{min-height:44px;display:flex;align-items:center;color:var(--oro-txt);font-size:13.5px;cursor:pointer}
 .guardamos a{color:var(--oro);min-height:32px;display:inline-flex;align-items:center}
+
+/* Avisos */
+.cab-fila .mas{margin-left:4px}
+.campana{display:flex;align-items:center;justify-content:center}
+.invita{margin-top:16px;padding:14px;border:1px solid #e7d3a8;background:var(--oro-suave);display:flex;flex-direction:column;gap:10px}
+.invita b{display:block;font:600 19px var(--serif)}
+.invita span{font-size:13px;color:var(--gris)}
+.noti-muestra{display:flex;gap:12px;align-items:flex-start;margin-top:8px;padding:12px 14px;border-radius:18px;background:#fffdf9;box-shadow:0 6px 20px rgba(0,0,0,.12)}
+.noti-muestra .sello{background:var(--negro)}
+.noti-muestra b{display:block;font:600 14px var(--sans)}
+.noti-muestra span:not(.sello){font-size:13px;color:#3a332d}
