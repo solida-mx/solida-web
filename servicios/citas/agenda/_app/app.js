@@ -75,11 +75,19 @@
       '<div class="etq" style="color:var(--oro);margin-top:14px">' + esc(perfil.nombre) + '</div><h1 class="titulo" style="margin-top:6px">Tu agenda</h1>' +
       '<p>Sólo para ti. Tus clientas apartan en tu página; aquí ves y manejas todo.</p></section>' +
       '<div class="envoltura"><form class="forma" id="fEntrar"><label><span class="etq" style="color:var(--oro-txt)">Tu clave</span>' +
-      '<input class="campo clave" id="clave" autocomplete="current-password" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" required></label>' +
+      '<input class="campo clave" id="clave" autocomplete="current-password" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="14" placeholder="XXXX-XXXX-XXXX" required></label>' +
       '<p class="falta" id="falta" role="alert"></p><button class="btn negro bloque">Entrar</button>' +
       '<p class="nota">Se queda abierta 30 días en este teléfono. La clave te la da Solida Aplicaciones; si la perdiste, escríbenos y te damos otra.</p></form>' +
       tarjetaInstalar() + '</div>';
     pintaInstalar();
+    // Los guiones se ponen solos: ella sólo escribe las letras y los números (y en minúsculas también sirve).
+    var cl = document.getElementById('clave');
+    cl.addEventListener('input', function () {
+      var limpio = cl.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+      var conGuiones = limpio.replace(/(.{4})(?=.)/g, '$1-');
+      if (cl.value !== conGuiones) cl.value = conGuiones;
+      document.getElementById('falta').textContent = '';
+    });
     document.getElementById('fEntrar').onsubmit = function (e) {
       e.preventDefault();
       var b = e.target.querySelector('button'), f = document.getElementById('falta');

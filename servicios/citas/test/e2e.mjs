@@ -178,7 +178,10 @@ try {
     if (CAP) await pg.screenshot({ path: CAP + '/ag-entrar.png', fullPage: true });
     await pg.fill('#clave', 'MALA-MALA-MALA'); await pg.click('#fEntrar button');
     await pg.waitForFunction(() => document.getElementById('falta').textContent.length > 0);
-    await pg.fill('#clave', CLAVE2); await pg.click('#fEntrar button');
+    // Los guiones se ponen solos mientras escribe, y las minúsculas pasan a mayúsculas
+    await pg.fill('#clave', ''); await pg.type('#clave', CLAVE2.replace(/-/g, '').toLowerCase());
+    assert.equal(await pg.inputValue('#clave'), CLAVE2, 'los guiones aparecen solos');
+    await pg.click('#fEntrar button');
     await pg.waitForSelector('.cab');
     if (CAP) await pg.screenshot({ path: CAP + '/ag-agenda.png', fullPage: true });
     await pg.click('[data-vista="semana"]'); await pg.waitForSelector('.sem-dia');
