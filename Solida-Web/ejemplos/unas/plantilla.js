@@ -16,15 +16,28 @@
   // En el ejemplo se quedan en el propio teléfono, para que nadie deje sus datos en un negocio que no existe.
   var SERVIDOR = (NIVEL === 'avanzado' || NIVEL === 'citas') && N.citasApi && !N.ejemplo ? String(N.citasApi).replace(/\/+$/, '') : '';
   var ocupadoSrv = null, horarioSrv = null;   // horarioSrv: el que la dueña puso en su agenda («Mis tiempos»), si puso uno
-  var AGENDA = (function () {
+  var AGENDA_DUENA = (function () {   // la dirección de la agenda de la dueña (otra cosa que AGENDA, que dice si el paquete trae agenda)
     if (N.agendaUrl) return N.agendaUrl;
     var m = SERVIDOR.match(/^https:\/\/citas\.([^/]+)\/api\/([a-z0-9-]+)$/);
     return m ? 'https://agenda.' + m[1] + '/' + m[2] + '/' : 'https://agenda.solidaaplicaciones.com/ejemplo/';
   })();
+  // La app de la clienta: su teléfono se identifica con un número al azar (sin cuenta) y recuerda sus datos.
+  var LLAVE_DISP = 'citas:disp:' + SERVIDOR, LLAVE_YO = 'citas:yo:' + SERVIDOR;
+  function dispCliente(crear) {
+    var t = ''; try { t = localStorage.getItem(LLAVE_DISP) || ''; } catch (e) {}
+    if (!t && crear) {
+      var b = crypto.getRandomValues(new Uint8Array(24));
+      t = btoa(String.fromCharCode.apply(null, b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      try { localStorage.setItem(LLAVE_DISP, t); } catch (e) {}
+    }
+    return t;
+  }
+  function yo() { try { return JSON.parse(localStorage.getItem(LLAVE_YO)) || {}; } catch (e) { return {}; } }
   function pide(ruta, op) {
     op = op || {};
     var h = { 'Content-Type': 'application/json' };
     if (op.token) h.Authorization = 'Bearer ' + op.token;
+    if (op.disp && dispCliente()) h['X-Dispositivo'] = dispCliente();
     return fetch(SERVIDOR + ruta, { method: op.metodo || 'GET', headers: h, body: op.body ? JSON.stringify(op.body) : undefined })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d }; }); });
   }
@@ -78,7 +91,7 @@
   // ───── la lista de citas del dueño (avanzado/citas) ─────
   // La agenda de la dueña ya no vive dentro de la página: tiene su propia dirección (agenda.solidaaplicaciones.com/<negocio>/).
   // /citas/ queda sólo para que no se pierda quien la tenía guardada.
-  if (NIVEL === 'citas') { location.replace(AGENDA); return; }
+  if (NIVEL === 'citas') { location.replace(AGENDA_DUENA); return; }
 
   // ───── la página ─────
   var disenos = NIVEL === 'basico' ? N.disenos.slice(0, 20) : N.disenos;
@@ -144,7 +157,7 @@
         (x[1] == null ? 'Cerrado' : esc(hora12(hhmm(x[1] * 60)) + ' – ' + hora12(hhmm(x[2] * 60)))) + '</span>';
     }).join('') + '</div></div></div></div></section>';
 
-  h += '<footer class="pie">' + (TOTAL && N.ejemplo ? '<a href="' + esc(AGENDA) + '" style="display:inline-flex;align-items:center;min-height:44px;margin-bottom:10px">Ver la agenda de la dueña (ejemplo) ›</a><br>' : '') +
+  h += '<footer class="pie">' + (TOTAL && N.ejemplo ? '<a href="' + esc(AGENDA_DUENA) + '" style="display:inline-flex;align-items:center;min-height:44px;margin-bottom:10px">Ver la agenda de la dueña (ejemplo) ›</a><br>' : '') +
     esc(N.nombre) + ' · ' + esc(N.giro) + '<br>Página hecha por <a href="https://solidaaplicaciones.com" target="_blank" rel="noopener">Solida Aplicaciones</a></footer>';
   h += '<div class="velo" id="velo"></div><section class="hoja" id="hoja" role="dialog" aria-modal="true" aria-labelledby="hojaTit"></section><div class="toast" id="toast" role="status" aria-live="polite"></div>';
   document.body.innerHTML = h;
@@ -254,7 +267,8 @@
       });
       return;
     }
-    var c = Object.assign({ persona: (N.equipo || []).length === 1 ? N.equipo[0].id : '' }, c0);
+    var y = SERVIDOR ? yo() : {};
+    var c = Object.assign({ persona: (N.equipo || []).length === 1 ? N.equipo[0].id : '', nombre: y.nombre || '', tel: y.tel || '', correo: y.correo || '' }, c0);
     var dias = diasDisponibles();
     if (!c.fecha) c.fecha = dias[0];
     var pinta = function (msg) {
@@ -293,22 +307,23 @@
           return '<button class="op" type="button" data-hora="' + x.hora + '" aria-pressed="' + (c.hora === x.hora) + '"' + (x.ocupada ? ' disabled aria-label="' + hora12(x.hora) + ', ocupada"' : '') + '>' + hora12(x.hora) + '</button>';
         }).join('') + '</div>' + (TOTAL ? '<p class="aviso">Las horas tachadas ya están apartadas.</p>' : '') : '<p class="aviso">Ese día ya no hay horas. Elige otro.</p>') + '</div>';
         // 5 · datos
-        html += '<div class="paso"><span class="etq">5 · Tus datos</span>' +
+        if (!c.mover) html += '<div class="paso"><span class="etq">5 · Tus datos</span>' +
           '<label class="campo">Tu nombre<input id="cNombre" autocomplete="name" value="' + esc(c.nombre || '') + '"></label>' +
-          '<label class="campo">Tu WhatsApp<input id="cTel" inputmode="tel" autocomplete="tel" placeholder="10 dígitos" value="' + esc(c.tel || '') + '"></label></div>';
+          '<label class="campo">Tu WhatsApp<input id="cTel" inputmode="tel" autocomplete="tel" placeholder="10 dígitos" value="' + esc(c.tel || '') + '"></label>' +
+          (SERVIDOR ? '<label class="campo">Tu correo <small style="text-transform:none;letter-spacing:0;font-weight:300">(opcional, para avisarte si cambia algo)</small><input id="cCorreo" type="email" inputmode="email" autocomplete="email" value="' + esc(c.correo || '') + '"></label>' : '') + '</div>';
         // resumen
         html += '<div class="resumen"><b>' + (c.hora ? esc(fechaLarga(c.fecha)) + ' · ' + hora12(c.hora) : 'Elige día y hora') + '</b>' +
           '<div class="fila"><span>' + esc(d ? d.nombre : s.nombre) + (esUnas(s) && c.largo != null ? ' · ' + esc(N.largos[c.largo][0]) : '') + '</span><span>' + pesos(precioDe(c)) + '</span></div>' +
           (c.persona ? '<div class="fila"><span>Con ' + esc(personaDe(c.persona).nombre) + '</span><span>' + esc(duracion(s.min)) + '</span></div>' : '') +
           (TOTAL && N.anticipo ? '<div class="fila ant"><span>Anticipo para apartar</span><span>' + pesos(N.anticipo) + '</span></div>' : '') + '</div>';
         html += '<p class="falta" id="falta" role="alert">' + esc(msg || '') + '</p>';
-        html += '<button class="btn btn-negro btn-bloque" type="button" data-confirma>' + (TOTAL ? 'Apartar mi cita' : 'Pedir mi cita') + '</button>';
+        html += '<button class="btn btn-negro btn-bloque" type="button" data-confirma>' + (c.mover ? 'Cambiar a esta hora' : TOTAL ? 'Apartar mi cita' : 'Pedir mi cita') + '</button>';
         html += '<p class="aviso">' + (TOTAL ? 'Al apartar te damos tu ticket y el enlace para el anticipo.' : 'Te damos tu ticket para mandarlo por WhatsApp y te confirmamos.') + '</p>';
       }
       var y = hoja.classList.contains('on') ? hoja.scrollTop : 0;
       abre(html); hoja.scrollTop = y;
       hoja.querySelector('.cerrar').onclick = cierra;
-      var lee = function () { var n = hoja.querySelector('#cNombre'), t = hoja.querySelector('#cTel'); if (n) c.nombre = n.value; if (t) c.tel = t.value; };
+      var lee = function () { var n = hoja.querySelector('#cNombre'), t = hoja.querySelector('#cTel'), m = hoja.querySelector('#cCorreo'); if (n) c.nombre = n.value; if (t) c.tel = t.value; if (m) c.correo = m.value; };
       var on = function (sel, f) { hoja.querySelectorAll(sel).forEach(function (b) { b.onclick = function () { lee(); f(b); pinta(); }; }); };
       on('[data-cambia]', function () { c.servicio = ''; c.diseno = ''; c.largo = null; });
       on('[data-serv]', function (b) { c.servicio = b.getAttribute('data-serv'); c.largo = esUnas(servicioDe(c.servicio)) ? 1 : null; });
@@ -322,6 +337,7 @@
         lee();
         var tel = String(c.tel || '').replace(/\D/g, '');
         if (!c.hora) return pinta('Elige una hora.');
+        if (c.mover) return mueveMiCita(c);
         if (String(c.nombre || '').trim().length < 2) return pinta('Escribe tu nombre.');
         if (tel.length < 10) return pinta('Escribe tu WhatsApp a 10 dígitos.');
         c.tel = tel.slice(-10);
@@ -343,8 +359,15 @@
     };
     if (SERVIDOR) {
       var btn = hoja.querySelector('[data-confirma]'); if (btn) { btn.disabled = true; btn.textContent = 'Apartando…'; }
-      pide('/citas', { metodo: 'POST', body: Object.assign({}, cita, { equipo: (N.equipo || []).map(function (p) { return p.id; }) }) }).then(function (x) {
-        if (x.status === 201) { cita.folio = x.d.folio; cita.persona = x.d.persona || cita.persona; ocupadoSrv = null; muestraTicket(cita); return; }
+      var correo = String(c.correo || '').trim();
+      pide('/citas', { metodo: 'POST', body: Object.assign({}, cita, { equipo: (N.equipo || []).map(function (p) { return p.id; }), disp: dispCliente(true), correo: correo }) }).then(function (x) {
+        if (x.status === 201) {
+          cita.folio = x.d.folio; cita.persona = x.d.persona || cita.persona; ocupadoSrv = null;
+          try { localStorage.setItem(LLAVE_YO, JSON.stringify({ nombre: cita.nombre, tel: cita.tel, correo: correo })); } catch (e) {}
+          muestraTicket(cita);
+          if (window.__clienta) window.__clienta.refresca();
+          return;
+        }
         if (x.status === 409) { ocupadoSrv = null; c.hora = ''; agenda(c, x.d.error || 'Esa hora ya se ocupó. Elige otra.'); return; }
         agenda(c, x.d.error || 'No se pudo apartar. Inténtalo de nuevo.');
       }, function () { agenda(c, 'Sin conexión. Inténtalo de nuevo.'); });
@@ -352,6 +375,15 @@
     }
     if (TOTAL) { var l = leeCitas(); l.push(cita); guardaCitas(l); }
     muestraTicket(cita);
+  }
+  // Cambiar el día o la hora de una cita desde «Mis citas»
+  function mueveMiCita(c) {
+    var btn = hoja.querySelector('[data-confirma]'); if (btn) { btn.disabled = true; btn.textContent = 'Cambiando…'; }
+    pide('/mis-citas/' + encodeURIComponent(c.mover) + '/mover', { metodo: 'POST', disp: true, body: { fecha: c.fecha, hora: c.hora } }).then(function (x) {
+      if (x.status === 200) { ocupadoSrv = null; cierra(); toast('Listo: tu cita quedó el ' + fechaLarga(c.fecha) + ' a las ' + hora12(c.hora) + '. ' + N.nombre + ' te la confirma.'); if (window.__clienta) window.__clienta.refresca(); return; }
+      ocupadoSrv = null; if (x.status === 409) c.hora = '';
+      agenda(c, x.d.error || 'No se pudo cambiar. Inténtalo de nuevo.');
+    }, function () { agenda(c, 'Sin conexión. Inténtalo de nuevo.'); });
   }
   function muestraTicket(cita) {
     var p = cita.persona ? personaDe(cita.persona) : null;
@@ -376,7 +408,9 @@
           : '<p class="aviso" style="margin:0">En tu página, aquí va el botón para pagar el anticipo a tu cuenta.</p>') : '') +
         '<button class="btn btn-negro btn-bloque" type="button" data-envia>Enviar a ' + esc(N.nombre) + ' por WhatsApp</button>' +
         '<a class="btn btn-linea btn-bloque" href="' + url + '" download="cita-' + esc(cita.folio) + '.png">Guardar mi ticket</a></div>' +
-        '<p class="aviso">' + (compartible ? 'Se abre WhatsApp con tu ticket listo para mandar.' : 'Guarda tu ticket y mándalo en el chat que se abre.') + '</p>');
+        '<p class="aviso">' + (compartible ? 'Se abre WhatsApp con tu ticket listo para mandar.' : 'Guarda tu ticket y mándalo en el chat que se abre.') + '</p>' +
+        (SERVIDOR ? '<div id="clientaTicket"></div>' : ''));
+      if (SERVIDOR && window.__clienta) window.__clienta.enTicket(document.getElementById('clientaTicket'), cita);
       hoja.querySelector('.cerrar').onclick = cierra;
       hoja.querySelector('[data-envia]').onclick = function () {
         if (compartible) {
@@ -465,5 +499,14 @@
       x.fillStyle = 'rgba(201,169,110,.7)'; x.font = serif('italic 500', 17); x.fillText('Te esperamos', W / 2, by + 132);
       return cv;
     });
+  }
+
+  // ───── la app de la clienta (sólo con el servicio de citas): Mis citas, avisos e instalarla ─────
+  if (SERVIDOR) {
+    window.__cita = { agenda: agenda, abre: abre, cierra: cierra, toast: toast, pide: pide, esc: esc, disp: dispCliente, yo: yo,
+      hora12: function (m) { return hora12(hhmm(m)); }, fechaLarga: fechaLarga, hhmm: hhmm, servicioDe: servicioDe, personaDe: personaDe, CERRAR: CERRAR };
+    var sc = document.createElement('script');
+    sc.src = (document.currentScript && document.currentScript.src ? document.currentScript.src : (N.base || '') + 'plantilla.js').replace(/plantilla\.js(\?.*)?$/, 'app-clienta.js');
+    document.body.appendChild(sc);
   }
 })();

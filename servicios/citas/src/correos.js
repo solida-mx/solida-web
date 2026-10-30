@@ -96,3 +96,35 @@ export function correoPrueba(neg, telefonos, correo, base) {
   'Funciona: así te llega el respaldo', '');
   return { html, texto: 'Éste es el correo de respaldo de tu agenda de ' + neg.nombre + '. Sólo te escribimos aquí si llega una cita y en ninguno de tus teléfonos están activos los avisos.\n\nAbrir mi agenda: ' + agenda };
 }
+
+// ── a la clienta ──
+const fechaLarga = (f) => { const d = new Date(f + 'T12:00:00Z'); return ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][d.getUTCDay()] + ' ' + d.getUTCDate() + ' de ' + ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][d.getUTCMonth()]; };
+const may = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+// La dueña le propone otra hora: antes y ahora, y tres botones para contestar.
+export function correoPropuesta(neg, c, quien, link, hasta) {
+  const servicio = (c.diseno ? c.diseno + ' (' + c.servicio + ')' : c.servicio) + (quien ? ' con ' + quien : '');
+  const filaTx = (et, v, color, tachado) => `<tr><td style="padding:10px 0;border-bottom:1px solid #efe7da;font-family:${SANS};font-size:14px;color:${C.gris}">${esc(et)}</td>` +
+    `<td align="right" style="padding:10px 0;border-bottom:1px solid #efe7da;font-family:${SANS};font-size:14px;font-weight:bold;color:${color};${tachado ? 'text-decoration:line-through;font-weight:normal' : ''}">${esc(v)}</td></tr>`;
+  const html = marco(neg, `<tr><td style="padding:0 16px"><div style="margin-top:-18px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.papel}" style="border:1px solid ${C.linea}">` +
+    `<tr><td align="center" style="padding:20px 18px 16px"><div style="font-family:${SANS};font-size:11px;letter-spacing:3px;text-transform:uppercase;color:${C.oroTxt}">Tu cita cambió de hora</div>` +
+    `<div style="font-family:${SERIF};font-size:27px;line-height:31px;color:${C.negro};margin-top:8px">Hola ${esc(c.nombre)}, te proponemos una hora nueva</div>` +
+    `<div style="font-family:${SANS};font-size:14px;line-height:20px;color:${C.gris};margin-top:8px">A ${esc(quien || neg.nombre)} se le atravesó algo. Te apartó la primera hora libre.</div></td></tr>` +
+    separador() + `<tr><td style="padding:8px 18px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    filaTx('Antes', may(fechaLarga(c.antes_fecha)) + ' · ' + hora12(c.antes_ini), C.rojo, true) + filaTx('Ahora', may(fechaLarga(c.fecha)) + ' · ' + hora12(c.ini), C.verde) +
+    filaTx('Servicio', servicio, C.negro) + `</table></td></tr>` + separador() +
+    `<tr><td style="padding:16px 18px 6px">${boton('Me queda', link + '&r=acepto', true)}<div style="height:8px;line-height:8px;font-size:8px">&nbsp;</div>${boton('Elegir otra hora', link, false)}</td></tr>` +
+    `<tr><td align="center" style="padding:6px 18px 18px"><a href="${esc(link + '&r=cancelo')}" target="_blank" style="font-family:${SANS};font-size:13px;color:${C.rojo}">Cancelar mi cita</a></td></tr></table></div></td></tr>`,
+  'Antes ' + hora12(c.antes_ini) + ' · ahora ' + hora12(c.ini), 'Te guardamos la hora nueva hasta ' + hasta + '.');
+  const texto = 'Hola ' + c.nombre + ', ' + neg.nombre + ' te propone una hora nueva para tu cita.\n\nAntes: ' + fechaLarga(c.antes_fecha) + ' · ' + hora12(c.antes_ini) +
+    '\nAhora: ' + fechaLarga(c.fecha) + ' · ' + hora12(c.ini) + '\nServicio: ' + servicio + '\n\nContesta aquí (me queda, otra hora o cancelar): ' + link;
+  return { html, texto };
+}
+export function correoCancelada(neg, c, quien, pagina) {
+  const html = marco(neg, `<tr><td style="padding:0 16px"><div style="margin-top:-18px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.papel}" style="border:1px solid ${C.linea}">` +
+    `<tr><td align="center" style="padding:20px 18px 18px"><div style="font-family:${SANS};font-size:11px;letter-spacing:3px;text-transform:uppercase;color:${C.rojo}">Cita cancelada</div>` +
+    `<div style="font-family:${SERIF};font-size:27px;line-height:31px;color:${C.negro};margin-top:8px">Hola ${esc(c.nombre)}, tu cita se canceló</div>` +
+    `<div style="font-family:${SANS};font-size:14px;line-height:20px;color:${C.gris};margin-top:8px">${esc(may(fechaLarga(c.fecha)) + ' · ' + hora12(c.ini) + ' · ' + c.servicio + (quien ? ' con ' + quien : ''))}</div></td></tr>` +
+    (pagina ? `<tr><td style="padding:0 18px 18px">${boton('Agendar otra vez', pagina, true)}</td></tr>` : '') + `</table></div></td></tr>`,
+  'Tu cita del ' + fechaLarga(c.fecha) + ' se canceló', '');
+  return { html, texto: 'Hola ' + c.nombre + ', tu cita en ' + neg.nombre + ' del ' + fechaLarga(c.fecha) + ' a las ' + hora12(c.ini) + ' se canceló.' + (pagina ? '\n\nAgendar otra vez: ' + pagina : '') };
+}

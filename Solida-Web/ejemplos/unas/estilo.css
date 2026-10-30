@@ -158,3 +158,42 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .reveal.on{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}.reveal{opacity:1;transform:none}}
 [hidden]{display:none!important}
+
+/* ── La app de la clienta: Mis citas, instalarla y avisos ── */
+.cl-sec{padding:34px 0 10px;background:var(--marfil)}
+.cl-sec[hidden]{display:none}
+.cl-link{color:var(--oro);font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;margin-left:auto;margin-right:10px;white-space:nowrap}
+.cab .marca{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cab .btn{white-space:nowrap}
+.cl-prox{margin-top:14px;background:var(--papel);border:1px solid var(--linea);padding:16px}
+.cl-fila{display:flex;gap:12px;align-items:stretch;margin-top:10px}
+.cl-dia{width:66px;flex:none;background:var(--tinta);color:var(--marfil);text-align:center;padding:8px 0;display:flex;flex-direction:column;justify-content:center}
+.cl-dia small{font-size:10px;letter-spacing:.2em;color:var(--oro)}
+.cl-dia b{font-family:var(--serif);font-size:30px;line-height:1;font-weight:600}
+.cl-t{display:block;font-family:var(--serif);font-size:21px;font-weight:600;line-height:1.2}
+.cl-s{display:block;font-size:13px;color:var(--suave)}
+.cl-pill{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;margin-top:6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.cl-acc{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:14px}
+.cl-acc .btn{min-height:46px;padding:0 8px}
+.cl-prop{margin-top:12px;padding:12px;background:#f3e6d8;font-size:14px;line-height:1.5}
+.cl-prop s{color:var(--suave)}
+.cl-repite{margin-top:16px;min-height:56px}
+.cl-hist{margin-top:22px}
+.cl-h{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--linea)}
+.cl-h>span{width:70px;flex:none;font-size:12px;color:var(--oro-txt);letter-spacing:.06em;text-transform:uppercase;padding-top:2px}
+.cl-h b{display:block;font-family:var(--serif);font-size:18px;font-weight:600;line-height:1.2}
+.cl-h small{font-size:12.5px;color:var(--suave)}
+.cl-card{margin-top:14px;padding:14px;border:1px solid var(--oro-claro);background:#f3ead8;display:flex;flex-direction:column;gap:10px}
+.cl-card>b{font-family:var(--serif);font-size:20px;font-weight:600}
+.cl-card>span{font-size:13px;color:var(--suave)}
+.cl-app{display:flex;gap:12px;align-items:center}
+.cl-app b{display:block;font-family:var(--serif);font-size:19px;font-weight:600;line-height:1.2}
+.cl-app span{font-size:13px;color:var(--suave)}
+.cl-sello{width:48px;height:48px;flex:none;border-radius:999px;background:var(--tinta);border:1.5px solid var(--oro);color:var(--oro);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:19px;font-weight:600}
+.cl-nota{margin:0;font-size:13px;line-height:1.45;color:var(--tinta)}
+.cl-ok{margin:12px 0 0;font-size:13px;color:#2f6b45}
+.cl-paso{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--linea)}
+.cl-paso .n{width:28px;height:28px;flex:none;border-radius:999px;background:var(--tinta);color:var(--oro);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:15px;font-weight:600}
+.cl-paso b{display:block;font-family:var(--serif);font-size:18px;font-weight:600}
+.cl-paso span{font-size:13.5px;line-height:1.45;color:var(--suave)}
+.cl-ico{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 4px;border:2px solid #2f6bd6;border-radius:6px;color:#2f6bd6;font-weight:700;font-size:14px;vertical-align:middle}

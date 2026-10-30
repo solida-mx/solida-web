@@ -14,6 +14,12 @@
 //   POST /api/:negocio/calendarios {url, persona} · DELETE …/:id · POST …/:id/revisar   su calendario de Google (sólo horas ocupadas)
 //   GET  /api/:negocio/avisos · POST …/avisos/suscribir · …/quitar · PUT …/avisos/correo · POST …/avisos/prueba   avisos al celular y por correo
 //   POST /api/:negocio/avisos/pendientes {endpoint}       (sin clave) lo que el teléfono enseña al despertar
+//   POST /api/:negocio/mover/sugerir · …/mover/proponer   «Se me atravesó algo»: proponer hora nueva a las clientas
+//   PUT  /api/:negocio/avisos/clientas {recordar}          cuándo se les recuerda (60 | 120 | dia60)
+// De la clienta (su teléfono, con la cabecera X-Dispositivo; sin cuenta):
+//   GET  /api/:negocio/mis-citas · POST …/mis-citas/:folio/cancelar · …/mover {fecha, hora}
+//   GET|POST /api/:negocio/mis-avisos · POST …/mis-avisos/quitar          avisos en su teléfono
+//   GET|POST /api/:negocio/propuesta/:folio (?t= o X-Dispositivo)          contestar «te proponemos otra hora»
 //   GET  /api/:negocio/perfil                             nombre, equipo y página (lo que la agenda pinta)
 // De Solida (con la clave maestra):
 //   POST /api/admin/negocios {id, nombre, equipo?, pagina?}  dar de alta un negocio (o cambiarle la clave)
@@ -24,8 +30,9 @@
 // Una vez al día se borran las citas de hace más de 120 días: no guardamos datos de nadie más de lo necesario.
 
 import ARCHIVOS from './agenda.generados.js';
-import { horasOcupadas } from './ical.js';
-import { validaEndpoint, vapidPublica, avisa, pendientes, correoValido, correoDisponible, avisaCitaNueva, avisaPrueba } from './avisos.js';
+import { horasOcupadas, aInstante } from './ical.js';
+import { validaEndpoint, vapidPublica, avisa, pendientes, correoValido, correoDisponible, avisaCitaNueva, avisaPrueba, mandaCorreo } from './avisos.js';
+import { correoPropuesta, correoCancelada } from './correos.js';
 
 const DIAS_GUARDADO = 120;
 const CRON_CALENDARIOS = '*/15 * * * *';
@@ -49,7 +56,7 @@ export default {
   },
   async scheduled(c, env, ctx) {
     // Cada 15 minutos se vuelven a leer los calendarios; una vez al día, además, se limpia lo viejo.
-    ctx.waitUntil(c.cron === CRON_CALENDARIOS ? Promise.all([sincronizaTodos(env), resumenesDeLaNoche(env)]) : limpia(env));
+    ctx.waitUntil(c.cron === CRON_CALENDARIOS ? Promise.all([sincronizaTodos(env), resumenesDeLaNoche(env), recordatoriosClientas(env)]) : limpia(env));
   },
 };
 
@@ -98,6 +105,38 @@ async function enrutar(request, env, ctx) {
     return json({ token: await firmaToken(env, neg.id), nombre: neg.nombre });
   }
 
+  // ── de la clienta ──
+  if (sub.startsWith('/mis-') || sub.startsWith('/propuesta/')) {
+    await limita(env, 'cli:' + neg.id + ':' + await ipDe(request, env), 240, 3600, 'Demasiadas consultas. Espera un rato.');
+    const disp = await dispDe(request);
+    if (sub === '/mis-avisos' && m === 'GET') return json({ vapid: vapidPublica(env) });
+    if ((p = sub.match(/^\/propuesta\/([A-Z0-9-]{4,20})$/))) {
+      const t = m === 'GET' ? url.searchParams.get('t') || '' : String((await cuerpoCopia(request)).t || '');
+      const c = await citaDeClienta(env, neg, p[1], t, disp);
+      if (m === 'GET') return json(await vistaPropuesta(env, neg, c));
+      if (m === 'POST') return json(await contestaPropuesta(env, neg, c, await cuerpo(request), ctx));
+    }
+    if (!disp) throw new ErrorHttp(401, 'Este teléfono todavía no tiene citas aquí.');
+    if (sub === '/mis-citas' && m === 'GET') return json(await misCitas(env, neg, disp));
+    if ((p = sub.match(/^\/mis-citas\/([A-Z0-9-]{4,20})\/(cancelar|mover)$/)) && m === 'POST') {
+      const c = await citaDeClienta(env, neg, p[1], '', disp);
+      return json(p[2] === 'cancelar' ? await cancelaClienta(env, neg, c, ctx) : await mueveClienta(env, neg, c, await cuerpo(request), ctx));
+    }
+    if (sub === '/mis-avisos' && m === 'POST') {
+      const ep = validaEndpoint((await cuerpo(request)).endpoint, env);
+      if (!ep) throw new ErrorHttp(400, 'Este teléfono no dio una dirección de avisos válida');
+      const ultimo = await env.DB.prepare('SELECT COALESCE(MAX(id),0) n FROM avisos WHERE negocio_id=?').bind(neg.id).first();
+      await env.DB.prepare('INSERT INTO suscripciones (negocio_id, endpoint, visto, creado, disp) VALUES (?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET negocio_id=excluded.negocio_id, disp=excluded.disp, fallos=0')
+        .bind(neg.id, ep, ultimo.n, ahora(), disp).run();
+      return json({ ok: true });
+    }
+    if (sub === '/mis-avisos/quitar' && m === 'POST') {
+      const ep = validaEndpoint((await cuerpo(request)).endpoint, env);
+      if (ep) await env.DB.prepare('DELETE FROM suscripciones WHERE negocio_id=? AND endpoint=? AND disp=?').bind(neg.id, ep, disp).run();
+      return json({ ok: true });
+    }
+    throw new ErrorHttp(404, 'No existe');
+  }
   if (sub === '/avisos/pendientes' && m === 'POST') {
     await limita(env, 'pend:' + neg.id + ':' + await ipDe(request, env), 120, 3600, 'Demasiadas consultas');
     const ep = validaEndpoint((await cuerpo(request)).endpoint, env);
@@ -114,6 +153,8 @@ async function enrutar(request, env, ctx) {
     if (!['confirmada', 'cancelada', 'apartada'].includes(d.estado)) throw new ErrorHttp(400, 'Estado no válido');
     const r = await env.DB.prepare('UPDATE citas SET estado=? WHERE negocio_id=? AND folio=?').bind(d.estado, neg.id, p[1]).run();
     if (!r.meta.changes) throw new ErrorHttp(404, 'No existe esa cita');
+    const cc = await env.DB.prepare('SELECT * FROM citas WHERE negocio_id=? AND folio=?').bind(neg.id, p[1]).first();
+    const av = avisaCambioEstado(env, neg, cc).catch((e) => console.error('aviso clienta', e)); if (ctx) ctx.waitUntil(av); else await av;
     return json({ ok: true });
   }
   if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/recordada$/)) && m === 'POST') {
@@ -123,14 +164,22 @@ async function enrutar(request, env, ctx) {
   }
   if (sub === '/bloqueos' && m === 'POST') return json(await bloquear(env, neg, await cuerpo(request)), 201);
   if (sub === '/avisos' && m === 'GET') return json(await estadoAvisos(env, neg));
+  if (sub === '/avisos/clientas' && m === 'PUT') {
+    const v = String((await cuerpo(request)).recordar || '');
+    if (!['60', '120', 'dia60'].includes(v)) throw new ErrorHttp(400, 'Elige cuándo recordarles');
+    await env.DB.prepare('UPDATE negocios SET recordar=? WHERE id=?').bind(v, neg.id).run();
+    return json(await estadoAvisos(env, { ...neg, recordar: v }));
+  }
+  if (sub === '/mover/sugerir' && m === 'POST') return json(await sugiereMovidas(env, neg, await cuerpo(request)));
+  if (sub === '/mover/proponer' && m === 'POST') return json(await proponeMovidas(env, neg, await cuerpo(request)));
   if (sub === '/avisos/suscribir' && m === 'POST') {
     const ep = validaEndpoint((await cuerpo(request)).endpoint, env);
     if (!ep) throw new ErrorHttp(400, 'Ese teléfono no dio una dirección de avisos válida');
     const ultimo = await env.DB.prepare('SELECT COALESCE(MAX(id),0) n FROM avisos WHERE negocio_id=?').bind(neg.id).first();
-    await env.DB.prepare('INSERT INTO suscripciones (negocio_id, endpoint, visto, creado) VALUES (?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET negocio_id=excluded.negocio_id, fallos=0')
+    await env.DB.prepare("INSERT INTO suscripciones (negocio_id, endpoint, visto, creado, disp) VALUES (?,?,?,?,'') ON CONFLICT(endpoint) DO UPDATE SET negocio_id=excluded.negocio_id, disp='', fallos=0")
       .bind(neg.id, ep, ultimo.n, ahora()).run();
     // Hasta 10 teléfonos por negocio: el más viejo sale.
-    await env.DB.prepare('DELETE FROM suscripciones WHERE negocio_id=? AND id NOT IN (SELECT id FROM suscripciones WHERE negocio_id=? ORDER BY id DESC LIMIT 10)').bind(neg.id, neg.id).run();
+    await env.DB.prepare("DELETE FROM suscripciones WHERE negocio_id=? AND disp='' AND id NOT IN (SELECT id FROM suscripciones WHERE negocio_id=? AND disp='' ORDER BY id DESC LIMIT 10)").bind(neg.id, neg.id).run();
     return json(await estadoAvisos(env, neg));
   }
   if (sub === '/avisos/quitar' && m === 'POST') {
@@ -329,12 +378,15 @@ async function apartar(env, neg, d, deLaDueña) {
   const candidatas = c.persona ? [c.persona] : (c.equipo.length ? c.equipo : ['']);
   const folio = 'C-' + aleatorio(6);
   const wd = String(diaSemana(c.fecha));
+  // Desde la app de la clienta: la huella de su teléfono (para que vea SUS citas) y, si lo dejó, su correo.
+  const dispH = !deLaDueña && DISP.test(String(d.disp || '')) ? await sha256('disp|' + d.disp) : '';
+  const correoCli = deLaDueña ? '' : correoValido(d.correo);
   for (const persona of candidatas) {
     // La dueña puede apartar fuera de su horario o encima de sus tiempos (se lo pidieron por teléfono y ella sabe); la página no.
     if (!deLaDueña && fueraDeHorario(neg, c.fecha, c.ini, c.fin, persona)) continue;
     // Un solo INSERT … WHERE NOT EXISTS: dos personas apartando la misma hora al mismo tiempo no pueden ganar las dos.
-    const r = await env.DB.prepare(`INSERT INTO citas (negocio_id, folio, fecha, inicio_min, fin_min, persona, servicio, diseno, detalle, precio, anticipo, nombre, tel, estado, origen, creada)
-      SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16
+    const r = await env.DB.prepare(`INSERT INTO citas (negocio_id, folio, fecha, inicio_min, fin_min, persona, servicio, diseno, detalle, precio, anticipo, nombre, tel, estado, origen, creada, disp, correo)
+      SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?19, ?20
       WHERE NOT EXISTS (SELECT 1 FROM citas WHERE negocio_id=?1 AND fecha=?3 AND estado<>'cancelada' AND inicio_min < ?5 AND fin_min > ?4
                           AND (persona=?6 OR persona='' OR ?6=''))
         AND (?17 = 1 OR NOT EXISTS (SELECT 1 FROM bloqueos WHERE negocio_id=?1 AND fecha=?3 AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))
@@ -342,7 +394,7 @@ async function apartar(env, neg, d, deLaDueña) {
                                       AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))
         AND (?17 = 1 OR NOT EXISTS (SELECT 1 FROM cal_ocupado WHERE negocio_id=?1 AND fecha=?3 AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))`)
       .bind(neg.id, folio, c.fecha, c.ini, c.fin, persona, c.servicio, c.diseno, c.detalle, c.precio, c.anticipo, c.nombre, c.tel,
-        deLaDueña ? 'confirmada' : 'apartada', deLaDueña ? 'negocio' : 'pagina', ahora(), deLaDueña ? 1 : 0, wd).run();
+        deLaDueña ? 'confirmada' : 'apartada', deLaDueña ? 'negocio' : 'pagina', ahora(), deLaDueña ? 1 : 0, wd, dispH, correoCli).run();
     if (r.meta.changes) return { folio, persona, estado: deLaDueña ? 'confirmada' : 'apartada', cita: c };
   }
   throw new ErrorHttp(409, 'Esa hora ya no está disponible. Elige otra.');
@@ -352,8 +404,11 @@ async function agenda(env, neg, url) {
   const hoy = hoyEn(neg.zona).fecha;
   const desde = FECHA.test(url.searchParams.get('desde') || '') ? url.searchParams.get('desde') : sumaDias(hoy, -1);
   const hasta = FECHA.test(url.searchParams.get('hasta') || '') ? url.searchParams.get('hasta') : sumaDias(hoy, DIAS_MAX_ADELANTE);
-  const citas = (await env.DB.prepare(`SELECT folio, fecha, inicio_min, fin_min, persona, servicio, diseno, detalle, precio, anticipo, nombre, tel, estado, origen, creada, recordada
-      FROM citas WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min`).bind(neg.id, desde, hasta).all()).results;
+  const conApp = new Set((await env.DB.prepare("SELECT DISTINCT disp FROM suscripciones WHERE negocio_id=? AND disp<>''").bind(neg.id).all()).results.map((x) => x.disp));
+  const citas = (await env.DB.prepare(`SELECT folio, fecha, inicio_min, fin_min, persona, servicio, diseno, detalle, precio, anticipo, nombre, tel, estado, origen, creada, recordada,
+      disp, correo, antes_fecha, antes_ini, propuesta_hasta, resp
+      FROM citas WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min`).bind(neg.id, desde, hasta).all()).results
+    .map(({ disp, resp, ...c }) => ({ ...c, app: !!disp && conApp.has(disp), enlace: c.estado === 'propuesta' && resp ? enlacePropuesta(neg, c.folio, resp) : '' }));
   const bloqueos = (await env.DB.prepare('SELECT id, fecha, inicio_min, fin_min, persona, motivo FROM bloqueos WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min')
     .bind(neg.id, desde, hasta).all()).results;
   const calOcupado = (await env.DB.prepare('SELECT fecha, inicio_min, fin_min, persona FROM cal_ocupado WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min')
@@ -476,15 +531,201 @@ async function limpia(env) {
   ]);
 }
 
+// ───────── la app de la clienta y las propuestas de hora nueva ─────────
+const DISP = /^[A-Za-z0-9_-]{20,80}$/;
+async function dispDe(request) { const t = request.headers.get('X-Dispositivo') || ''; return DISP.test(t) ? sha256('disp|' + t) : ''; }
+async function cuerpoCopia(request) { try { return JSON.parse(await request.clone().text() || '{}') || {}; } catch { return {}; } }
+const enlacePropuesta = (neg, folio, resp) => AGENDA + '/' + neg.id + '/cita/' + encodeURIComponent(folio) + '?t=' + encodeURIComponent(resp);
+const DIAS_C = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'], MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const fechaCorta = (f) => { const d = new Date(f + 'T12:00:00Z'); return DIAS_C[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MESES_C[d.getUTCMonth()]; };
+const hora12 = (m) => { const h = Math.floor(m / 60), mi = m % 60; return (h % 12 || 12) + ':' + String(mi).padStart(2, '0') + (h < 12 ? ' am' : ' pm'); };
+const minutosDe = (v) => { const x = String(v || '').match(/^(\d{2}):(\d{2})$/); return x ? +x[1] * 60 + +x[2] : null; };
+
+// Lo que ya está ocupado un día: citas (con folio, para poder excluir la que se mueve) y lo demás (bloqueos, planes, calendario).
+async function ocupacionDia(env, neg, fecha) {
+  const [c, b, cal, rep] = await Promise.all([
+    env.DB.prepare("SELECT folio, inicio_min ini, fin_min fin, persona FROM citas WHERE negocio_id=? AND fecha=? AND estado<>'cancelada'").bind(neg.id, fecha).all(),
+    env.DB.prepare('SELECT inicio_min ini, fin_min fin, persona FROM bloqueos WHERE negocio_id=? AND fecha=?').bind(neg.id, fecha).all(),
+    env.DB.prepare('SELECT inicio_min ini, fin_min fin, persona FROM cal_ocupado WHERE negocio_id=? AND fecha=?').bind(neg.id, fecha).all(),
+    repetidosDe(env, neg.id, fecha),
+  ]);
+  const wd = String(diaSemana(fecha));
+  const reps = rep.filter((x) => x.dias.includes(wd) && x.desde <= fecha && (!x.hasta || x.hasta >= fecha)).map((x) => ({ ini: x.inicio_min, fin: x.fin_min, persona: x.persona }));
+  return { citas: c.results, otros: b.results.concat(cal.results, reps) };
+}
+export function cabe(neg, occ, fecha, ini, fin, persona, excluir = [], conHorario = true) {
+  if (conHorario && fueraDeHorario(neg, fecha, ini, fin, persona)) return false;
+  if (occ.citas.some((x) => !excluir.includes(x.folio) && x.ini < fin && x.fin > ini && (x.persona === persona || x.persona === '' || persona === ''))) return false;
+  return !occ.otros.some((x) => x.ini < fin && x.fin > ini && (x.persona === persona || x.persona === ''));
+}
+// Las primeras horas libres para un servicio de «dur» minutos, cada media hora, dentro del horario de esa persona.
+async function buscaHuecos(env, neg, { persona = '', dur, desde, desdeMin = 0, excluir = [], extra = [], max = 6, dias = 14 }) {
+  const h = leeHorario(neg), sem = h[persona] || h[''] || null, hoy = hoyEn(neg.zona), out = [];
+  for (let i = 0, f = desde < hoy.fecha ? hoy.fecha : desde; i < dias && out.length < max; i++, f = sumaDias(f, 1)) {
+    const x = sem ? sem[String(diaSemana(f))] : [600, 1140];
+    if (!x) continue;
+    const occ = await ocupacionDia(env, neg, f);
+    occ.otros = occ.otros.concat(extra.filter((e) => e.fecha === f));
+    let m = Math.max(x[0], f === desde ? desdeMin : 0, f === hoy.fecha ? hoy.min + 60 : 0);
+    for (m = Math.ceil(m / 30) * 30; m + dur <= x[1] && out.length < max; m += 30) if (cabe(neg, occ, f, m, m + dur, persona, excluir, !!sem)) out.push({ fecha: f, ini: m });
+  }
+  return out;
+}
+async function citaDeClienta(env, neg, folio, t, disp) {
+  const c = await env.DB.prepare('SELECT * FROM citas WHERE negocio_id=? AND folio=?').bind(neg.id, folio).first();
+  if (!c || !((t && c.resp && t === c.resp) || (disp && c.disp && disp === c.disp))) throw new ErrorHttp(404, 'No encontramos esa cita');
+  return c;
+}
+function citaPublica(neg, c) {
+  return { folio: c.folio, nombre: c.nombre, fecha: c.fecha, ini: c.inicio_min, fin: c.fin_min, persona: c.persona, con: nombreEnEquipo(neg, c.persona), servicio: c.servicio,
+    diseno: c.diseno, detalle: c.detalle, precio: c.precio, anticipo: c.anticipo, estado: c.estado, antesFecha: c.antes_fecha, antesIni: c.antes_ini, hasta: c.propuesta_hasta,
+    enlace: c.estado === 'propuesta' && c.resp ? enlacePropuesta(neg, c.folio, c.resp) : '' };
+}
+async function misCitas(env, neg, disp) {
+  const l = (await env.DB.prepare('SELECT * FROM citas WHERE negocio_id=? AND disp=? AND fecha>=? ORDER BY fecha DESC, inicio_min DESC LIMIT 40')
+    .bind(neg.id, disp, sumaDias(hoyEn(neg.zona).fecha, -365)).all()).results;
+  return { hoy: hoyEn(neg.zona).fecha, negocio: { nombre: neg.nombre, recordar: neg.recordar || '60' }, citas: l.map((c) => citaPublica(neg, c)) };
+}
+const avisaDuena = (env, neg, aviso) => avisa(env, neg.id, aviso).catch((e) => console.error('aviso dueña', e));
+async function cancelaClienta(env, neg, c, ctx) {
+  if (c.estado === 'cancelada') return { ok: true };
+  await env.DB.prepare("UPDATE citas SET estado='cancelada' WHERE id=?").bind(c.id).run();
+  const av = avisaDuena(env, neg, { titulo: c.nombre + ' canceló su cita', cuerpo: fechaCorta(c.fecha) + ' · ' + hora12(c.inicio_min) + ' · ' + c.servicio + '. Esa hora ya está libre en tu página.', url: '/' + neg.id + '/?dia=' + c.fecha });
+  if (ctx) ctx.waitUntil(av); else await av;
+  return { ok: true };
+}
+async function mueveA(env, neg, c, d, estado) {
+  const fecha = String(d.fecha || ''), ini = minutosDe(d.hora), dur = c.fin_min - c.inicio_min, hoy = hoyEn(neg.zona);
+  if (!FECHA.test(fecha) || ini == null) throw new ErrorHttp(400, 'Elige el día y la hora');
+  if (fecha < hoy.fecha || (fecha === hoy.fecha && ini <= hoy.min) || fecha > sumaDias(hoy.fecha, DIAS_MAX_ADELANTE)) throw new ErrorHttp(400, 'Esa hora ya no se puede');
+  if (!cabe(neg, await ocupacionDia(env, neg, fecha), fecha, ini, ini + dur, c.persona, [c.folio], true)) throw new ErrorHttp(409, 'Esa hora ya no está disponible. Elige otra.');
+  await env.DB.prepare("UPDATE citas SET fecha=?, inicio_min=?, fin_min=?, estado=?, antes_fecha='', antes_ini=0, propuesta_hasta=0, aviso_cli=0, recordada=0 WHERE id=?")
+    .bind(fecha, ini, ini + dur, estado, c.id).run();
+  return { fecha, ini };
+}
+async function mueveClienta(env, neg, c, d, ctx) {
+  if (c.estado === 'cancelada') throw new ErrorHttp(400, 'Esa cita ya está cancelada');
+  const n = await mueveA(env, neg, c, d, 'apartada');
+  const av = avisaDuena(env, neg, { titulo: c.nombre + ' cambió su cita', cuerpo: 'Antes ' + fechaCorta(c.fecha) + ' · ' + hora12(c.inicio_min) + ', ahora ' + fechaCorta(n.fecha) + ' · ' + hora12(n.ini) + '. Confírmasela.', url: '/' + neg.id + '/?cita=' + encodeURIComponent(c.folio) });
+  if (ctx) ctx.waitUntil(av); else await av;
+  return { ok: true, ...n };
+}
+async function vistaPropuesta(env, neg, c) {
+  const hoy = hoyEn(neg.zona).fecha, dur = c.fin_min - c.inicio_min;
+  const huecos = c.estado === 'cancelada' ? [] : await buscaHuecos(env, neg, { persona: c.persona, dur, desde: hoy, excluir: [c.folio], max: 9 });
+  return { negocio: { nombre: neg.nombre, pagina: neg.pagina || '' }, cita: citaPublica(neg, c), huecos };
+}
+async function contestaPropuesta(env, neg, c, d, ctx) {
+  const accion = String(d.accion || '');
+  if (c.estado === 'cancelada') throw new ErrorHttp(400, 'Esa cita ya está cancelada');
+  let aviso;
+  if (accion === 'acepto') {
+    if (c.estado !== 'propuesta') return { ok: true, estado: c.estado };
+    await env.DB.prepare("UPDATE citas SET estado='confirmada', antes_fecha='', antes_ini=0, propuesta_hasta=0 WHERE id=?").bind(c.id).run();
+    aviso = { titulo: c.nombre + ' aceptó la hora nueva', cuerpo: fechaCorta(c.fecha) + ' · ' + hora12(c.inicio_min) + ' · ' + c.servicio + '. Quedó confirmada.' };
+  } else if (accion === 'otra') {
+    const n = await mueveA(env, neg, c, d, 'confirmada');
+    aviso = { titulo: c.nombre + ' eligió otra hora', cuerpo: fechaCorta(n.fecha) + ' · ' + hora12(n.ini) + ' · ' + c.servicio + '. Quedó confirmada.' };
+  } else if (accion === 'cancelo') {
+    await env.DB.prepare("UPDATE citas SET estado='cancelada' WHERE id=?").bind(c.id).run();
+    aviso = { titulo: c.nombre + ' canceló su cita', cuerpo: 'No pudo con la hora nueva (' + fechaCorta(c.fecha) + ' · ' + hora12(c.inicio_min) + '). Esa hora ya está libre.' };
+  } else throw new ErrorHttp(400, 'Elige una opción');
+  const av = avisaDuena(env, neg, { ...aviso, url: '/' + neg.id + '/?cita=' + encodeURIComponent(c.folio) });
+  if (ctx) ctx.waitUntil(av); else await av;
+  const nueva = await env.DB.prepare('SELECT * FROM citas WHERE id=?').bind(c.id).first();
+  return { ok: true, cita: citaPublica(neg, nueva) };
+}
+// Cuando la dueña confirma o cancela: a la clienta le llega a su teléfono (y si canceló, también por correo si lo dejó).
+async function avisaCambioEstado(env, neg, c) {
+  if (!c) return;
+  const quien = nombreEnEquipo(neg, c.persona);
+  if (c.estado === 'confirmada' && c.disp) {
+    await avisa(env, neg.id, { titulo: 'Tu cita quedó confirmada', cuerpo: fechaCorta(c.fecha) + ' · ' + hora12(c.inicio_min) + ' · ' + c.servicio + (quien ? ' con ' + quien : '') + '. ¡Te esperamos!', url: neg.pagina || '' }, c.disp);
+  }
+  if (c.estado === 'cancelada') {
+    if (c.disp) await avisa(env, neg.id, { titulo: 'Tu cita se canceló', cuerpo: fechaCorta(c.fecha) + ' · ' + hora12(c.inicio_min) + ' · ' + c.servicio + '. Toca para agendar otra.', url: neg.pagina || '' }, c.disp);
+    if (c.correo) { const m = correoCancelada(neg, { ...c, ini: c.inicio_min }, quien, neg.pagina || ''); await mandaCorreo(env, c.correo, 'Tu cita en ' + neg.nombre + ' se canceló', m.html, m.texto); }
+  }
+}
+// «Se me atravesó algo»: qué citas caen en ese tiempo y la primera hora libre para cada una (sin encimarlas entre sí).
+async function sugiereMovidas(env, neg, d) {
+  const fecha = String(d.fecha || '');
+  if (!FECHA.test(fecha)) throw new ErrorHttp(400, 'Elige el día');
+  const ini = d.desde ? minutosDe(d.desde) : 0, fin = d.hasta ? minutosDe(d.hasta) : 1440;
+  if (ini == null || fin == null || fin <= ini) throw new ErrorHttp(400, 'La hora de fin va después de la de inicio');
+  const persona = personaValida(neg, d.persona);
+  const l = (await env.DB.prepare("SELECT * FROM citas WHERE negocio_id=? AND fecha=? AND estado<>'cancelada' AND inicio_min<? AND fin_min>? ORDER BY inicio_min")
+    .bind(neg.id, fecha, fin, ini).all()).results.filter((c) => !persona || c.persona === persona || c.persona === '');
+  const conApp = new Set((await env.DB.prepare("SELECT DISTINCT disp FROM suscripciones WHERE negocio_id=? AND disp<>''").bind(neg.id).all()).results.map((x) => x.disp));
+  const excluir = l.map((c) => c.folio), extra = [{ fecha, ini, fin, persona }], afectadas = [];
+  for (const c of l) {
+    const dur = c.fin_min - c.inicio_min;
+    const alternativas = await buscaHuecos(env, neg, { persona: c.persona, dur, desde: fecha, desdeMin: fin, excluir, extra, max: 6 });
+    const p = alternativas[0] || null;
+    if (p) extra.push({ fecha: p.fecha, ini: p.ini, fin: p.ini + dur, persona: c.persona });
+    afectadas.push({ folio: c.folio, nombre: c.nombre, tel: c.tel, servicio: c.servicio, diseno: c.diseno, persona: c.persona, con: nombreEnEquipo(neg, c.persona),
+      ini: c.inicio_min, fin: c.fin_min, dur, app: !!c.disp && conApp.has(c.disp), correo: !!c.correo, propuesta: p, alternativas });
+  }
+  return { fecha, ini, fin, persona, afectadas };
+}
+async function proponeMovidas(env, neg, d) {
+  const b = d.bloqueo || {};
+  if (b.fecha) await bloquear(env, neg, { fecha: b.fecha, desde: b.desde, hasta: b.hasta, persona: b.persona, motivo: b.motivo || 'Se me atravesó algo' });
+  const hoy = hoyEn(neg.zona);
+  // Se le guarda hasta mañana a las 10 de la mañana (hora del negocio)
+  const man = sumaDias(hoy.fecha, 1).split('-').map(Number);
+  const hasta = Math.floor(aInstante({ y: man[0], mo: man[1], d: man[2], h: 10, mi: 0 }, neg.zona) / 1000);
+  const resultados = [];
+  for (const pr of (Array.isArray(d.propuestas) ? d.propuestas : []).slice(0, 40)) {
+    const c = await env.DB.prepare('SELECT * FROM citas WHERE negocio_id=? AND folio=?').bind(neg.id, String(pr.folio || '')).first();
+    if (!c || c.estado === 'cancelada') continue;
+    const fecha = String(pr.fecha || ''), ini = minutosDe(pr.hora), dur = c.fin_min - c.inicio_min;
+    if (!FECHA.test(fecha) || ini == null) { resultados.push({ folio: c.folio, error: 'Falta la hora nueva' }); continue; }
+    if (!cabe(neg, await ocupacionDia(env, neg, fecha), fecha, ini, ini + dur, c.persona, [c.folio], false)) { resultados.push({ folio: c.folio, error: 'Esa hora ya se ocupó' }); continue; }
+    const resp = c.resp || aleatorio(20);
+    await env.DB.prepare("UPDATE citas SET antes_fecha=?, antes_ini=?, fecha=?, inicio_min=?, fin_min=?, estado='propuesta', propuesta_hasta=?, resp=?, aviso_cli=0, recordada=0 WHERE id=?")
+      .bind(c.antes_fecha || c.fecha, c.antes_fecha ? c.antes_ini : c.inicio_min, fecha, ini, ini + dur, hasta, resp, c.id).run();
+    const n = { ...c, antes_fecha: c.antes_fecha || c.fecha, antes_ini: c.antes_fecha ? c.antes_ini : c.inicio_min, fecha, ini, fin: ini + dur, inicio_min: ini };
+    const link = enlacePropuesta(neg, c.folio, resp), quien = nombreEnEquipo(neg, c.persona);
+    let app = false, correo = false;
+    if (c.disp) app = (await avisa(env, neg.id, { titulo: 'Tu cita cambió de hora', cuerpo: (quien || neg.nombre) + ' te propone ' + fechaCorta(fecha) + ' a las ' + hora12(ini) + '. Toca para contestar.', url: link }, c.disp)).enviados > 0;
+    if (c.correo) { const m = correoPropuesta(neg, n, quien, link, 'mañana a las 10:00 am'); correo = await mandaCorreo(env, c.correo, neg.nombre + ' te propone mover tu cita', m.html, m.texto); }
+    resultados.push({ folio: c.folio, nombre: c.nombre, tel: c.tel, fecha, ini, antesFecha: n.antes_fecha, antesIni: n.antes_ini, link, app, correo });
+  }
+  return { resultados };
+}
+// Cada 15 minutos: el recordatorio a las clientas que tienen la app (1 h o 2 h antes, y si la dueña quiere, también la noche anterior).
+async function recordatoriosClientas(env) {
+  const negs = (await env.DB.prepare("SELECT * FROM negocios n WHERE activo=1 AND EXISTS (SELECT 1 FROM suscripciones s WHERE s.negocio_id=n.id AND s.disp<>'')").all()).results;
+  for (const neg of negs) {
+    const hoy = hoyEn(neg.zona), man = sumaDias(hoy.fecha, 1), modo = neg.recordar || '60', antes = modo === '120' ? 120 : 60;
+    const l = (await env.DB.prepare("SELECT * FROM citas WHERE negocio_id=? AND disp<>'' AND estado IN ('apartada','confirmada') AND fecha IN (?,?)").bind(neg.id, hoy.fecha, man).all()).results;
+    for (const c of l) {
+      const [y, mo, dd] = c.fecha.split('-').map(Number);
+      const falta = (aInstante({ y, mo, d: dd, h: Math.floor(c.inicio_min / 60), mi: c.inicio_min % 60 }, neg.zona) - Date.now()) / 60000;
+      const quien = nombreEnEquipo(neg, c.persona), qu = c.servicio + (quien ? ' con ' + quien : '');
+      if (!(c.aviso_cli & 1) && falta > 0 && falta <= antes + 8) {
+        await env.DB.prepare('UPDATE citas SET aviso_cli=aviso_cli|1 WHERE id=?').bind(c.id).run();
+        await avisa(env, neg.id, { titulo: 'Tu cita es en ' + (antes === 120 ? '2 horas' : '1 hora'), cuerpo: neg.nombre + ' te espera a las ' + hora12(c.inicio_min) + ' · ' + qu + '.', url: neg.pagina || '' }, c.disp);
+      } else if (modo === 'dia60' && !(c.aviso_cli & 2) && c.fecha === man && hoy.min >= 19 * 60) {
+        await env.DB.prepare('UPDATE citas SET aviso_cli=aviso_cli|2 WHERE id=?').bind(c.id).run();
+        await avisa(env, neg.id, { titulo: 'Mañana es tu cita', cuerpo: neg.nombre + ' te espera mañana a las ' + hora12(c.inicio_min) + ' · ' + qu + '.', url: neg.pagina || '' }, c.disp);
+      }
+    }
+  }
+}
+
 // ───────── avisos ─────────
 function nombreEnEquipo(neg, id) { const p = perfilDe(neg).equipo.find((x) => x.id === id); return p ? p.nombre : ''; }
 async function estadoAvisos(env, neg) {
-  const n = await env.DB.prepare('SELECT COUNT(*) n FROM suscripciones WHERE negocio_id=?').bind(neg.id).first();
-  return { vapid: vapidPublica(env), telefonos: n ? n.n : 0, correo: neg.correo || '', avisoCorreo: !!neg.aviso_correo, correoDisponible: correoDisponible(env) };
+  const n = await env.DB.prepare("SELECT COUNT(*) n FROM suscripciones WHERE negocio_id=? AND disp=''").bind(neg.id).first();
+  const cl = await env.DB.prepare("SELECT COUNT(DISTINCT disp) n FROM suscripciones WHERE negocio_id=? AND disp<>''").bind(neg.id).first();
+  return { vapid: vapidPublica(env), telefonos: n ? n.n : 0, correo: neg.correo || '', avisoCorreo: !!neg.aviso_correo, correoDisponible: correoDisponible(env),
+    recordar: neg.recordar || '60', clientasConApp: cl ? cl.n : 0 };
 }
 // A partir de las 8 de la noche (hora del negocio), una vez al día: «Mañana tienes N citas».
 async function resumenesDeLaNoche(env) {
-  const negs = (await env.DB.prepare("SELECT n.* FROM negocios n WHERE n.activo=1 AND EXISTS (SELECT 1 FROM suscripciones s WHERE s.negocio_id=n.id)").all()).results;
+  const negs = (await env.DB.prepare("SELECT n.* FROM negocios n WHERE n.activo=1 AND EXISTS (SELECT 1 FROM suscripciones s WHERE s.negocio_id=n.id AND s.disp='')").all()).results;
   for (const neg of negs) {
     const h = hoyEn(neg.zona);
     if ((h.min < 20 * 60 && env.RESUMEN_PRUEBA !== '1') || neg.resumen === h.fecha) continue;
@@ -615,7 +856,7 @@ async function app(request, env, url) {
     if (!ARCHIVOS[ruta]) return paginaNoExiste();
     return archivo(ruta, { 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' });
   }
-  const p = ruta.match(/^\/([a-z0-9-]{2,40})(\/|\/manifest\.webmanifest|\/icono\.svg|\/sw\.js)?$/);
+  const p = ruta.match(/^\/([a-z0-9-]{2,40})(\/|\/manifest\.webmanifest|\/icono\.svg|\/sw\.js|\/cita\/[A-Z0-9-]{4,20})?$/);
   if (!p) return paginaNoExiste();
   const neg = p[1] === 'ejemplo' ? EJEMPLO : await env.DB.prepare('SELECT id, nombre FROM negocios WHERE id=? AND activo=1').bind(p[1]).first();
   if (!neg) return paginaNoExiste();
@@ -623,6 +864,8 @@ async function app(request, env, url) {
   if (que === '') return Response.redirect(url.origin + '/' + neg.id + '/', 301);
   if (que === '/manifest.webmanifest') return new Response(JSON.stringify(manifiesto(neg)), { headers: { 'Content-Type': 'application/manifest+json; charset=utf-8', 'Cache-Control': 'public, max-age=3600', ...SEGURIDAD } });
   if (que === '/icono.svg') return new Response(iconoSvg(neg.nombre), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400', ...SEGURIDAD } });
+  // La página donde la clienta contesta «te proponemos otra hora» (o cambia o cancela su cita): sin clave, con el enlace que le llegó.
+  if (que.startsWith('/cita/')) return archivo('/cita.html', { 'Cache-Control': 'no-cache', ...SEGURIDAD });
   return archivo(que === '/sw.js' ? '/sw.js' : '/index.html', { 'Cache-Control': 'no-cache', ...SEGURIDAD });
 }
 function archivo(ruta, cabeceras) {

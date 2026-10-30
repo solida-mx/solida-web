@@ -53,20 +53,21 @@ async function empuja(env, sub) {
 }
 
 // ── un aviso: se guarda y se le avisa a cada teléfono suscrito ──
-export async function avisa(env, negocio, aviso) {
-  const r = await env.DB.prepare('INSERT INTO avisos (negocio_id, titulo, cuerpo, url, creado) VALUES (?,?,?,?,?)')
-    .bind(negocio, String(aviso.titulo).slice(0, 120), String(aviso.cuerpo).slice(0, 400), String(aviso.url || '').slice(0, 200), ahora()).run();
+// disp = '' es la dueña; si no, es el teléfono de una clienta (sólo a ella le llega).
+export async function avisa(env, negocio, aviso, disp = '') {
+  const r = await env.DB.prepare('INSERT INTO avisos (negocio_id, titulo, cuerpo, url, creado, disp) VALUES (?,?,?,?,?,?)')
+    .bind(negocio, String(aviso.titulo).slice(0, 120), String(aviso.cuerpo).slice(0, 400), String(aviso.url || '').slice(0, 300), ahora(), disp).run();
   if (!jwkPrivada(env)) return { id: r.meta.last_row_id, enviados: 0 };
-  const subs = (await env.DB.prepare('SELECT id, endpoint FROM suscripciones WHERE negocio_id=?').bind(negocio).all()).results;
+  const subs = (await env.DB.prepare('SELECT id, endpoint FROM suscripciones WHERE negocio_id=? AND disp=?').bind(negocio, disp).all()).results;
   const res = await Promise.all(subs.map((s) => empuja(env, s)));
   return { id: r.meta.last_row_id, enviados: res.filter(Boolean).length };
 }
 // Lo que el teléfono enseña al despertar: lo nuevo desde la última vez (máximo 5 y de las últimas 48 h).
 export async function pendientes(env, negocio, endpoint) {
-  const sub = await env.DB.prepare('SELECT id, visto, creado FROM suscripciones WHERE negocio_id=? AND endpoint=?').bind(negocio, endpoint).first();
+  const sub = await env.DB.prepare('SELECT id, visto, creado, disp FROM suscripciones WHERE negocio_id=? AND endpoint=?').bind(negocio, endpoint).first();
   if (!sub) return null;
-  const l = (await env.DB.prepare('SELECT id, titulo, cuerpo, url FROM avisos WHERE negocio_id=? AND id>? AND creado>=? ORDER BY id DESC LIMIT 5')
-    .bind(negocio, sub.visto, Math.max(sub.creado - 60, ahora() - 48 * 3600)).all()).results.reverse();
+  const l = (await env.DB.prepare('SELECT id, titulo, cuerpo, url FROM avisos WHERE negocio_id=? AND disp=? AND id>? AND creado>=? ORDER BY id DESC LIMIT 5')
+    .bind(negocio, sub.disp, sub.visto, Math.max(sub.creado - 60, ahora() - 48 * 3600)).all()).results.reverse();
   if (l.length) await env.DB.prepare('UPDATE suscripciones SET visto=? WHERE id=?').bind(l[l.length - 1].id, sub.id).run();
   return l;
 }
@@ -74,7 +75,7 @@ export async function pendientes(env, negocio, endpoint) {
 // ── correo ──
 export const correoValido = (v) => { const t = String(v || '').trim().toLowerCase(); return /^[^\s@<>"']{1,64}@[a-z0-9.-]{1,180}\.[a-z]{2,}$/.test(t) ? t : ''; };
 export const correoDisponible = (env) => !!env.RESEND_API_KEY;
-async function mandaCorreo(env, para, asunto, html, texto, adjuntos) {
+export async function mandaCorreo(env, para, asunto, html, texto, adjuntos) {
   if (!correoDisponible(env) || !para) return false;
   try {
     const r = await fetch(env.RESEND_URL || 'https://api.resend.com/emails', { method: 'POST',

@@ -63,3 +63,16 @@ Pendientes de convertir: profesional, taller, nutriólogo, invitación, uniforme
 `/restaurante/basico` (y las demás) mandan solas a `https://solidaaplicaciones.com/ejemplos/restaurante/basico`, también desde
 `solida-web.j23salva.workers.dev`, que es la que está impresa en los QR viejos. **No borrar esa redirección** mientras haya QR impresos.
 Los QR nuevos se hacen siempre con `solidaaplicaciones.com`.
+
+**La app de la clienta.** La página del negocio (con Agenda Total) se instala como app: `app-clienta.js` agrega «Mis citas»
+(próxima cita, «Repetir mi última cita», «Cambiar o cancelar», anteriores), la guía para instalarla (botón en Android, 3 pasos
+en iPhone, «copiar el enlace» desde Instagram/Facebook) y los avisos a su teléfono (confirmada, cancelada, recordatorio 1 h
+o 2 h antes o la noche anterior, «te proponen otra hora»). Sin cuenta: el teléfono guarda un número al azar (`X-Dispositivo`).
+Cada sitio de cliente lleva su `manifest.webmanifest` y su `sw.js` (copia de `ejemplos/unas/sw-clienta.js`).
+
+**Se me atravesó algo.** La dueña cierra un tiempo y la agenda propone a cada clienta afectada la primera hora libre (sin
+encimarlas) y se la aparta (estado `propuesta`). Le avisa por su app, por correo si lo dejó, o la dueña le manda el WhatsApp
+con su enlace. La clienta contesta en `agenda.solidaaplicaciones.com/<negocio>/cita/<folio>?t=…`: me queda, otra hora o cancelar.
+
+**Página de prueba:** `/prueba-agenda/` está conectada a la agenda `prueba-solida` (no indexada). Se borra al terminar las pruebas.
+
