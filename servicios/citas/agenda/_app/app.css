@@ -240,3 +240,31 @@ select.campo{appearance:auto}
 .noti-muestra .sello{background:var(--negro)}
 .noti-muestra b{display:block;font:600 14px var(--sans)}
 .noti-muestra span:not(.sello){font-size:13px;color:#3a332d}
+
+/* Tu cita (propuesta) */
+.propuesta{margin-top:-18px;background:var(--papel);border:1px solid var(--linea);padding:20px 18px;position:relative}
+.cambio{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.cambio .antes{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px dashed var(--linea2)}
+.cambio .antes .etq{color:var(--rojo);width:56px;flex:none}
+.cambio .antes s{color:var(--gris);font-size:14px}
+.cambio .ahora{display:flex;gap:10px;align-items:center;padding:12px;background:var(--negro);color:var(--marfil)}
+.cambio .ahora .etq{color:var(--oro);width:56px;flex:none}
+.cambio .ahora b{font:600 21px var(--serif)}
+.botones{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.huecos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}
+.huecos .btn{letter-spacing:0;text-transform:none;font-size:13.5px;min-height:46px;padding:0 4px}
+
+/* Propuestas y «Se me atravesó algo» */
+.pill.propuesta{background:#f3e6d8;color:#8a4f1d}
+.cita.propuesta{border-left-color:#c07a3a}
+.antes-de{color:var(--rojo)!important;text-decoration:line-through}
+.atraveso{margin-top:10px;min-height:44px;border-color:var(--linea2);color:var(--gris)}
+.mv{background:var(--papel);border:1px solid var(--linea);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.mv-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.mv-top b{font:600 19px var(--serif)}
+.mv-top span{font-size:12.5px;color:var(--gris);text-align:right}
+.mv-antes{font-size:13px;color:var(--rojo);text-decoration:line-through}
+.mv-ahora{font-size:14px;color:var(--verde);font-weight:500}
+.mv-sin{font-size:13px;color:var(--rojo)}
+.canales{display:flex;gap:6px;flex-wrap:wrap}
+.canal{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;font:500 11px var(--sans);background:var(--oro-suave);color:var(--oro-txt)}

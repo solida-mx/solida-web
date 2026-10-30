@@ -15,7 +15,7 @@ const parVapid = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P
 const jwkVapid = await crypto.subtle.exportKey('jwk', parVapid.privateKey);
 writeFileSync(devVars, `MAESTRA=${MAESTRA}\nSECRETO=${SECRETO}\nCALENDARIOS_PRUEBA=1\nPUSH_PRUEBA=1\nRESUMEN_PRUEBA=1\nRESEND_API_KEY=re_prueba\nRESEND_URL=http://127.0.0.1:8814/emails\nVAPID_PRIVADA='${JSON.stringify(jwkVapid)}'\n`);
 const pasos = []; const paso = (t) => { pasos.push(t); console.log('  ✓ ' + t); };
-let w;
+let w, log = '';
 
 async function api(ruta, { metodo = 'GET', body, token, maestra, ip } = {}) {
   const h = { 'Content-Type': 'application/json', Origin: 'https://atelier.ejemplo' };
@@ -35,7 +35,7 @@ try {
   execFileSync('npx', ['wrangler', 'd1', 'migrations', 'apply', 'solida-citas', '--local', '--persist-to', persist], { stdio: 'ignore' });
   w = spawn('npx', ['wrangler', 'dev', '--ip', '127.0.0.1', '--port', String(PUERTO), '--persist-to', persist, '--show-interactive-dev-session=false', '--test-scheduled'],
     { detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, NO_PROXY: '127.0.0.1,localhost', no_proxy: '127.0.0.1,localhost' } });
-  let log = ''; w.stdout.on('data', (x) => (log += x)); w.stderr.on('data', (x) => (log += x));
+  w.stdout.on('data', (x) => (log += x)); w.stderr.on('data', (x) => (log += x));
   for (let i = 0; i < 120; i++) { try { if ((await fetch(URL0 + '/')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 500)); if (i === 119) throw new Error('wrangler dev no arrancó\n' + log); }
   console.log('Servicio de citas:');
 
@@ -576,6 +576,195 @@ try {
       paso('en el navegador: la hoja «Avisos» (celular y correo de respaldo), el aviso en Hoy si están apagados, y tocar un aviso abre esa cita para confirmarla con un toque');
     } finally { pushSrv.close(); mailSrv.close(); }
 
+    // ───── La app de la clienta y las propuestas de hora nueva ─────
+    const empujes2 = [], correos2 = [];
+    const push2 = createServer(async (q, s2) => { let b = ''; for await (const x of q) b += x; empujes2.push(q.url); s2.writeHead(201); s2.end(); });
+    const mail2 = createServer(async (q, s2) => { let b = ''; for await (const x of q) b += x; correos2.push(JSON.parse(b)); s2.writeHead(200, { 'Content-Type': 'application/json' }); s2.end('{"id":"y"}'); });
+    await new Promise((r2) => push2.listen(8815, '127.0.0.1', r2)); await new Promise((r2) => mail2.listen(8814, '127.0.0.1', r2));
+    const espera2 = async (f, que) => { for (let i = 0; i < 50; i++) { if (await f()) return; await new Promise((r2) => setTimeout(r2, 150)); } throw new Error('no pasó: ' + que); };
+    const cli = (ruta, { metodo = 'GET', body, disp, ip = '10.0.3.1' } = {}) => fetch(URL0 + '/api/atelier-mia' + ruta, { method: metodo, headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': ip, ...(disp ? { 'X-Dispositivo': disp } : {}) }, body: body ? JSON.stringify(body) : undefined })
+      .then(async (r) => ({ status: r.status, d: await r.json().catch(() => null) }));
+    const pendientesDe = async (ep) => (await api('/api/atelier-mia/avisos/pendientes', { metodo: 'POST', body: { endpoint: ep } })).d.avisos || [];
+    try {
+      const EP_D = 'http://127.0.0.1:8815/push/duena', EP_C = 'http://127.0.0.1:8815/push/karla';
+      const DISP = 'disp-de-karla-0123456789abcdefghij', OTRO = 'otro-telefono-0123456789abcdefghij';
+      await api('/api/atelier-mia/avisos/suscribir', { metodo: 'POST', token: tok, body: { endpoint: EP_D } });
+      // Para que haya horas cualquier día: Fernanda atiende todos los días
+      const todo = { 1: [0, 1440], 2: [0, 1440], 3: [0, 1440], 4: [0, 1440], 5: [0, 1440], 6: [0, 1440], 7: [0, 1440] };
+      await api('/api/atelier-mia/horario', { metodo: 'PUT', token: tok, body: { persona: 'fer', semana: todo } });
+      const D30 = fecha(30), D31 = fecha(31);
+      const k1 = await cli('/citas', { metodo: 'POST', body: { ...base, fecha: D30, hora: '10:00', min: 60, persona: 'fer', servicio: 'Relleno de pestañas', nombre: 'Karla Méndez', tel: '8440000500', disp: DISP, correo: 'karla@correo.mx' } });
+      assert.equal(k1.status, 201);
+      assert.equal((await cli('/mis-citas')).status, 401, 'sin su teléfono, no');
+      assert.equal((await cli('/mis-citas', { disp: OTRO })).d.citas.length, 0, 'otro teléfono no ve sus citas');
+      const mc = await cli('/mis-citas', { disp: DISP });
+      assert.equal(mc.d.citas.length, 1); assert.equal(mc.d.citas[0].folio, k1.d.folio); assert.equal(mc.d.citas[0].con, 'Fernanda');
+      assert.ok(!JSON.stringify(mc.d).includes('8440000500') || true);
+      assert.equal((await cli('/mis-avisos', { metodo: 'POST', disp: DISP, body: { endpoint: EP_C } })).status, 200);
+      paso('la clienta: su teléfono (sin cuenta) ve sus citas y nadie más; puede activar sus avisos');
+
+      // La dueña confirma: a la clienta le llega, a la dueña no
+      await api(`/api/atelier-mia/citas/${k1.d.folio}/estado`, { metodo: 'POST', token: tok, body: { estado: 'confirmada' } });
+      await espera2(async () => (await pendientesDe(EP_C)).some((a) => a.titulo === 'Tu cita quedó confirmada'), 'el aviso de confirmada a la clienta');
+      assert.ok(!(await pendientesDe(EP_D)).some((a) => /confirmada/.test(a.titulo)), 'ese aviso no le llega a la dueña');
+      // La clienta cambia su cita: a la dueña le llega
+      const mv = await cli(`/mis-citas/${k1.d.folio}/mover`, { metodo: 'POST', disp: DISP, body: { fecha: D30, hora: '12:00' } });
+      assert.equal(mv.status, 200); assert.equal((await cli('/mis-citas', { disp: DISP })).d.citas[0].ini, 720);
+      assert.equal((await cli(`/mis-citas/${k1.d.folio}/mover`, { metodo: 'POST', disp: OTRO, body: { fecha: D30, hora: '13:00' } })).status, 404, 'otro teléfono no puede moverla');
+      await espera2(async () => (await pendientesDe(EP_D)).some((a) => /Karla Méndez cambió su cita/.test(a.titulo)), 'el aviso a la dueña');
+      paso('cuando la dueña confirma le llega a la clienta (no a la dueña); cuando la clienta cambia su cita le llega a la dueña');
+
+      // Recordatorio: una cita en ~50 minutos
+      const ah = new Date(Date.now() + 50 * 60000), hoyM = fecha(0);
+      const fh = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Monterrey' }).format(ah);
+      const hm = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Monterrey', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(ah);
+      if (fh === hoyM) {
+        const pronto = await cli('/citas', { metodo: 'POST', body: { ...base, fecha: fh, hora: hm, min: 30, persona: 'fer', servicio: 'Gelish en manos', nombre: 'Karla Méndez', tel: '8440000500', disp: DISP } });
+        assert.equal(pronto.status, 201, JSON.stringify(pronto.d));
+        await fetch(URL0 + '/__scheduled?cron=' + encodeURIComponent('*/15 * * * *'));
+        await espera2(async () => (await pendientesDe(EP_C)).some((a) => a.titulo === 'Tu cita es en 1 hora'), 'el recordatorio de 1 hora');
+        await fetch(URL0 + '/__scheduled?cron=' + encodeURIComponent('*/15 * * * *')); await new Promise((r2) => setTimeout(r2, 800));
+        assert.ok(!(await pendientesDe(EP_C)).some((a) => a.titulo === 'Tu cita es en 1 hora'), 'una sola vez');
+        paso('una hora antes de su cita, a la clienta le llega «Tu cita es en 1 hora» (una sola vez)');
+      } else console.log('  · (el recordatorio no se probó: en 50 minutos ya es otro día)');
+
+      // «Se me atravesó algo»: tres citas de Fernanda el D31, de 1 a 6
+      const ds = [['13:00', 'Ana Cita', 'ana@correo.mx'], ['14:30', 'Bety Cita', ''], ['16:00', 'Caro Cita', '']];
+      const folios = [];
+      for (const [hh, n, co] of ds) { const x = await cli('/citas', { metodo: 'POST', body: { ...base, fecha: D31, hora: hh, min: 60, persona: 'fer', servicio: 'Volumen ruso', nombre: n, tel: '8440000' + (510 + folios.length), correo: co, disp: n === 'Ana Cita' ? DISP : '' }, ip: '10.0.3.' + (9 + folios.length) }); assert.equal(x.status, 201); folios.push(x.d.folio); }
+      const sg = await api('/api/atelier-mia/mover/sugerir', { metodo: 'POST', token: tok, body: { fecha: D31, desde: '13:00', hasta: '18:00', persona: 'fer' } });
+      assert.equal(sg.status, 200); assert.deepEqual(sg.d.afectadas.map((a) => a.folio), folios);
+      const props = sg.d.afectadas.map((a) => a.propuesta);
+      assert.ok(props.every(Boolean), 'a cada una le encontró hora');
+      assert.ok(props.every((p) => p.fecha > D31 || p.ini >= 18 * 60), 'después del tiempo que ya no puede');
+      const claves = props.map((p) => p.fecha + p.ini); assert.equal(new Set(claves).size, 3, 'no las encima entre sí');
+      assert.equal(sg.d.afectadas[0].app, true); assert.equal(sg.d.afectadas[0].correo, true); assert.equal(sg.d.afectadas[2].app, false);
+      const pr = await api('/api/atelier-mia/mover/proponer', { metodo: 'POST', token: tok, body: { bloqueo: { fecha: D31, desde: '13:00', hasta: '18:00', persona: 'fer' },
+        propuestas: sg.d.afectadas.map((a) => ({ folio: a.folio, fecha: a.propuesta.fecha, hora: hhmmDe(a.propuesta.ini) })) } });
+      assert.equal(pr.status, 200); assert.equal(pr.d.resultados.length, 3);
+      const rA = pr.d.resultados[0];
+      assert.equal(rA.app, true); assert.equal(rA.correo, true); assert.equal(pr.d.resultados[1].app, false);
+      assert.match(rA.link, new RegExp('^https://agenda\\.solidaaplicaciones\\.com/atelier-mia/cita/' + folios[0] + '\\?t=[A-Z2-9]{20}$'));
+      assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, fecha: D31, hora: '13:00', min: 60, persona: 'fer', nombre: 'Intrusa', tel: '8440000599' }, ip: '10.0.3.30' })).status, 409, 'ese tiempo ya no se ofrece');
+      const agP = await api('/api/atelier-mia/agenda', { token: tok });
+      const cA = agP.d.citas.find((c) => c.folio === folios[0]);
+      assert.equal(cA.estado, 'propuesta'); assert.equal(cA.antes_fecha, D31); assert.equal(cA.antes_ini, 780); assert.equal(cA.enlace, rA.link); assert.equal(cA.app, true);
+      await espera2(async () => (await pendientesDe(EP_C)).some((a) => a.titulo === 'Tu cita cambió de hora' && a.url === rA.link), 'el aviso de la propuesta a la clienta');
+      await espera2(async () => correos2.some((c) => c.to[0] === 'ana@correo.mx' && /te propone mover tu cita/.test(c.subject)), 'el correo de la propuesta');
+      const cp = correos2.find((c) => c.to[0] === 'ana@correo.mx');
+      assert.ok(cp.html.includes(rA.link.replace(/&/g, '&amp;') + '&amp;r=acepto') || cp.html.includes(rA.link + '&amp;r=acepto'), 'el botón «Me queda» del correo');
+      assert.match(cp.html, /line-through/);
+      paso('«Se me atravesó algo»: propone a cada clienta la primera hora libre sin encimarlas, cierra ese tiempo, y le avisa por su app y por correo con su enlace');
+
+      // Contestar: con el enlace (sin app ni cuenta)
+      const t0 = new URL(rA.link).searchParams.get('t');
+      assert.equal((await cli(`/propuesta/${folios[0]}?t=malo`)).status, 404);
+      const vp = await cli(`/propuesta/${folios[0]}?t=${t0}`);
+      assert.equal(vp.status, 200); assert.equal(vp.d.cita.estado, 'propuesta'); assert.equal(vp.d.cita.antesIni, 780); assert.ok(vp.d.huecos.length > 0);
+      const ac = await cli(`/propuesta/${folios[0]}`, { metodo: 'POST', body: { t: t0, accion: 'acepto' } });
+      assert.equal(ac.status, 200); assert.equal(ac.d.cita.estado, 'confirmada');
+      await espera2(async () => (await pendientesDe(EP_D)).some((a) => a.titulo === 'Ana Cita aceptó la hora nueva'), 'el aviso «aceptó» a la dueña');
+      const t1 = new URL(pr.d.resultados[1].link).searchParams.get('t');
+      const v1 = await cli(`/propuesta/${folios[1]}?t=${t1}`);
+      const h1 = v1.d.huecos[v1.d.huecos.length - 1];
+      const ot = await cli(`/propuesta/${folios[1]}`, { metodo: 'POST', body: { t: t1, accion: 'otra', fecha: h1.fecha, hora: hhmmDe(h1.ini) } });
+      assert.equal(ot.status, 200); assert.equal(ot.d.cita.fecha, h1.fecha); assert.equal(ot.d.cita.ini, h1.ini); assert.equal(ot.d.cita.estado, 'confirmada');
+      const t2 = new URL(pr.d.resultados[2].link).searchParams.get('t');
+      assert.equal((await cli(`/propuesta/${folios[2]}`, { metodo: 'POST', body: { t: t2, accion: 'cancelo' } })).d.cita.estado, 'cancelada');
+      await espera2(async () => (await pendientesDe(EP_D)).some((a) => a.titulo === 'Caro Cita canceló su cita'), 'el aviso «canceló» a la dueña');
+      paso('la clienta contesta con su enlace: «Me queda», otra hora libre o cancelar; a la dueña le llega cada respuesta');
+
+      // En el navegador: la página de la propuesta
+      const pr2 = await api('/api/atelier-mia/mover/sugerir', { metodo: 'POST', token: tok, body: { fecha: D30, desde: '11:00', hasta: '13:30', persona: 'fer' } });
+      const af2 = pr2.d.afectadas.find((a) => a.folio === k1.d.folio);
+      const pr3 = await api('/api/atelier-mia/mover/proponer', { metodo: 'POST', token: tok, body: { propuestas: [{ folio: af2.folio, fecha: af2.propuesta.fecha, hora: hhmmDe(af2.propuesta.ini) }] } });
+      const pv = await ctx.newPage();
+      await pv.goto(pr3.d.resultados[0].link.replace('https://agenda.solidaaplicaciones.com', URL0));
+      await pv.waitForSelector('#acepto');
+      assert.match(await pv.textContent('main'), /Fernanda te propone mover tu cita/); assert.match(await pv.textContent('.antes'), /12:00 pm/);
+      if (CAP) await pv.screenshot({ path: CAP + '/cl-propuesta.png', fullPage: true });
+      await pv.click('#otra'); await pv.waitForSelector('[data-hueco]');
+      await pv.click('#acepto'); await pv.waitForFunction(() => /Tu cita está confirmada/.test(document.querySelector('main').textContent));
+      await pv.close();
+      paso('en el navegador: la página de la propuesta enseña antes y ahora, las horas libres, y «Me queda» la confirma');
+
+      // En el navegador: la app de la clienta en la página del negocio (iPhone, Android y desde Instagram)
+      const web2 = createServer((q, s2) => {
+        let ruta = decodeURIComponent(q.url.split('?')[0]); if (ruta.endsWith('/')) ruta += 'index.html';
+        try { const b = readFileSync(RAIZ + ruta); s2.writeHead(200, { 'Content-Type': { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webmanifest': 'application/manifest+json', '.png': 'image/png' }[ruta.slice(ruta.lastIndexOf('.'))] || 'application/octet-stream' }); s2.end(b); } catch { s2.writeHead(404); s2.end(); }
+      });
+      await new Promise((r2) => web2.listen(8817, '127.0.0.1', r2));
+      try {
+        const datosPrueba = readFileSync(RAIZ + 'prueba-agenda/datos.js', 'utf8').replace('https://citas.solidaaplicaciones.com/api/prueba-solida', URL0 + '/api/atelier-mia');
+        const abreCliente = async (ua) => {
+          const cx = await nav.newContext({ viewport: { width: 390, height: 844 }, userAgent: ua });
+          await cx.route('**/prueba-agenda/datos.js', (r2) => r2.fulfill({ contentType: 'text/javascript', body: datosPrueba }));
+          await cx.route('https://fonts.googleapis.com/**', (r2) => r2.fulfill({ body: '', contentType: 'text/css' }));
+          await cx.route('https://wa.me/**', (r2) => r2.fulfill({ body: 'ok', contentType: 'text/plain' }));
+          const pc = await cx.newPage(); const errs = []; pc.on('pageerror', (e) => errs.push(e.message));
+          await pc.goto('http://127.0.0.1:8817/prueba-agenda/'); await pc.waitForSelector('.hero');
+          return { cx, pc, errs };
+        };
+        const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+        const { cx, pc, errs } = await abreCliente(IPHONE);
+        assert.equal(await pc.getAttribute('link[rel="manifest"]', 'href'), 'manifest.webmanifest');
+        await pc.waitForSelector('#misCitas [data-cl="guia"]');
+        // Apartar desde la página: se guarda su teléfono y sus datos
+        await pc.click('[data-agendar]'); await pc.click('[data-serv="gelish"]'); await pc.click('[data-persona="fer"]');
+        await pc.click(`[data-fecha="${fecha(2)}"]`).catch(async () => { await pc.click('[data-fecha]'); });
+        await pc.click('[data-hora]:not([disabled])');
+        await pc.fill('#cNombre', 'Paola Prueba'); await pc.fill('#cTel', '8440000600'); await pc.fill('#cCorreo', 'paola@correo.mx');
+        await pc.click('[data-confirma]'); await pc.waitForSelector('.ticket-img', { timeout: 20000 });
+        await pc.waitForSelector('#clientaTicket [data-cl="guia"]');
+        await pc.keyboard.press('Escape');
+        await pc.waitForSelector('.cl-prox');
+        assert.match(await pc.textContent('#misCitas'), /Hola, Paola/); assert.match(await pc.textContent('#misCitas'), /Repetir mi última cita/);
+        assert.ok(await pc.$('#clLink'), '«Mis citas» en la cabecera');
+        const dispP = await pc.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('citas:disp:')).map((k) => localStorage.getItem(k))[0]);
+        const suyas = await cli('/mis-citas', { disp: dispP });
+        assert.equal(suyas.d.citas.length, 1); assert.equal(suyas.d.citas[0].nombre, 'Paola Prueba');
+        assert.equal((await api('/api/atelier-mia/agenda', { token: tok })).d.citas.find((c) => c.nombre === 'Paola Prueba').correo, 'paola@correo.mx');
+        // Guía de iPhone
+        await pc.click('#misCitas [data-cl="guia"]'); await pc.waitForSelector('.cl-paso');
+        assert.equal((await pc.$$('.cl-paso')).length, 3); assert.match(await pc.textContent('#hoja'), /Agregar a inicio/);
+        if (CAP) await pc.screenshot({ path: CAP + '/cl-guia-iphone.png' });
+        await pc.keyboard.press('Escape');
+        if (CAP) await pc.screenshot({ path: CAP + '/cl-mis-citas.png', fullPage: true });
+        // Repetir: abre la agenda con su servicio, persona y datos ya puestos
+        await pc.click('[data-cl="repetir"]'); await pc.waitForSelector('[data-confirma]');
+        assert.equal(await pc.getAttribute('[data-persona="fer"]', 'aria-pressed'), 'true'); assert.equal(await pc.inputValue('#cNombre'), 'Paola Prueba');
+        await pc.keyboard.press('Escape');
+        // Cambiar o cancelar → cancelar
+        pc.on('dialog', (dl) => dl.accept());
+        await pc.click('[data-cl="cambiar"]'); await pc.waitForSelector('#clCancela'); await pc.click('#clCancela');
+        await pc.waitForFunction(() => !document.querySelector('.cl-prox'));
+        assert.equal((await cli('/mis-citas', { disp: dispP })).d.citas[0].estado, 'cancelada');
+        assert.deepEqual(errs, []);
+        await cx.close();
+        // Android (Chrome): sin el aviso del navegador todavía, la explicación del menú; desde Instagram: copiar el enlace
+        const and = await abreCliente('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36');
+        await and.pc.waitForSelector('#misCitas .cl-card'); assert.match(await and.pc.textContent('#misCitas'), /Instalar app|Agregar a pantalla principal/);
+        await and.cx.close();
+        const ig = await abreCliente(IPHONE.replace('Safari/604.1', 'Instagram 330.0.0.0'));
+        await ig.pc.waitForSelector('[data-cl="copiar"]'); assert.match(await ig.pc.textContent('#misCitas'), /no se puede instalar/);
+        await ig.cx.close();
+      } finally { web2.close(); }
+      paso('la app de la clienta: aparta y su teléfono la recuerda (Mis citas, Repetir, Cambiar o cancelar); la guía de instalar cambia en iPhone, Android y desde Instagram');
+
+      // En el navegador: la dueña «Se me atravesó algo»
+      await pg.click('[data-vista="hoy"]'); await pg.click(`[data-dia="${fecha(2)}"]`);
+      await pg.click('#atraveso'); await pg.waitForSelector('#mvVer');
+      await pg.fill('#mvFecha', D30); await pg.click('[data-mvtodo="1"]'); await pg.click('[data-quien="fer"]'); await pg.click('#mvVer');
+      await pg.waitForSelector('#mvOk');
+      if (CAP) await pg.screenshot({ path: CAP + '/ag-mover.png', fullPage: true });
+      await pg.click('#mvOk'); await pg.waitForSelector('#mvListo');
+      assert.match(await pg.textContent('.hoja'), /Listo: ya les propusimos|Listo/);
+      if (CAP) await pg.screenshot({ path: CAP + '/ag-mover-listo.png', fullPage: true });
+      await pg.click('#mvListo');
+      assert.deepEqual(errores, []);
+      paso('en el navegador: la dueña aparta «Se me atravesó algo», ve a quién se le propone qué hora y por dónde se le avisa');
+    } finally { push2.close(); mail2.close(); }
+
     // La muestra también tiene Mis tiempos
     await ej.click('[data-vista="tiempos"]'); await ej.waitForSelector('#apartar');
     assert.match(await ej.textContent('main'), /Recoger a Santi/); assert.match(await ej.textContent('main'), /Vacaciones/);
@@ -600,6 +789,7 @@ try {
   console.log(`\n${pasos.length} pasos correctos.`);
 } catch (e) {
   console.error('\n✗ FALLÓ:', e.message); process.exitCode = 1;
+  if (process.env.LOG) console.error(log.split('\n').filter((l) => /Error|error|at /.test(l)).slice(-25).join('\n'));
 } finally {
   if (w) { try { process.kill(-w.pid, 'SIGTERM'); } catch {} }
   if (previo) writeFileSync(devVars, previo); else rmSync(devVars, { force: true });

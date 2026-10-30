@@ -194,7 +194,8 @@
   }
 
   // ───── vista: hoy (un día, hora por hora) ─────
-  var ESTADO = { apartada: 'Por confirmar', confirmada: 'Confirmada', cancelada: 'Cancelada' };
+  var ESTADO = { apartada: 'Por confirmar', confirmada: 'Confirmada', cancelada: 'Cancelada', propuesta: 'Hora nueva propuesta · esperando respuesta' };
+  function msgPropuesta(c) { return 'Hola ' + c.nombre + ' 👋 Te escribo de ' + perfil.nombre + ': se me atravesó algo y te propongo mover tu cita al ' + fechaLarga(c.fecha) + ' a las ' + hora12(c.inicio_min != null ? c.inicio_min : c.ini) + '. Contéstame aquí (me queda, otra hora o cancelar): ' + c.enlace; }
   function textoCita(c) {
     return (c.diseno ? c.diseno + ' (' + c.servicio + ')' : c.servicio) + (c.detalle ? ' · ' + c.detalle : '') + ' · ' + duracion(c.fin_min - c.inicio_min);
   }
@@ -235,7 +236,7 @@
       var x = sumaDia(hoy, i), n = d.citas.filter(function (c) { return c.fecha === x && c.estado !== 'cancelada'; }).length;
       h += '<button type="button" class="dia-chip" data-dia="' + x + '" aria-pressed="' + (x === f) + '">' + esc(nombreDia(x, hoy)) + (n ? '<small>' + n + '</small>' : '') + '</button>';
     }
-    h += '</div>';
+    h += '</div><button type="button" class="btn bloque atraveso" id="atraveso">Se me atravesó algo</button>';
     var et = estadoAvisosTel();
     if (et === 'apagado') h += '<section class="invita"><div><b>Los avisos de citas nuevas están apagados en este teléfono</b><span>Actívalos y te llega un aviso en cuanto alguien aparte en tu página.</span></div>' +
       '<div class="dos"><button type="button" class="btn negro" id="invitaSi">Activar</button><button type="button" class="btn" id="invitaNo">Ahora no</button></div></section>';
@@ -278,8 +279,10 @@
     var acc = '';
     if (c.estado !== 'cancelada') {
       acc = '<div class="acc">' + (c.estado === 'apartada' ? '<button class="btn negro" type="button" data-estado="confirmada" data-folio="' + esc(c.folio) + '" data-aviso="' + esc(conf) + '" data-tel="' + esc(c.tel) + '">Confirmar</button>' : '') +
-        (f === man ? '<a class="btn" href="' + esc(wa(c.tel, mensajeRecordar(c))) + '" target="_blank" rel="noopener" data-recfolio="' + esc(c.folio) + '">' + (c.recordada ? 'Recordada ✓' : 'Recordar') + '</a>'
-          : '<a class="btn" href="' + esc(wa(c.tel, 'Hola ' + c.nombre + ' 👋 ')) + '" target="_blank" rel="noopener">Escribirle</a>') +
+        (c.estado === 'propuesta' && c.enlace ? '<a class="btn" href="' + esc(wa(c.tel, msgPropuesta(c))) + '" target="_blank" rel="noopener">Mandarle la propuesta</a>'
+          : f === man ? '<a class="btn" href="' + esc(wa(c.tel, mensajeRecordar(c))) + '" target="_blank" rel="noopener" data-recfolio="' + esc(c.folio) + '">' + (c.recordada ? 'Recordada ✓' : 'Recordar') + '</a>'
+            : '<a class="btn" href="' + esc(wa(c.tel, 'Hola ' + c.nombre + ' 👋 ')) + '" target="_blank" rel="noopener">Escribirle</a>') +
+        '<button class="btn" type="button" data-detalle="' + esc(c.folio) + '">Más</button>' +
         '<button class="btn quitar" type="button" data-estado="cancelada" data-folio="' + esc(c.folio) + '">Cancelar cita</button></div>';
     }
     var pago = c.anticipo ? ' · anticipo ' + pesos(c.anticipo) : '';
@@ -287,7 +290,8 @@
       '<span class="pill ' + esc(c.estado) + '">' + esc(ESTADO[c.estado] || c.estado) + (c.origen === 'negocio' ? ' · la capturaste tú' : c.estado === 'apartada' ? ' · llegó de tu página' : '') + (c.recordada && c.estado !== 'cancelada' ? ' · recordada' : '') + '</span>' +
       '<b>' + esc(c.nombre) + '</b><span class="s">' + esc(textoCita(c)) + '</span>' +
       '<span class="s">' + (quien ? 'Con ' + esc(quien) + ' · ' : '') + esc(pesos(c.precio)) + esc(pago) + ' · termina ' + esc(hora12(c.fin_min)) + '</span>' +
-      '<span class="s">WhatsApp ' + esc(c.tel) + ' · folio ' + esc(c.folio) + '</span>' + acc + '</div></div>';
+      (c.estado === 'propuesta' && c.antes_fecha ? '<span class="s antes-de">Antes: ' + esc(fechaCorta(c.antes_fecha) + ' · ' + hora12(c.antes_ini)) + '</span>' : '') +
+      '<span class="s">WhatsApp ' + esc(c.tel) + ' · folio ' + esc(c.folio) + (c.app ? ' · 📱 tiene tu app' : '') + '</span>' + acc + '</div></div>';
   }
 
   // ───── vista: semana ─────
@@ -545,7 +549,20 @@
         '<button type="button" class="btn" id="avPruebaCorreo"' + (st.correo && !DEMO ? '' : ' disabled') + '>Probar el correo</button></div></form></section>';
       document.getElementById('avCuerpo').innerHTML = '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">Al celular</span>' + cel +
         (st.telefonos ? '<p class="nota" style="text-align:left">Activos en ' + st.telefonos + (st.telefonos === 1 ? ' teléfono' : ' teléfonos') + '.</p>' : '') +
-        (!DEMO && suscrito ? '<button type="button" class="btn bloque" id="avPrueba" style="margin-top:6px">Mandarme un aviso de prueba</button>' : '') + '</section>' + correo;
+        (!DEMO && suscrito ? '<button type="button" class="btn bloque" id="avPrueba" style="margin-top:6px">Mandarme un aviso de prueba</button>' : '') + '</section>' + correo +
+        '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">A tus clientas</span>' +
+        '<p class="nota" style="text-align:left;margin:0">Las que tienen la app de tu página reciben su recordatorio solas' + (st.clientasConApp != null ? ' (hoy: ' + st.clientasConApp + (st.clientasConApp === 1 ? ' clienta' : ' clientas') + ')' : '') + '. A las demás les recuerdas por WhatsApp, como siempre.</p>' +
+        '<div class="chips" role="group" aria-label="Cuándo recordarles">' + [['60', '1 hora antes'], ['120', '2 horas antes'], ['dia60', 'El día anterior + 1 hora antes']].map(function (o) {
+          return '<button type="button" class="chip" data-recordar="' + o[0] + '" aria-pressed="' + ((st.recordar || '60') === o[0]) + '">' + o[1] + '</button>';
+        }).join('') + '</div><p class="nota" style="text-align:left;margin:0">También les avisamos cuando confirmas, cancelas o les propones otra hora.</p></section>';
+      hoja.querySelectorAll('[data-recordar]').forEach(function (b) {
+        b.onclick = function () {
+          var v = b.getAttribute('data-recordar');
+          hoja.querySelectorAll('[data-recordar]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+          if (DEMO) { toast('Listo. En el ejemplo no se guarda.'); return; }
+          api('/avisos/clientas', { metodo: 'PUT', body: { recordar: v } }).then(function (x) { toast(x.status === 200 ? 'Listo: les recordamos ' + b.textContent.toLowerCase() : (x.d.error || 'No se pudo')); }, function () { toast('Sin conexión'); });
+        };
+      });
       var a = document.getElementById('avActiva');
       if (a) a.onclick = function () {
         a.disabled = true; a.textContent = 'Activando…';
@@ -777,6 +794,7 @@
       (c.estado === 'cancelada' ? '' : '<div class="acc" style="margin-top:14px">' +
         (c.estado === 'apartada' ? '<button class="btn negro" type="button" id="dcConfirma">Confirmar</button>' : '') +
         '<a class="btn" href="' + esc(wa(c.tel, c.fecha === man ? mensajeRecordar(c) : 'Hola ' + c.nombre + ' 👋 ')) + '" target="_blank" rel="noopener"' + (c.fecha === man ? ' data-recfolio="' + esc(c.folio) + '"' : '') + '>' + (c.fecha === man ? 'Recordar' : 'Escribirle') + '</a>' +
+        '<button class="btn" type="button" id="dcMover">Proponerle otra hora</button>' +
         '<button class="btn quitar" type="button" id="dcCancela">Cancelar cita</button></div>'));
     var cambia = function (est, aviso) {
       var ventana = aviso ? window.open('', '_blank') : null;
@@ -790,6 +808,95 @@
     var bc = document.getElementById('dcConfirma'); if (bc) bc.onclick = function () { bc.disabled = true; cambia('confirmada', wa(c.tel, conf)); };
     var bx = document.getElementById('dcCancela'); if (bx) bx.onclick = function () { if (confirm('¿Cancelar esta cita? Su hora vuelve a quedar libre en tu página.')) cambia('cancelada', ''); };
     var rc = hoja.querySelector('[data-recfolio]'); if (rc) rc.addEventListener('click', function () { marcaRecordada(c.folio); });
+    var bm = document.getElementById('dcMover'); if (bm) bm.onclick = function () { abreMover(ultimo, { cita: c }); };
+  }
+
+  // ───── «Se me atravesó algo»: proponerles hora nueva ─────
+  function abreMover(d, op) {
+    op = op || {};
+    var una = op.cita || null;
+    var st = { fecha: una ? una.fecha : (diaSel || d.hoy), todo: false, de: '13:00', a: '18:00', quien: una ? una.persona : (equipo().length ? (personaSel || equipo()[0].id) : ''), sug: null, elegidas: {} };
+    var hoja = abreHoja('<div id="mvCuerpo"></div>');
+    var cab = function (t, sub) { return '<div class="hoja-cab"><h2 class="titulo" id="hojaTit">' + esc(t) + '</h2>' + CERRAR + '</div>' + (sub ? '<p class="nota" style="text-align:left;margin-top:2px">' + esc(sub) + '</p>' : ''); };
+    var ataCerrar = function () { var x = hoja.querySelector('.cerrar'); if (x) x.onclick = cierraHoja; };
+    function paso1(msg) {
+      document.getElementById('mvCuerpo').innerHTML = cab('Se me atravesó algo', 'Elige el tiempo que ya no puedes. A cada clienta le proponemos la primera hora libre y le avisamos.') +
+        '<div class="campo-h"><label class="etq" for="mvFecha">Día</label><input class="campo" type="date" id="mvFecha" value="' + esc(st.fecha) + '" min="' + esc(d.hoy) + '">' +
+        '<div class="chips" role="group" aria-label="Qué tiempo"><button type="button" class="chip" data-mvtodo="0" aria-pressed="' + !st.todo + '">De … a …</button><button type="button" class="chip" data-mvtodo="1" aria-pressed="' + st.todo + '">Todo el día</button></div>' +
+        '<div class="dos" id="mvHoras"' + (st.todo ? ' hidden' : '') + '><label><span class="etq">De</span><select class="campo" id="mvDe">' + opcionesHora(st.de, 360, 1410) + '</select></label>' +
+        '<label><span class="etq">A</span><select class="campo" id="mvA">' + opcionesHora(st.a, 390, 1440) + '</select></label></div></div>' +
+        chipsPersona(st.quien) +
+        '<div class="campo-h"><label class="etq" for="mvMotivo">Motivo (sólo lo ves tú)</label><input class="campo" id="mvMotivo" maxlength="80" placeholder="Doctor, un pendiente…"></div>' +
+        '<p class="falta" id="mvFalta" role="alert">' + esc(msg || '') + '</p><button class="btn negro bloque grande" type="button" id="mvVer">Ver qué citas se mueven</button>';
+      ataCerrar();
+      eligeEn(hoja, 'data-mvtodo', function (v) { st.todo = v === '1'; document.getElementById('mvHoras').hidden = st.todo; });
+      eligeEn(hoja, 'data-quien', function (q) { st.quien = q; });
+      document.getElementById('mvVer').onclick = function () {
+        st.fecha = document.getElementById('mvFecha').value; st.de = document.getElementById('mvDe').value; st.a = document.getElementById('mvA').value; st.motivo = document.getElementById('mvMotivo').value;
+        if (!st.fecha) { document.getElementById('mvFalta').textContent = 'Elige el día.'; return; }
+        if (!st.todo && aMin(st.a) <= aMin(st.de)) { document.getElementById('mvFalta').textContent = 'La hora de fin va después de la de inicio.'; return; }
+        sugiere();
+      };
+    }
+    function sugiere() {
+      var cuerpo = una ? { fecha: una.fecha, desde: hhmm(una.inicio_min), hasta: hhmm(una.fin_min), persona: una.persona }
+        : { fecha: st.fecha, desde: st.todo ? '' : st.de, hasta: st.todo ? '' : st.a, persona: st.quien };
+      document.getElementById('mvCuerpo').innerHTML = cab(una ? 'Proponerle otra hora' : 'Se me atravesó algo') + '<p class="nota">Buscando horas libres…</p>'; ataCerrar();
+      envia('/mover/sugerir', { metodo: 'POST', body: cuerpo }).then(function (x) {
+        if (x.status === 401) return salir();
+        if (x.status !== 200) return una ? (cierraHoja(), toast(x.d.error || 'No se pudo')) : paso1(x.d.error || 'No se pudo');
+        st.sug = x.d; if (una) st.sug.afectadas = st.sug.afectadas.filter(function (a) { return a.folio === una.folio; });
+        st.elegidas = {}; st.sug.afectadas.forEach(function (a) { if (a.propuesta) st.elegidas[a.folio] = a.propuesta; });
+        paso2();
+      }, function () { una ? (cierraHoja(), toast('Sin conexión')) : paso1('Sin conexión.'); });
+    }
+    function paso2() {
+      var l = st.sug.afectadas, n = Object.keys(st.elegidas).length;
+      var h = cab(una ? 'Proponerle otra hora' : 'Se me atravesó algo', l.length ? null : 'En ese tiempo no hay citas. Igual lo cerramos para que tu página ya no lo ofrezca.');
+      if (l.length) h += '<span class="etq" style="color:var(--oro-txt);display:block;margin-top:12px">' + l.length + (l.length === 1 ? ' cita se mueve' : ' citas se mueven') + ' · a la primera hora libre</span>';
+      h += '<div class="lista" style="margin-top:8px">' + l.map(function (a) {
+        var e = st.elegidas[a.folio];
+        var canales = (a.app ? '<span class="canal">📱 Su app</span>' : '') + (a.correo ? '<span class="canal">✉ Correo</span>' : '') + (!a.app && !a.correo ? '<span class="canal">WhatsApp: tú le mandas</span>' : '');
+        return '<div class="mv"><div class="mv-top"><b>' + esc(a.nombre) + '</b><span>' + esc(a.servicio + ' · ' + duracion(a.dur)) + '</span></div>' +
+          '<span class="mv-antes">' + esc(fechaCorta(st.sug.fecha) + ' · ' + hora12(a.ini)) + '</span>' +
+          (e ? '<span class="mv-ahora">→ ' + esc(fechaCorta(e.fecha) + ' · ' + hora12(e.ini)) + ' <button type="button" class="enlace" data-mvcambia="' + esc(a.folio) + '">cambiar</button></span>'
+            : '<span class="mv-sin">No encontramos hora libre en 2 semanas. Escríbele tú.</span>') +
+          (st.abierta === a.folio ? '<div class="chips">' + a.alternativas.map(function (x) {
+            return '<button type="button" class="chip" data-mvelige="' + esc(a.folio + '|' + x.fecha + '|' + x.ini) + '" aria-pressed="' + (!!e && e.fecha === x.fecha && e.ini === x.ini) + '">' + esc(fechaCorta(x.fecha) + ' ' + hora12(x.ini)) + '</button>';
+          }).join('') + '</div>' : '') + '<div class="canales">' + canales + '</div></div>';
+      }).join('') + '</div>';
+      h += '<div class="ojo">Les <b>proponemos</b> la hora nueva y se la apartamos. Ellas contestan con un toque: <b>me queda</b>, <b>elijo otra</b> o <b>cancelo</b>.' + (una ? '' : ' Ese tiempo ya no se ofrece en tu página.') + '</div>' +
+        '<p class="falta" id="mvFalta2" role="alert"></p><button class="btn negro bloque grande" type="button" id="mvOk">' + (una ? 'Proponer y avisarle' : n ? 'Proponer y avisarles' : 'Cerrar ese tiempo') + '</button>' +
+        (una ? '' : '<button class="btn bloque" type="button" id="mvAtras" style="margin-top:8px">Atrás</button>');
+      document.getElementById('mvCuerpo').innerHTML = h; ataCerrar();
+      hoja.querySelectorAll('[data-mvcambia]').forEach(function (b) { b.onclick = function () { st.abierta = st.abierta === b.getAttribute('data-mvcambia') ? null : b.getAttribute('data-mvcambia'); paso2(); }; });
+      hoja.querySelectorAll('[data-mvelige]').forEach(function (b) { b.onclick = function () { var p = b.getAttribute('data-mvelige').split('|'); st.elegidas[p[0]] = { fecha: p[1], ini: +p[2] }; st.abierta = null; paso2(); }; });
+      var at = document.getElementById('mvAtras'); if (at) at.onclick = function () { paso1(); };
+      document.getElementById('mvOk').onclick = function () {
+        var b = document.getElementById('mvOk'); b.disabled = true;
+        var cuerpo = { propuestas: Object.keys(st.elegidas).map(function (f) { return { folio: f, fecha: st.elegidas[f].fecha, hora: hhmm(st.elegidas[f].ini) }; }) };
+        if (!una) cuerpo.bloqueo = { fecha: st.sug.fecha, desde: st.todo ? '' : st.de, hasta: st.todo ? '' : st.a, persona: st.quien, motivo: st.motivo || '' };
+        envia('/mover/proponer', { metodo: 'POST', body: cuerpo }).then(function (x) {
+          if (x.status === 401) return salir();
+          if (x.status !== 200) { b.disabled = false; document.getElementById('mvFalta2').textContent = x.d.error || 'No se pudo'; return; }
+          paso3(x.d.resultados || []); carga();
+        }, function () { b.disabled = false; document.getElementById('mvFalta2').textContent = 'Sin conexión.'; });
+      };
+    }
+    function paso3(res) {
+      var h = cab(res.length ? 'Listo: ya les propusimos' : 'Listo', res.length ? 'Te avisamos en cuanto contesten.' : (una ? '' : 'Tu página ya no ofrece ese tiempo.'));
+      h += '<div class="lista" style="margin-top:10px">' + res.map(function (r) {
+        if (r.error) return '<div class="mv"><b>' + esc(r.folio) + '</b><span class="mv-sin">' + esc(r.error) + '</span></div>';
+        var c = { nombre: r.nombre, fecha: r.fecha, ini: r.ini, enlace: r.link };
+        var dijo = r.app && r.correo ? 'Le avisamos en su app y por correo ✓' : r.app ? 'Le avisamos en su app ✓' : r.correo ? 'Le mandamos un correo ✓' : '';
+        return '<div class="mv"><div class="mv-top"><b>' + esc(r.nombre) + '</b><span>→ ' + esc(fechaCorta(r.fecha) + ' · ' + hora12(r.ini)) + '</span></div>' +
+          (dijo ? '<span class="mv-ahora" style="font-weight:400">' + esc(dijo) + '</span>' : '') +
+          '<a class="btn' + (dijo ? '' : ' negro') + '" href="' + esc(wa(r.tel, msgPropuesta(c))) + '" target="_blank" rel="noopener">' + (dijo ? 'También por WhatsApp' : 'Mandarle por WhatsApp') + '</a></div>';
+      }).join('') + '</div><button class="btn bloque" type="button" id="mvListo" style="margin-top:12px">Listo</button>';
+      document.getElementById('mvCuerpo').innerHTML = h; ataCerrar();
+      document.getElementById('mvListo').onclick = cierraHoja;
+    }
+    if (una) sugiere(); else paso1();
   }
 
   // ───── apartar una cita que pidieron por teléfono ─────
@@ -881,6 +988,8 @@
     raiz.querySelectorAll('[data-ir]').forEach(function (b) { b.onclick = function () { diaSel = b.getAttribute('data-ir'); irA('hoy'); }; });
     var nc = document.getElementById('nuevaCita'); if (nc) nc.onclick = function () { abreNuevaCita(ultimo); };
     var av = document.getElementById('abreAvisos'); if (av) av.onclick = abreAvisos;
+    var atr = document.getElementById('atraveso'); if (atr) atr.onclick = function () { abreMover(ultimo); };
+    raiz.querySelectorAll('[data-detalle]').forEach(function (b) { b.onclick = function () { abreCita(b.getAttribute('data-detalle')); }; });
     var iSi = document.getElementById('invitaSi');
     if (iSi) iSi.onclick = function () {
       iSi.disabled = true;
@@ -986,6 +1095,22 @@
   }
   function demoApi(ruta, op) {
     var d = demo(), b = op.body || {}, m;
+    if (ruta === '/mover/sugerir') {
+      var ini0 = b.desde ? aMin(b.desde) : 0, fin0 = b.hasta ? aMin(b.hasta) : 1440;
+      var af = d.citas.filter(function (c) { return c.fecha === b.fecha && c.estado !== 'cancelada' && c.inicio_min < fin0 && c.fin_min > ini0 && tocaA(c.persona, b.persona); });
+      return { status: 200, d: { fecha: b.fecha, afectadas: af.map(function (c, i) {
+        var alt = [0, 1, 2].map(function (k) { return { fecha: sumaDia(b.fecha, 1 + k), ini: 600 + i * 90 }; });
+        return { folio: c.folio, nombre: c.nombre, tel: c.tel, servicio: c.servicio, persona: c.persona, ini: c.inicio_min, fin: c.fin_min, dur: c.fin_min - c.inicio_min, app: i === 0, correo: i === 1, propuesta: alt[0], alternativas: alt };
+      }) } };
+    }
+    if (ruta === '/mover/proponer') {
+      return { status: 200, d: { resultados: (b.propuestas || []).map(function (p, i) {
+        var c = d.citas.filter(function (x) { return x.folio === p.folio; })[0];
+        c.antes_fecha = c.fecha; c.antes_ini = c.inicio_min; var dur = c.fin_min - c.inicio_min;
+        c.fecha = p.fecha; c.inicio_min = aMin(p.hora); c.fin_min = c.inicio_min + dur; c.estado = 'propuesta'; c.enlace = 'https://agenda.solidaaplicaciones.com/ejemplo/';
+        return { folio: c.folio, nombre: c.nombre, tel: c.tel, fecha: c.fecha, ini: c.inicio_min, link: c.enlace, app: i === 0, correo: i === 1 };
+      }) } };
+    }
     if ((m = ruta.match(/^\/citas\/(.+)\/recordada$/))) { d.citas.forEach(function (c) { if (c.folio === decodeURIComponent(m[1])) c.recordada = 1; }); return { status: 200, d: { ok: true } }; }
     if (ruta === '/citas' && op.metodo === 'POST') {
       var ini = aMin(b.hora), finC = ini + b.min;
