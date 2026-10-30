@@ -25,6 +25,7 @@ async function api(ruta, { metodo = 'GET', body, token, maestra, ip } = {}) {
 // Un día que exista y no sea hoy: mañana y pasado, en la zona del negocio
 // El primer día (desde dentro de n días) que cae en ese día de la semana (1 = lunes … 7 = domingo)
 const elDia = (wd, n = 1) => { for (let i = n; i < n + 8; i++) { const f = fecha(i); const d = new Date(f + 'T12:00:00Z').getUTCDay() || 7; if (d === wd) return f; } };
+const hhmmDe = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 const fecha = (n) => { const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Monterrey' }).format(new Date(Date.now() + n * 86400000)); return f; };
 
 try {
@@ -166,7 +167,7 @@ try {
     await ctx.route('https://wa.me/**', (r) => r.fulfill({ body: 'WhatsApp', contentType: 'text/plain' }));
     await ctx.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ body: '', contentType: 'text/css' }));
     const pg = await ctx.newPage();
-    const errores = []; pg.on('pageerror', (e) => errores.push(e.message)); pg.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|status of 401/.test(m.text())) errores.push(m.text()); });
+    const errores = []; pg.on('pageerror', (e) => errores.push(e.message)); pg.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|status of 40[19]/.test(m.text())) errores.push(m.text()); });
     await pg.goto(URL0 + '/atelier-mia/');
     await pg.waitForSelector('#clave');
     assert.match(await pg.textContent('.portada'), /Atelier Mía/);
@@ -177,8 +178,12 @@ try {
     await pg.fill('#clave', CLAVE2); await pg.click('#fEntrar button');
     await pg.waitForSelector('.cab');
     if (CAP) await pg.screenshot({ path: CAP + '/ag-agenda.png', fullPage: true });
+    await pg.click('[data-vista="semana"]'); await pg.waitForSelector('.sem-dia');
+    assert.equal((await pg.$$('.sem-dia')).length, 7, 'la semana son los próximos 7 días');
+    assert.match(await pg.textContent('main'), /Bea|Caro/);
+    await pg.click(`[data-ir="${F1}"]`); await pg.waitForSelector(`.dia-chip[data-dia="${F1}"][aria-pressed="true"]`);
     const txt = await pg.textContent('#app');
-    assert.match(txt, /Andrea|Bea|Caro/); assert.match(txt, /Con Fernanda/, 'pone el nombre del equipo, no su id');
+    assert.match(txt, /Bea|Caro/); assert.match(txt, /Con Fernanda/, 'pone el nombre del equipo, no su id');
     assert.ok(!(await pg.$('img')), 'el nombre con <img> se pinta como texto');
     assert.equal(await pg.getAttribute('a.btn[href^="https://ateliermia"]', 'href'), 'https://ateliermia.solidaaplicaciones.com/');
     // Cerrar un horario desde la app y que la página ya no pueda apartarlo
@@ -190,7 +195,8 @@ try {
     await pg.waitForFunction(() => !document.getElementById('velo') || document.getElementById('hojaListo'));
     if (await pg.$('#hojaListo')) await pg.click('#hojaListo');
     await pg.waitForFunction(() => /Dentista/.test(document.querySelector('main').textContent));
-    await pg.click('[data-vista="citas"]'); await pg.waitForSelector('.cifras');
+    await pg.click('[data-vista="hoy"]'); await pg.waitForSelector('.cifras');
+    await pg.click(`[data-dia="${F1}"]`); await pg.waitForSelector(`.dia-chip[data-dia="${F1}"][aria-pressed="true"]`);
     assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...cita, fecha: F9, hora: '10:30', persona: 'mia', nombre: 'Iris', tel: '8440000014' }, ip: '8.8.8.20' })).status, 409);
     // Confirmar una cita pendiente
     const pendientes = await pg.$$('[data-estado="confirmada"]');
@@ -199,7 +205,7 @@ try {
     await popup.waitForURL(/wa\.me/, { timeout: 8000 }); assert.match(popup.url(), /wa\.me\/52\d{10}\?text=/); await popup.close();
     await pg.waitForFunction((n) => document.querySelectorAll('[data-estado="confirmada"]').length === n - 1, pendientes.length);
     // Se queda abierta al volver a entrar
-    await pg.reload(); await pg.waitForSelector('.cab');
+    await pg.reload(); await pg.waitForSelector('.cab'); await pg.waitForSelector('.barra-nav');
     assert.deepEqual(errores, []);
     paso('en el navegador: entra con su clave, ve sus citas con los nombres de su equipo, cierra un horario y confirma una cita avisando por WhatsApp');
 
@@ -207,7 +213,7 @@ try {
     await ej.goto(URL0 + '/ejemplo/'); await ej.waitForSelector('.cab');
     assert.match(await ej.textContent('.muestra'), /Ejemplo de Solida/);
     if (CAP) await ej.screenshot({ path: CAP + '/ag-ejemplo.png', fullPage: true });
-    assert.ok((await ej.$$('.cita')).length >= 6); assert.ok(!(await ej.$('#clave')), 'la muestra no pide clave');
+    assert.ok((await ej.$$('.cita')).length >= 4); assert.ok(!(await ej.$('#clave')), 'la muestra no pide clave');
     const ancho = await ej.evaluate(() => document.documentElement.scrollWidth); assert.ok(ancho <= 390, 'sin scroll de lado: ' + ancho);
     paso('la agenda de muestra (/ejemplo/) abre sin clave, con citas de ejemplo, para el catálogo');
 
@@ -338,6 +344,51 @@ try {
     if (CAP) await pg.screenshot({ path: CAP + '/ag-tiempos.png', fullPage: true });
     assert.deepEqual(errores, []);
     paso('en el navegador: Mis tiempos enseña la semana de cada quien, edita el horario, aparta tiempo que se repite (avisando de la cita que ya estaba) y vacaciones');
+
+    // ───── Hoy: huecos libres y apartar por teléfono ─────
+    const MARTES = elDia(2, 1);
+    await pg.click('[data-vista="hoy"]'); await pg.waitForSelector('.dias-chips');
+    await pg.click(`[data-dia="${MARTES}"]`); await pg.waitForSelector(`.dia-chip[data-dia="${MARTES}"][aria-pressed="true"]`);
+    const libresMia = await pg.$$eval('[data-libre]', (l) => l.map((x) => x.getAttribute('data-libre')));
+    assert.ok(libresMia.some((x) => x.endsWith('|mia')), 'enseña los huecos libres de Mía en su horario: ' + libresMia.join(' '));
+    const hueco = libresMia.find((x) => x.endsWith('|mia')).split('|');
+    await pg.click(`[data-libre="${hueco.join('|')}"]`); await pg.waitForSelector('#fCita');
+    assert.equal(await pg.inputValue('#ncFecha'), MARTES); assert.equal(await pg.inputValue('#ncHora'), String(Math.floor(hueco[1] / 60)).padStart(2, '0') + ':' + String(hueco[1] % 60).padStart(2, '0'));
+    await pg.click('#ncOk'); assert.match(await pg.textContent('#ncFalta'), /nombre/);
+    await pg.fill('#ncNombre', 'Rosa Tel'); await pg.fill('#ncTel', '844 555 0101'); await pg.fill('#ncServ', 'Gelish'); await pg.click('[data-dur="90"]'); await pg.fill('#ncPrecio', '$300');
+    await pg.click('#ncOk'); await pg.waitForSelector('#ncAvisar');
+    assert.match(decodeURIComponent(await pg.getAttribute('#ncAvisar', 'href')), /wa\.me\/528445550101\?text=Hola Rosa Tel/);
+    await pg.click('#hojaListo');
+    const ag5 = await api('/api/atelier-mia/agenda', { token: tok });
+    const rosa = ag5.d.citas.find((c) => c.nombre === 'Rosa Tel');
+    assert.ok(rosa); assert.equal(rosa.estado, 'confirmada'); assert.equal(rosa.origen, 'negocio'); assert.equal(rosa.persona, 'mia');
+    assert.equal(rosa.fin_min - rosa.inicio_min, 90); assert.equal(rosa.precio, 300); assert.equal(rosa.fecha, MARTES);
+    await pg.waitForFunction(() => /Rosa Tel/.test(document.querySelector('main').textContent));
+    // La misma hora otra vez: ya está ocupada
+    await pg.click('#nuevaCita'); await pg.waitForSelector('#fCita');
+    await pg.fill('#ncFecha', MARTES); await pg.selectOption('#ncHora', hhmmDe(rosa.inicio_min)); await pg.click('[data-con="mia"]');
+    await pg.fill('#ncNombre', 'Otra'); await pg.fill('#ncTel', '8445550102'); await pg.fill('#ncServ', 'Gelish');
+    await pg.click('#ncOk'); await pg.waitForFunction(() => /ya hay otra cita/.test(document.getElementById('ncFalta').textContent));
+    await pg.keyboard.press('Escape');
+    paso('Hoy: enseña el día hora por hora con los huecos libres de cada quien; tocar uno aparta ahí la cita que pidieron por teléfono (ya confirmada) y no deja encimarla');
+
+    // Recordar las de mañana
+    assert.equal((await api(`/api/atelier-mia/citas/${rosa.folio}/recordada`, { metodo: 'POST' })).status, 401);
+    assert.equal((await api('/api/atelier-mia/citas/C-NOEXISTE/recordada', { metodo: 'POST', token: tok })).status, 404);
+    await pg.click(`[data-dia="${fecha(0)}"]`); await pg.waitForSelector('#recordar');
+    assert.match(await pg.textContent('.manana'), /sin recordar/);
+    await pg.click('#recordar'); await pg.waitForSelector('.rec');
+    const nRec = (await pg.$$('.rec')).length; assert.ok(nRec >= 2, 'las citas de mañana');
+    const [pop2] = await Promise.all([ctx.waitForEvent('page'), pg.click('.rec a.negro')]);
+    await pop2.waitForURL(/wa\.me/, { timeout: 8000 }); assert.match(decodeURIComponent(pop2.url()), /Te recordamos tu cita en Atelier Mía mañana/); await pop2.close();
+    await pg.waitForFunction(() => /Enviado ✓/.test(document.querySelector('.hoja').textContent));
+    await pg.click('.hoja .cerrar');
+    const ag6 = await api('/api/atelier-mia/agenda', { token: tok });
+    assert.equal(ag6.d.citas.filter((c) => c.fecha === fecha(1) && c.recordada > 0).length, 1, 'queda guardado en el servidor: se ve desde cualquier teléfono');
+    paso('Para mañana: lista las citas sin recordar; cada botón abre WhatsApp con su recordatorio y queda marcada como enviada en el servidor');
+
+    if (CAP) { await pg.click('[data-vista="hoy"]'); await pg.click(`[data-dia="${MARTES}"]`); await pg.screenshot({ path: CAP + '/ag-hoy.png', fullPage: true }); await pg.click('[data-vista="semana"]'); await pg.screenshot({ path: CAP + '/ag-semana.png', fullPage: true }); }
+    assert.deepEqual(errores, []);
 
     // La muestra también tiene Mis tiempos
     await ej.click('[data-vista="tiempos"]'); await ej.waitForSelector('#apartar');

@@ -7,6 +7,7 @@
 //   POST /api/:negocio/entrar {clave}                     → {token} para 30 días
 //   GET  /api/:negocio/agenda?desde=&hasta=               citas y bloqueos con sus datos
 //   POST /api/:negocio/citas/:folio/estado {estado}       confirmar o cancelar
+//   POST /api/:negocio/citas/:folio/recordada              ya se le mandó su recordatorio
 //   POST /api/:negocio/bloqueos {fecha, fechaFin?, desde?, hasta?} · DELETE /api/:negocio/bloqueos/:id
 //   PUT  /api/:negocio/horario {persona, semana}            cuándo trabaja cada quien (Mis tiempos)
 //   POST /api/:negocio/repetidos · DELETE /api/:negocio/repetidos/:id   planes que se repiten
@@ -94,6 +95,11 @@ async function enrutar(request, env) {
     const d = await cuerpo(request);
     if (!['confirmada', 'cancelada', 'apartada'].includes(d.estado)) throw new ErrorHttp(400, 'Estado no válido');
     const r = await env.DB.prepare('UPDATE citas SET estado=? WHERE negocio_id=? AND folio=?').bind(d.estado, neg.id, p[1]).run();
+    if (!r.meta.changes) throw new ErrorHttp(404, 'No existe esa cita');
+    return json({ ok: true });
+  }
+  if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/recordada$/)) && m === 'POST') {
+    const r = await env.DB.prepare('UPDATE citas SET recordada=? WHERE negocio_id=? AND folio=?').bind(ahora(), neg.id, p[1]).run();
     if (!r.meta.changes) throw new ErrorHttp(404, 'No existe esa cita');
     return json({ ok: true });
   }
@@ -279,7 +285,7 @@ async function agenda(env, neg, url) {
   const hoy = hoyEn(neg.zona).fecha;
   const desde = FECHA.test(url.searchParams.get('desde') || '') ? url.searchParams.get('desde') : sumaDias(hoy, -1);
   const hasta = FECHA.test(url.searchParams.get('hasta') || '') ? url.searchParams.get('hasta') : sumaDias(hoy, DIAS_MAX_ADELANTE);
-  const citas = (await env.DB.prepare(`SELECT folio, fecha, inicio_min, fin_min, persona, servicio, diseno, detalle, precio, anticipo, nombre, tel, estado, origen, creada
+  const citas = (await env.DB.prepare(`SELECT folio, fecha, inicio_min, fin_min, persona, servicio, diseno, detalle, precio, anticipo, nombre, tel, estado, origen, creada, recordada
       FROM citas WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min`).bind(neg.id, desde, hasta).all()).results;
   const bloqueos = (await env.DB.prepare('SELECT id, fecha, inicio_min, fin_min, persona, motivo FROM bloqueos WHERE negocio_id=? AND fecha>=? AND fecha<=? ORDER BY fecha, inicio_min')
     .bind(neg.id, desde, hasta).all()).results;
