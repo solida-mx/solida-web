@@ -163,7 +163,7 @@
     var c = datos && datos.citas.filter(function (x) { return x.folio === folio; })[0]; if (!c || !C.muestraTicket) return;
     var y = C.yo();
     C.muestraTicket({ folio: c.folio, fecha: c.fecha, hora: C.hhmm(c.ini), min: c.fin - c.ini, persona: c.persona || '', servicio: c.servicio, diseno: c.diseno || '',
-      largo: c.detalle || '', precio: c.precio || 0, anticipo: c.anticipo || 0, nombre: c.nombre || y.nombre || '', tel: y.tel || '' });
+      largo: c.detalle || '', precio: c.precio || 0, anticipo: c.anticipo || 0, nombre: c.nombre || y.nombre || '', tel: y.tel || '', estado: c.estado });
   }
   function copiar(t) {
     var ok = function () { C.toast('Enlace copiado. Pégalo en ' + (esIos ? 'Safari' : 'Chrome') + '.'); };
@@ -206,5 +206,16 @@
 
   window.__clienta = { refresca: refresca, enTicket: enTicket };
   if (location.hash === '#mis-citas') location.hash = '#misCitas';
-  refresca();
+  // Llegó con el enlace de su cita (se la apartaron en el local o por teléfono): se guarda en ESTE celular,
+  // aparece en «Mis citas» y abajo de su ticket le ofrecemos los avisos y la app.
+  var qs = new URLSearchParams(location.search), cf = qs.get('cita'), ct = qs.get('t');
+  if (cf && ct && /^[A-Z0-9-]{4,20}$/.test(cf)) {
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+    C.disp(true);
+    C.pide('/mis-citas/' + encodeURIComponent(cf) + '/guardar', { metodo: 'POST', disp: true, body: { t: ct } }).then(function (x) {
+      if (x.status !== 200) { C.toast(x.d.error || 'No encontramos esa cita'); return refresca(); }
+      datos = x.d;
+      return revisaAvisos().then(function () { pinta(); verTicket(cf); C.toast('Listo: tu cita quedó guardada en este celular'); });
+    }, function () { C.toast('Sin conexión. Vuelve a abrir el enlace.'); refresca(); });
+  } else refresca();
 })();

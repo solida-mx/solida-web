@@ -306,7 +306,7 @@
   // ───── la agenda ─────
   // Tres secciones, en la barra de abajo: «Hoy» (el día, hora por hora), «Semana» (los próximos 7 días)
   // y «Mis tiempos» (cuándo trabaja cada quien y lo que no se puede apartar).
-  var vista = location.hash === '#tiempos' ? 'tiempos' : location.hash === '#semana' ? 'semana' : 'hoy';
+  var vista = location.hash === '#tiempos' ? 'tiempos' : location.hash === '#semana' ? 'semana' : location.hash === '#qr' ? 'qr' : 'hoy';
   var personaSel = null, diaSel = null;
   var ultimo = null;
   var DSEM = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -341,11 +341,31 @@
     hoy: '<rect x="3.5" y="5" width="17" height="15" rx="1.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     semana: '<path d="M4 6h16M4 12h16M4 18h10"/>',
     tiempos: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    qr: '<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>',
   };
   function navHtml() {
-    return '<nav class="barra-nav" aria-label="Secciones de tu agenda">' + [['hoy', 'Hoy'], ['semana', 'Semana'], ['tiempos', 'Mis tiempos']].map(function (x) {
+    return '<nav class="barra-nav" aria-label="Secciones de tu agenda">' + [['hoy', 'Hoy'], ['semana', 'Semana'], ['tiempos', 'Mis tiempos'], ['qr', 'Mi QR']].map(function (x) {
       return '<button type="button" data-vista="' + x[0] + '"' + (vista === x[0] ? ' aria-current="page"' : '') + '><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' + ICO[x[0]] + '</svg>' + x[1] + '</button>';
     }).join('') + '</nav>';
+  }
+
+  // ───── en la compu (pantalla ancha): menú a un lado, Hoy por columnas, Semana en columnas, hojas a la derecha ─────
+  var ANCHA = matchMedia('(min-width: 1024px)');
+  function ancha() { return ANCHA.matches; }
+  function marcaAncha() { document.body.classList.toggle('ancha', ancha()); }
+  marcaAncha();
+  (ANCHA.addEventListener ? ANCHA.addEventListener.bind(ANCHA, 'change') : ANCHA.addListener.bind(ANCHA))(function () { marcaAncha(); if (ultimo && (token || DEMO)) pinta(ultimo); });
+  function ladoHtml() {
+    var bot = function (attr, ico, txt, actual) { return '<button type="button" ' + attr + (actual ? ' aria-current="page"' : '') + '><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' + ico + '</svg>' + txt + '</button>'; };
+    return '<nav class="lado" aria-label="Menú de tu agenda"><div class="lado-quien"><span class="sello chico">' + esc(iniciales(perfil.nombre)) + '</span><div><span class="etq">' + esc(perfil.nombre) + '</span><b>Tu agenda</b></div></div>' +
+      [['hoy', 'Hoy'], ['semana', 'Semana'], ['tiempos', 'Mis tiempos'], ['qr', 'Tu código QR']].map(function (x) { return bot('data-vista="' + x[0] + '"', ICO[x[0]], x[1], vista === x[0]); }).join('') +
+      '<span class="lado-raya"></span>' +
+      bot('data-lado="avisos"', '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>', 'Avisos') +
+      (DEMO ? '' : bot('data-lado="seguridad"', '<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/>', 'Seguridad y dispositivos')) +
+      (perfil.pagina ? '<a href="' + esc(perfil.pagina) + '" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg>Ver mi página</a>' : '') +
+      (DEMO ? '' : bot('data-lado="salir"', '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>', 'Salir')) +
+      '<span class="lado-hueco"></span><button type="button" class="btn oro bloque" data-lado="nueva">+ Apartar una cita</button>' +
+      '<p class="lado-nota">' + (DEMO ? 'Es un ejemplo: puedes tocar todo, nada se guarda.' : 'Se actualiza sola cada minuto.') + '</p></nav>';
   }
 
   var citaPendiente = null;   // la cita que pidió abrir un aviso; se abre en cuanto haya datos (y sesión)
@@ -360,8 +380,8 @@
     if (!diaSel || diaSel < hoy) diaSel = hoy;
     var vivas = d.citas.filter(function (c) { return c.fecha >= hoy && c.estado !== 'cancelada'; });
     var cab;
-    if (vista === 'tiempos') {
-      cab = '<div><span class="etq" style="color:var(--oro)">' + esc(perfil.nombre) + '</span><div>Mis tiempos</div></div>';
+    if (vista === 'tiempos' || vista === 'qr') {
+      cab = '<div><span class="etq" style="color:var(--oro)">' + esc(perfil.nombre) + '</span><div>' + (vista === 'qr' ? 'Tu código QR' : 'Mis tiempos') + '</div></div>';
     } else {
       cab = '<div><span class="etq" style="color:var(--oro)">' + esc(perfil.nombre) + '</span><div>' + (vista === 'semana' ? 'Tu semana' : esc(saludo())) + '</div></div>';
     }
@@ -379,6 +399,8 @@
       cifras = '<div class="cifras"><div class="cifra"><b>' + deSemana.length + '</b><span>citas en 7 días</span></div>' +
         '<div class="cifra"><b>' + pesos(deSemana.reduce(function (s, c) { return s + (c.precio || 0); }, 0)) + '</b><span>en servicios</span></div>' +
         '<div class="cifra"><b>' + deSemana.filter(function (c) { return c.estado === 'apartada'; }).length + '</b><span>por confirmar</span></div></div>';
+    } else if (vista === 'qr') {
+      cifras = '<p class="cab-txt">Pégalo en tu mostrador, en el espejo o en la puerta. Quien lo escanee llega a tu página, aparta sola y se queda con tu app en su celular.</p>';
     } else {
       cifras = '<p class="cab-txt">Tu página sólo ofrece las horas en que de verdad puedes. Lo que apartes aquí, tus clientas lo ven como «no disponible», sin saber por qué.</p>' +
         '<button class="btn oro bloque" type="button" id="apartar" style="margin-top:14px">+ Apartar tiempo para mí</button>';
@@ -388,7 +410,7 @@
       '<div class="quien">' + cab + '</div>' +
       '<button type="button" class="mas campana" id="abreAvisos" aria-label="Avisos de citas nuevas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></button>' +
       (vista !== 'tiempos' ? '<button type="button" class="mas" id="nuevaCita" aria-label="Apartar una cita que te pidieron por teléfono">+</button>' : '') + '</div>' + cifras + '</div></header>';
-    h += '<main class="envoltura cuerpo">' + (vista === 'tiempos' ? htmlTiempos(d) : vista === 'semana' ? htmlSemana(d) : htmlHoy(d)) + pie() + '</main>' + tarjetaInstalar() + navHtml();
+    h += '<main class="envoltura cuerpo">' + (vista === 'tiempos' ? htmlTiempos(d) : vista === 'semana' ? htmlSemana(d) : vista === 'qr' ? htmlQr() : htmlHoy(d)) + pie() + '</main>' + tarjetaInstalar() + (ancha() ? ladoHtml() : navHtml());
     var mismo = raiz.getAttribute('data-vista') === vista;
     raiz.setAttribute('data-vista', vista);
     raiz.innerHTML = h;
@@ -397,6 +419,7 @@
     ata(d);
     if (citaPendiente && !document.getElementById('velo')) { var f = citaPendiente; citaPendiente = null; abreCita(f); }
     if (ofrecerBio) { ofrecerBio = false; ofreceBio(); }
+    if (vista === 'qr') ataQr();
   }
   function pie() {
     return '<div class="pie">' + (perfil.pagina ? '<a class="btn" href="' + esc(perfil.pagina) + '" target="_blank" rel="noopener">Ver mi página</a>' : '') +
@@ -468,7 +491,8 @@
           '<span>Libre hasta ' + ((Math.floor(l.fin / 60) % 12 || 12) === 1 ? 'la ' : 'las ') + esc(hora12(l.fin)) + (equipo().length > 1 ? ' · ' + esc(nombreDe(l.persona)) : '') + '</span><b>Apartar ›</b></button></div>' };
       }))
       .sort(function (a, b) { return a.ini - b.ini || a.o - b.o; });
-    if (items.length) h += '<div class="lista">' + items.map(function (x) { return x.html; }).join('') + '</div>';
+    if (ancha() && (citas.length || tiempos.length || libres.length)) h += rejillaDia(d, f, citas, tiempos, libres, man);
+    else if (items.length) h += '<div class="lista">' + items.map(function (x) { return x.html; }).join('') + '</div>';
     else {
       var conHorario = personas().some(function (p) { return semanaDe(d, p.id); });
       h += '<p class="vacio">' + (conHorario ? 'Descansas este día.' : 'No hay citas este día.') + (conHorario ? '' : ' Pon tu horario en «Mis tiempos» y aquí verás tus horas libres.') + '</p>';
@@ -482,6 +506,49 @@
         '<p>' + (faltan ? 'Un toque y le llega a cada una su recordatorio por WhatsApp.' : deManana.length + (deManana.length === 1 ? ' cita mañana.' : ' citas mañana.')) + '</p>' +
         '<button type="button" class="btn claro bloque" id="recordar">' + (faltan ? 'Recordar ' + (faltan === 1 ? 'a la que falta' : 'a las ' + faltan) : 'Ver las de mañana') + '</button></section>';
     }
+    return h;
+  }
+  // El día en columnas, una por persona (en la compu). Media hora = una fila; lo que es de todo el negocio cruza todas las columnas.
+  function rejillaDia(d, f, citas, tiempos, libres, man) {
+    var ps = personas(), col = {}; ps.forEach(function (p, i) { col[p.id] = i + 2; });
+    var vivas = citas.filter(function (c) { return c.estado !== 'cancelada'; });
+    var desde = 1440, hasta = 0;
+    ps.forEach(function (p) { var s = semanaDe(d, p.id), x = s && s[dsem(f)]; if (x) { desde = Math.min(desde, x[0]); hasta = Math.max(hasta, x[1]); } });
+    vivas.forEach(function (c) { desde = Math.min(desde, c.inicio_min); hasta = Math.max(hasta, c.fin_min); });
+    tiempos.forEach(function (t) { if (t.fin - t.ini < 1440) { desde = Math.min(desde, t.ini); hasta = Math.max(hasta, t.fin); } });
+    if (desde >= hasta) { desde = 540; hasta = 1200; }
+    desde = Math.floor(desde / 60) * 60; hasta = Math.ceil(hasta / 60) * 60;
+    var fila = function (m) { return Math.round((Math.min(Math.max(m, desde), hasta) - desde) / 30) + 1; };
+    var lugar = function (ini, fin, persona) {
+      var c = persona && col[persona] ? col[persona] + ' / span 1' : '2 / -1';
+      return 'grid-column:' + c + ';grid-row:' + fila(ini) + ' / ' + Math.max(fila(fin), fila(ini) + 1);
+    };
+    var filas = (hasta - desde) / 30;
+    var h = '<div class="rej-caja"><div class="rej" style="grid-template-columns:56px repeat(' + ps.length + ',minmax(0,1fr));grid-template-rows:auto repeat(' + filas + ',40px)">';
+    h += '<span class="rej-esq"></span>' + ps.map(function (p) {
+      var s = semanaDe(d, p.id), x = s && s[dsem(f)];
+      return '<div class="rej-quien"><span class="rej-ini">' + esc(String(p.nombre || '?').charAt(0).toUpperCase()) + '</span><b>' + esc(p.nombre) + '</b><span>' + (s ? (x ? esc(corta(x[0]) + ' – ' + corta(x[1])) : 'descansa') : '') + '</span></div>';
+    }).join('');
+    // filas de la hora (la fila 1 es la de los nombres, así que todo va +1)
+    var mueve = function (st) { return st.replace(/grid-row:(\d+) \/ (\d+)/, function (_, a, b) { return 'grid-row:' + (+a + 1) + ' / ' + (+b + 1); }); };
+    for (var m = desde; m < hasta; m += 60) h += '<span class="rej-hora" style="grid-column:1;grid-row:' + (fila(m) + 1) + ' / span 2">' + esc(corta(m)) + '</span>';
+    h += '<span class="rej-fondo" style="grid-column:2 / -1;grid-row:2 / -1"></span>';
+    tiempos.forEach(function (t) {
+      h += '<div class="rej-mio' + (t.cal ? ' cal' : '') + '" style="' + mueve(lugar(t.ini, t.fin, t.persona)) + '"><b>' + esc(t.motivo || 'Tiempo para ti') + '</b><span>' +
+        esc(rango(t.ini, t.fin) + (t.rep ? ' · se repite' : '') + (t.cal ? ' · de tu calendario' : ' · sólo tú lo ves')) + '</span></div>';
+    });
+    libres.forEach(function (l) {
+      h += '<button type="button" class="rej-libre" data-libre="' + esc(f + '|' + l.ini + '|' + l.persona) + '" style="' + mueve(lugar(l.ini, l.fin, l.persona)) + '"><span>Libre ' + esc(corta(l.ini) + ' – ' + corta(l.fin)) + '</span><b>+ Apartar</b></button>';
+    });
+    vivas.forEach(function (c) {
+      var corta30 = c.fin_min - c.inicio_min <= 30;
+      h += '<button type="button" class="rej-cita ' + esc(c.estado) + (corta30 ? ' chica' : '') + '" data-detalle="' + esc(c.folio) + '" style="' + mueve(lugar(c.inicio_min, c.fin_min, c.persona)) + '">' +
+        '<span class="rej-est">' + esc(hora12(c.inicio_min) + ' · ' + (ESTADO[c.estado] || c.estado).split(' · ')[0]) + '</span><b>' + esc(c.nombre) + '</b>' +
+        (corta30 ? '' : '<span class="rej-s">' + esc((c.diseno ? c.diseno + ' · ' : '') + c.servicio + ' · ' + pesos(c.precio)) + '</span>') + '</button>';
+    });
+    h += '</div></div>';
+    var canc = citas.filter(function (c) { return c.estado === 'cancelada'; });
+    if (canc.length) h += '<p class="rej-canc">Canceladas: ' + canc.map(function (c) { return '<button type="button" class="enlace" data-detalle="' + esc(c.folio) + '">' + esc(hhmm(c.inicio_min) + ' ' + c.nombre) + '</button>'; }).join(' · ') + '</p>';
     return h;
   }
   function mensajeRecordar(c) { return 'Hola ' + c.nombre + ' 👋 Te recordamos tu cita en ' + perfil.nombre + ' mañana ' + fechaLarga(c.fecha) + ' a las ' + hora12(c.inicio_min) + '. ¡Te esperamos!'; }
@@ -508,7 +575,7 @@
 
   // ───── vista: semana ─────
   function htmlSemana(d) {
-    var hoy = d.hoy, h = '';
+    var hoy = d.hoy, h = '<div class="sem-rejilla">';
     for (var i = 0; i < 7; i++) {
       var f = sumaDia(hoy, i);
       var cs = d.citas.filter(function (c) { return c.fecha === f && c.estado !== 'cancelada'; }).sort(function (a, b) { return a.inicio_min - b.inicio_min; });
@@ -524,7 +591,7 @@
             (equipo().length > 1 && c.persona ? ' · ' + esc(nombreDe(c.persona)) : '') + (c.estado === 'apartada' ? ' · <em>por confirmar</em>' : '') + '</span></li>';
         }).join('') + '</ul>' : '') + '</section>';
     }
-    return h;
+    return h + '</div>';
   }
 
   // ───── vista: mis tiempos ─────
@@ -823,7 +890,8 @@
     focoAntes = document.activeElement;
     var v = document.createElement('div'); v.className = 'velo'; v.id = 'velo';
     v.innerHTML = '<div class="hoja" role="dialog" aria-modal="true" aria-labelledby="hojaTit"><div class="asa" aria-hidden="true"></div>' + html + '</div>';
-    document.body.appendChild(v); document.body.style.overflow = 'hidden';
+    document.body.appendChild(v);
+    if (ancha()) document.body.classList.add('con-panel'); else document.body.style.overflow = 'hidden';
     v.addEventListener('click', function (e) { if (e.target === v) cierraHoja(); });
     var x = v.querySelector('.cerrar'); if (x) x.onclick = cierraHoja;
     var f = v.querySelector('input,select,button:not(.cerrar)'); if (f) f.focus({ preventScroll: true });
@@ -832,7 +900,7 @@
   var alCerrar = null;
   function cierraHoja() {
     var v = document.getElementById('velo'); if (!v) return;
-    v.remove(); document.body.style.overflow = '';
+    v.remove(); document.body.style.overflow = ''; document.body.classList.remove('con-panel');
     if (alCerrar) { var f = alCerrar; alCerrar = null; f(); }
     if (focoAntes && focoAntes.isConnected) focoAntes.focus({ preventScroll: true });
   }
@@ -992,6 +1060,7 @@
   }
 
   // ───── el detalle de una cita (lo que abre el aviso) ─────
+  var recienApartada = null;
   function abreCita(folio) {
     var c = ultimo && ultimo.citas.filter(function (x) { return x.folio === folio; })[0];
     if (!c) { toast('Esa cita ya no está en tu agenda'); return; }
@@ -1008,6 +1077,8 @@
         '<a class="btn" href="' + esc(wa(c.tel, c.fecha === man ? mensajeRecordar(c) : 'Hola ' + c.nombre + ' 👋 ')) + '" target="_blank" rel="noopener"' + (c.fecha === man ? ' data-recfolio="' + esc(c.folio) + '"' : '') + '>' + (c.fecha === man ? 'Recordar' : 'Escribirle') + '</a>' +
         '<button class="btn" type="button" id="dcMover">Proponerle otra hora</button>' +
         '<button class="btn quitar" type="button" id="dcCancela">Cancelar cita</button></div>'));
+    if (c.estado !== 'cancelada' && perfil.pagina) ponManda(hoja, c, recienApartada === c.folio);
+    recienApartada = null;
     var cambia = function (est, aviso) {
       var ventana = aviso ? window.open('', '_blank') : null;
       envia('/citas/' + encodeURIComponent(c.folio) + '/estado', { metodo: 'POST', body: { estado: est } }).then(function (x) {
@@ -1021,6 +1092,186 @@
     var bx = document.getElementById('dcCancela'); if (bx) bx.onclick = function () { if (confirm('¿Cancelar esta cita? Su hora vuelve a quedar libre en tu página.')) cambia('cancelada', ''); };
     var rc = hoja.querySelector('[data-recfolio]'); if (rc) rc.addEventListener('click', function () { marcaRecordada(c.folio); });
     var bm = document.getElementById('dcMover'); if (bm) bm.onclick = function () { abreMover(ultimo, { cita: c }); };
+  }
+
+  // ───── «Mándale su cita»: su enlace por WhatsApp, por correo o como QR para que lo escanee ahí mismo ─────
+  // El enlace abre la página del negocio, guarda la cita en SU celular («Mis citas», avisos) y la invita a instalar la app.
+  function ponManda(hoja, c, recien) {
+    var quien = nombreDe(c.persona);
+    var sec = document.createElement('section'); sec.className = 'manda' + (recien ? ' recien' : '');
+    sec.innerHTML = (recien ? '<p class="manda-ok">Lista: ' + esc(c.nombre) + ' · ' + esc(fechaCorta(c.fecha) + ' · ' + hora12(c.inicio_min)) + '. Ya no se puede apartar esa hora en tu página.</p>' : '') +
+      '<span class="etq">Mándale su cita</span>' +
+      '<div class="dos"><button class="btn negro" type="button" data-manda="wa">Por WhatsApp</button><button class="btn" type="button" data-manda="correo">Por correo</button></div>' +
+      '<form class="manda-correo" hidden novalidate><input class="campo" type="email" inputmode="email" autocomplete="off" maxlength="200" placeholder="su@correo.com" aria-label="Su correo" value="' + esc(c.correo || '') + '">' +
+      '<button class="btn negro">Enviar</button></form>' +
+      '<button class="btn bloque" type="button" data-manda="qr">Que la escanee aquí</button>' +
+      '<div class="manda-qr" hidden></div><p class="falta manda-falta" role="alert"></p>' +
+      '<p class="nota" style="text-align:left">Le llega su cita con su enlace: la guarda en su celular, le recordamos antes y la próxima la aparta ella sola.</p>';
+    var fil = hoja.querySelector('.filas');
+    if (recien) fil.parentNode.insertBefore(sec, fil); else hoja.appendChild(sec);
+    var falta = sec.querySelector('.manda-falta');
+    var enlace = '';
+    var pideEnlace = function () {
+      if (enlace) return Promise.resolve(enlace);
+      return envia('/citas/' + encodeURIComponent(c.folio) + '/enlace', { metodo: 'POST' }).then(function (x) {
+        if (x.status === 401) { salir(false); throw new Error(''); }
+        if (x.status !== 200) throw new Error(x.d.error || 'No se pudo');
+        enlace = x.d.enlace; return enlace;
+      });
+    };
+    var msg = function (l) {
+      return 'Hola ' + c.nombre + ', te escribo de ' + perfil.nombre + '. Tu cita quedó el ' + fechaLarga(c.fecha) + ' a las ' + hora12(c.inicio_min) + (quien ? ' con ' + quien : '') + ': ' + c.servicio + '.\n\n' +
+        'Aquí la ves, la cambias si lo necesitas y te recordamos antes: ' + l + '\n\nLa próxima la apartas tú desde ahí, a la hora que quieras.';
+    };
+    sec.querySelector('[data-manda="wa"]').onclick = function () {
+      falta.textContent = '';
+      var ventana = window.open('', '_blank');   // se abre ya, o el teléfono la bloquea como ventana emergente
+      pideEnlace().then(function (l) { if (ventana) ventana.location = wa(c.tel, msg(l)); else location.href = wa(c.tel, msg(l)); },
+        function (e) { if (ventana) ventana.close(); falta.textContent = e.message || 'Sin conexión.'; });
+    };
+    var fc = sec.querySelector('.manda-correo');
+    sec.querySelector('[data-manda="correo"]').onclick = function () { fc.hidden = !fc.hidden; if (!fc.hidden) fc.querySelector('input').focus(); };
+    fc.onsubmit = function (e) {
+      e.preventDefault(); falta.textContent = '';
+      var b = fc.querySelector('button'), v = fc.querySelector('input').value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { falta.textContent = 'Revisa su correo.'; return; }
+      b.disabled = true;
+      envia('/citas/' + encodeURIComponent(c.folio) + '/correo', { metodo: 'POST', body: { correo: v } }).then(function (x) {
+        b.disabled = false;
+        if (x.status === 401) return salir(false);
+        if (x.status !== 200) { falta.textContent = x.d.error || 'No se pudo'; return; }
+        c.correo = v; fc.hidden = true; toast('Listo: le mandamos su cita a ' + v);
+      }, function () { b.disabled = false; falta.textContent = 'Sin conexión.'; });
+    };
+    sec.querySelector('[data-manda="qr"]').onclick = function () {
+      var caja = sec.querySelector('.manda-qr'), b = this;
+      if (!caja.hidden) { caja.hidden = true; return; }
+      falta.textContent = ''; b.disabled = true;
+      pideEnlace().then(function (l) {
+        b.disabled = false; caja.hidden = false;
+        caja.innerHTML = '<div class="qr-img" role="img" aria-label="Código QR de la cita de ' + esc(c.nombre) + '">' + qrSvg(l) + '</div>' +
+          '<span>Con la cámara de su celular: se abre su cita y queda guardada ahí.</span><button class="btn" type="button" data-manda="grande">Verlo en grande</button>';
+        caja.querySelector('[data-manda="grande"]').onclick = function () { qrGrande(l, c.nombre, 'Escanea con tu cámara: tu cita queda guardada en tu celular.'); };
+      }, function (e) { b.disabled = false; falta.textContent = e.message || 'Sin conexión.'; });
+    };
+  }
+  // Un código QR como dibujo (SVG), con la librería qr.js (MIT, sin conexión a nada)
+  function qrSvg(texto, nivel) {
+    var q = qrcode(0, nivel || 'M'); q.addData(texto); q.make();
+    var n = q.getModuleCount(), m = 4, d = '';
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) if (q.isDark(y, x)) d += 'M' + (x + m) + ' ' + (y + m) + 'h1v1h-1z';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + (n + 2 * m) + ' ' + (n + 2 * m) + '" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="' + d + '" fill="#161412"/></svg>';
+  }
+  // En grande, para voltear la pantalla hacia la clienta
+  function qrGrande(texto, titulo, sub) {
+    var v = document.createElement('div'); v.className = 'qr-grande'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-modal', 'true'); v.setAttribute('aria-label', 'Código QR');
+    v.innerHTML = '<span class="etq">' + esc(perfil.nombre) + '</span><b>' + esc(titulo) + '</b><div class="qr-img">' + qrSvg(texto) + '</div><span>' + esc(sub) + '</span>' +
+      '<button type="button" class="btn">Cerrar</button>';
+    var cierra = function () { v.remove(); document.removeEventListener('keydown', tecla, true); };
+    var tecla = function (e) { if (e.key === 'Escape') { e.stopPropagation(); cierra(); } };
+    v.querySelector('button').onclick = cierra; document.addEventListener('keydown', tecla, true);
+    document.body.appendChild(v); v.querySelector('button').focus();
+  }
+
+  // ───── Tu código QR: el cartel para el local (imprimir o PDF), en pantalla o como imagen para redes ─────
+  // Lleva a la página con ?de=qr: las citas que llegan así se cuentan, para ver si el cartel funciona.
+  var qrOp = { tam: 'carta', color: 'oro' };
+  try { var g = JSON.parse(localStorage.getItem('agenda:qr:' + ID) || '{}'); if (g.tam) qrOp.tam = g.tam; if (g.color) qrOp.color = g.color; qrOp.pie = String(g.pie || '').slice(0, 90); } catch (e) {}
+  var qrDatos = null;
+  function htmlQr() {
+    if (!perfil.pagina) return '<p class="vacio">Tu agenda todavía no tiene página conectada. Escríbele a Solida y te la conectamos.</p>';
+    var chip = function (attr, v, txt, sel) { return '<button type="button" class="chip" ' + attr + '="' + v + '" aria-pressed="' + (sel === v) + '">' + txt + '</button>'; };
+    return '<div class="qr-vista"><div class="qr-previa" aria-hidden="true"><div class="qr-hoja-previa" id="qrPrevia"></div></div>' +
+      '<div class="qr-opciones"><div class="campo-h"><span class="etq">Tamaño</span><div class="chips" role="group" aria-label="Tamaño">' +
+      chip('data-qrtam', 'carta', 'Cartel · carta', qrOp.tam) + chip('data-qrtam', 'media', 'Para el mostrador · 2 por hoja', qrOp.tam) + chip('data-qrtam', 'tarjetas', 'Tarjetitas · 8 por hoja', qrOp.tam) + '</div></div>' +
+      '<div class="campo-h"><span class="etq">Colores</span><div class="chips" role="group" aria-label="Colores">' +
+      chip('data-qrcolor', 'oro', 'Negro y dorado', qrOp.color) + chip('data-qrcolor', 'blanco', 'Blanco y negro (gasta menos tinta)', qrOp.color) + '</div></div>' +
+      '<div class="campo-h"><label class="etq" for="qrPie">Abajo del cartel (opcional)</label><input class="campo" id="qrPie" maxlength="90" placeholder="Tu dirección, tu horario o tu WhatsApp" value="' + esc(qrOp.pie || '') + '"></div>' +
+      '<div class="qr-botones"><button type="button" class="btn negro" id="qrImprime">Imprimir o guardar PDF</button><button type="button" class="btn" id="qrPantalla">Mostrar en pantalla</button>' +
+      '<button type="button" class="btn" id="qrImagen">Imagen para redes</button><button type="button" class="btn" id="qrCopia">Copiar el enlace</button></div>' +
+      '<p class="nota" style="text-align:left">Al imprimir elige tu impresora o «Guardar como PDF». El código nunca cambia: si lo imprimes hoy, sirve para siempre.</p>' +
+      '<div class="cifras qr-cifras" id="qrCifras"></div></div></div>';
+  }
+  function qrUrl() { return qrDatos ? qrDatos.url : perfil.pagina + (perfil.pagina.indexOf('?') >= 0 ? '&' : '?') + 'de=qr'; }
+  function guardaQrOp() { try { localStorage.setItem('agenda:qr:' + ID, JSON.stringify(qrOp)); } catch (e) {} }
+  function ataQr() {
+    if (!perfil.pagina) return;
+    var previa = function () { var p = document.getElementById('qrPrevia'); if (p) { p.className = 'qr-hoja-previa ' + qrOp.tam; p.innerHTML = hojaCartel(); } };
+    var cifras = function () {
+      var c = document.getElementById('qrCifras'); if (!c || !qrDatos) return;
+      c.innerHTML = '<div class="cifra"><b>' + qrDatos.delQr + '</b><span>apartaron desde tu QR este mes</span></div><div class="cifra"><b>' + qrDatos.nuevas + '</b><span>' + (qrDatos.nuevas === 1 ? 'es clienta nueva' : 'son clientas nuevas') + '</span></div>' +
+        '<div class="cifra"><b>' + qrDatos.conApp + '</b><span>tienen tus avisos en su celular</span></div>';
+    };
+    previa(); cifras();
+    raiz.querySelectorAll('[data-qrtam]').forEach(function (b) { b.onclick = function () { qrOp.tam = b.getAttribute('data-qrtam'); guardaQrOp(); raiz.querySelectorAll('[data-qrtam]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); previa(); }; });
+    raiz.querySelectorAll('[data-qrcolor]').forEach(function (b) { b.onclick = function () { qrOp.color = b.getAttribute('data-qrcolor'); guardaQrOp(); raiz.querySelectorAll('[data-qrcolor]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); previa(); }; });
+    var pieIn = document.getElementById('qrPie');
+    pieIn.oninput = function () { qrOp.pie = pieIn.value.slice(0, 90); guardaQrOp(); previa(); };
+    document.getElementById('qrImprime').onclick = imprimeCartel;
+    document.getElementById('qrPantalla').onclick = function () { qrGrande(qrUrl(), 'Aparta tu próxima cita', 'Escanea con la cámara de tu celular: eliges servicio, día y hora, y listo.'); };
+    document.getElementById('qrImagen').onclick = imagenRedes;
+    document.getElementById('qrCopia').onclick = function () {
+      var t = qrUrl(), ok = function () { toast('Enlace copiado'); };
+      if (navigator.clipboard) navigator.clipboard.writeText(t).then(ok, function () { prompt('Copia este enlace:', t); }); else prompt('Copia este enlace:', t);
+    };
+    if (!qrDatos) {
+      if (DEMO) { qrDatos = { url: qrUrl(), delQr: 12, nuevas: 7, conApp: 18 }; cifras(); return; }
+      api('/qr').then(function (x) { if (x.status === 401) return salir(false); if (x.status === 200) { qrDatos = x.d; cifras(); } });
+    }
+  }
+  // Un cartel (las tres medidas usan la misma pieza; cambian el acomodo y el tamaño)
+  function cartel(tam) {
+    var linea = String(perfil.pagina).replace(/^https?:\/\//, '').replace(/\/$/, '');
+    var qr = '<div class="ct-qr"><div class="qr-img">' + qrSvg(qrUrl(), 'H') + '</div><span class="ct-sello-qr">' + esc(iniciales(perfil.nombre)) + '</span></div>';
+    if (tam === 'tarjetas') return '<div class="ct ct-tarjeta">' + qr + '<div class="ct-txt"><span class="ct-neg">' + esc(perfil.nombre) + '</span><b>Aparta tu cita desde tu celular</b><span class="ct-pasos">Escanea · elige · listo</span></div></div>';
+    var pasos = '<div class="ct-pasos3"><div><i>1</i><b>Escanea</b><span>Con la cámara de tu celular, sin descargar nada.</span></div><div><i>2</i><b>Elige</b><span>Servicio, día y hora libre. Al momento.</span></div>' +
+      '<div><i>3</i><b>Listo</b><span>Guárdala como app y te recordamos tu cita.</span></div></div>';
+    return '<div class="ct ct-' + tam + '"><div class="ct-marco"><span class="ct-sello">' + esc(iniciales(perfil.nombre)) + '</span><span class="ct-neg">' + esc(perfil.nombre) + '</span>' +
+      '<b class="ct-tit">Aparta tu próxima cita <i>desde tu celular</i></b>' + qr + pasos + '<span class="ct-hueco"></span>' +
+      '<div class="ct-pie"><span>' + esc(qrOp.pie || '') + '</span><span>' + esc(linea) + '</span></div></div></div>';
+  }
+  function hojaCartel() {
+    var n = qrOp.tam === 'carta' ? 1 : qrOp.tam === 'media' ? 2 : 8, h = '';
+    for (var i = 0; i < n; i++) h += cartel(qrOp.tam);
+    return '<div class="ct-hoja ' + qrOp.tam + ' ' + qrOp.color + '">' + h + '</div>';
+  }
+  function imprimeCartel() {
+    var v = document.getElementById('impresion'); if (v) v.remove();
+    v = document.createElement('div'); v.id = 'impresion'; v.innerHTML = hojaCartel();
+    document.body.appendChild(v); document.body.classList.add('imprimiendo');
+    var fin = function () { document.body.classList.remove('imprimiendo'); var x = document.getElementById('impresion'); if (x) x.remove(); window.removeEventListener('afterprint', fin); };
+    window.addEventListener('afterprint', fin);
+    setTimeout(function () { window.print(); }, 60);
+  }
+  // Imagen de 1080 × 1350 (la medida de una publicación) para subirla a redes o mandarla por WhatsApp
+  function imagenRedes() {
+    var W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var x = cv.getContext('2d'), oro = qrOp.color === 'oro', fondo = oro ? '#161412' : '#ffffff', tinta = oro ? '#f7f3ec' : '#161412', acento = oro ? '#c9a96e' : '#161412';
+    var serif = '"Cormorant Garamond", Georgia, serif', sans = 'Jost, Helvetica, Arial, sans-serif';
+    x.fillStyle = fondo; x.fillRect(0, 0, W, H);
+    x.strokeStyle = acento; x.lineWidth = 3; x.strokeRect(48, 48, W - 96, H - 96);
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.beginPath(); x.arc(W / 2, 190, 64, 0, Math.PI * 2); x.stroke();
+    x.fillStyle = acento; x.font = '600 56px ' + serif; x.fillText(iniciales(perfil.nombre), W / 2, 194);
+    x.font = '500 26px ' + sans; x.fillText(perfil.nombre.toUpperCase().split('').join(String.fromCharCode(8202)), W / 2, 300);
+    x.fillStyle = tinta; x.font = '500 76px ' + serif; x.fillText('Aparta tu próxima cita', W / 2, 395);
+    x.font = 'italic 500 76px ' + serif; x.fillStyle = oro ? '#e9d3a6' : '#161412'; x.fillText('desde tu celular', W / 2, 475);
+    var q = qrcode(0, 'H'); q.addData(qrUrl()); q.make();
+    var n = q.getModuleCount(), lado = 470, cel = Math.floor(lado / (n + 8)), real = cel * (n + 8), x0 = (W - real) / 2, y0 = 560;
+    x.fillStyle = '#ffffff'; x.fillRect(x0, y0, real, real);
+    x.fillStyle = '#161412';
+    for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) x.fillRect(x0 + (c + 4) * cel, y0 + (r + 4) * cel, cel, cel);
+    var cx = W / 2, cy = y0 + real / 2, rr = real * 0.11;
+    x.fillStyle = '#ffffff'; x.beginPath(); x.arc(cx, cy, rr + 8, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#161412'; x.beginPath(); x.arc(cx, cy, rr, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#c9a96e'; x.font = '600 ' + Math.round(rr * 0.9) + 'px ' + serif; x.fillText(iniciales(perfil.nombre), cx, cy + 2);
+    x.fillStyle = tinta; x.font = '400 34px ' + sans; x.fillText('Escanea · elige · listo', W / 2, y0 + real + 70);
+    x.fillStyle = oro ? '#c9bfb1' : '#6b6157'; x.font = '400 28px ' + sans;
+    x.fillText(String(perfil.pagina).replace(/^https?:\/\//, '').replace(/\/$/, ''), W / 2, H - 120);
+    if (qrOp.pie) x.fillText(qrOp.pie, W / 2, H - 165);
+    var a = document.createElement('a'); a.download = 'codigo-qr-' + ID + '.png'; a.href = cv.toDataURL('image/png');
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('Listo: se descargó la imagen');
   }
 
   // ───── «Se me atravesó algo»: proponerles hora nueva ─────
@@ -1148,7 +1399,10 @@
         if (x.status === 401) return salir(false);
         if (x.status !== 201) { falta.textContent = x.status === 409 ? 'A esa hora ya hay otra cita' + (c.persona ? ' con ' + nombreDe(c.persona) : '') + '. Elige otra hora.' : (x.d.error || 'No se pudo'); b.disabled = false; return; }
         var msg = 'Hola ' + c.nombre + ' 👋 Quedó tu cita en ' + perfil.nombre + ' el ' + fechaLarga(c.fecha) + ' a las ' + hora12(aMin(c.hora)) + ' (' + c.servicio + '). ¡Te esperamos!';
-        diaSel = c.fecha; carga();
+        diaSel = c.fecha;
+        // Con página conectada: se abre su cita con «Mándale su cita» (WhatsApp, correo o el QR para que la escanee ahí mismo).
+        if (perfil.pagina && x.d.folio) { recienApartada = x.d.folio; citaPendiente = x.d.folio; cierraHoja(); carga(); return; }
+        carga();
         hoja.innerHTML = '<div class="asa" aria-hidden="true"></div><div class="hoja-cab"><h2 class="titulo" id="hojaTit">Cita apartada</h2>' + CERRAR + '</div>' +
           '<p class="nota" style="text-align:left">' + esc(c.nombre + ' · ' + fechaLarga(c.fecha) + ' · ' + hora12(aMin(c.hora))) + '. Ya no se puede apartar esa hora en tu página.</p>' +
           '<a class="btn negro bloque grande" id="ncAvisar" href="' + esc(wa(c.tel, msg)) + '" target="_blank" rel="noopener">Mandarle su cita por WhatsApp</a>' +
@@ -1200,6 +1454,11 @@
     raiz.querySelectorAll('[data-dia]').forEach(function (b) { if (b.classList.contains('dia-chip')) b.onclick = function () { diaSel = b.getAttribute('data-dia'); pinta(ultimo); }; });
     raiz.querySelectorAll('[data-ir]').forEach(function (b) { b.onclick = function () { diaSel = b.getAttribute('data-ir'); irA('hoy'); }; });
     var nc = document.getElementById('nuevaCita'); if (nc) nc.onclick = function () { abreNuevaCita(ultimo); };
+    raiz.querySelectorAll('[data-lado]').forEach(function (b) {
+      var q = b.getAttribute('data-lado');
+      b.onclick = q === 'avisos' ? abreAvisos : q === 'seguridad' ? abreSeguridad : q === 'nueva' ? function () { abreNuevaCita(ultimo); }
+        : function () { if (confirm('¿Salir de tu agenda en ' + este + '?')) salir(); };
+    });
     var av = document.getElementById('abreAvisos'); if (av) av.onclick = abreAvisos;
     var atr = document.getElementById('atraveso'); if (atr) atr.onclick = function () { abreMover(ultimo); };
     raiz.querySelectorAll('[data-detalle]').forEach(function (b) { b.onclick = function () { abreCita(b.getAttribute('data-detalle')); }; });
@@ -1255,7 +1514,7 @@
 
   function irA(v) {
     vista = v;
-    history.replaceState(null, '', v === 'tiempos' ? '#tiempos' : v === 'semana' ? '#semana' : location.pathname);
+    history.replaceState(null, '', v === 'hoy' ? location.pathname : '#' + v);
     pinta(ultimo); scrollTo(0, 0);
   }
 
@@ -1333,6 +1592,8 @@
         nombre: b.nombre, tel: b.tel, estado: 'confirmada', origen: 'negocio', recordada: 0 });
       return { status: 201, d: { folio: 'C-EJEM' + demoId, estado: 'confirmada' } };
     }
+    if ((m = ruta.match(/^\/citas\/(.+)\/enlace$/))) return { status: 200, d: { enlace: perfil.pagina + '?cita=' + m[1] + '&t=EJEMPLO' } };
+    if ((m = ruta.match(/^\/citas\/(.+)\/correo$/))) return { status: 200, d: { ok: true } };
     if ((m = ruta.match(/^\/citas\/(.+)\/estado$/))) { d.citas.forEach(function (c) { if (c.folio === decodeURIComponent(m[1])) c.estado = b.estado; }); return { status: 200, d: { ok: true } }; }
     if (ruta === '/horario') { d.horario[b.persona] = b.semana; return { status: 200, d: { horario: d.horario } }; }
     if (ruta === '/repetidos' && op.metodo === 'POST') {

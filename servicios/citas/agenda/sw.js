@@ -1,6 +1,6 @@
 // La agenda abre aunque la señal esté mala: la app se guarda en el teléfono; las citas siempre se piden al servidor.
 const VERSION = 'agenda-__VERSION__';
-const APP = ['/_app/app.css', '/_app/app.js'];
+const APP = ['/_app/app.css', '/_app/qr.js', '/_app/app.js'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(APP)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('agenda-') && k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));

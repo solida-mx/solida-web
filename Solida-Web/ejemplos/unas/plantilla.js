@@ -33,6 +33,9 @@
     return t;
   }
   function yo() { try { return JSON.parse(localStorage.getItem(LLAVE_YO)) || {}; } catch (e) { return {}; } }
+  // Si llegó escaneando el código QR del local (?de=qr), sus citas cuentan como «del QR» para que la dueña vea si el cartel funciona.
+  var VIA = '';
+  try { if (/[?&]de=qr(&|$)/.test(location.search)) sessionStorage.setItem('citas:via', 'qr'); VIA = sessionStorage.getItem('citas:via') || ''; } catch (e) {}
   function pide(ruta, op) {
     op = op || {};
     var h = { 'Content-Type': 'application/json' };
@@ -360,7 +363,7 @@
     if (SERVIDOR) {
       var btn = hoja.querySelector('[data-confirma]'); if (btn) { btn.disabled = true; btn.textContent = 'Apartando…'; }
       var correo = String(c.correo || '').trim();
-      pide('/citas', { metodo: 'POST', body: Object.assign({}, cita, { equipo: (N.equipo || []).map(function (p) { return p.id; }), disp: dispCliente(true), correo: correo }) }).then(function (x) {
+      pide('/citas', { metodo: 'POST', body: Object.assign({}, cita, { equipo: (N.equipo || []).map(function (p) { return p.id; }), disp: dispCliente(true), correo: correo, via: VIA }) }).then(function (x) {
         if (x.status === 201) {
           cita.folio = x.d.folio; cita.persona = x.d.persona || cita.persona; ocupadoSrv = null;
           try { localStorage.setItem(LLAVE_YO, JSON.stringify({ nombre: cita.nombre, tel: cita.tel, correo: correo })); } catch (e) {}
@@ -392,7 +395,7 @@
       '💅 ' + (cita.diseno ? cita.diseno + ' (' + cita.servicio + ')' : cita.servicio) + (cita.largo ? ' · ' + cita.largo : '') + '\n' +
       (p ? '👤 Con ' + p.nombre + '\n' : '') + '💲 ' + pesos(cita.precio) + (cita.anticipo ? ' · anticipo ' + pesos(cita.anticipo) : '') + '\n' +
       'A nombre de ' + cita.nombre + ' · Folio ' + cita.folio;
-    abre('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">' + (TOTAL ? 'Tu cita está apartada' : 'Tu ticket está listo') + '</h2>' + CERRAR + '</div>' +
+    abre('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">' + (TOTAL ? (cita.estado === 'confirmada' ? 'Tu cita está confirmada' : 'Tu cita está apartada') : 'Tu ticket está listo') + '</h2>' + CERRAR + '</div>' +
       '<p class="aviso" style="margin:0 0 6px">Preparando tu ticket…</p>');
     hoja.querySelector('.cerrar').onclick = cierra;
     dibujaTicket(cita).then(function (canvas) {
@@ -401,7 +404,7 @@
       var url = URL.createObjectURL(t.blob);
       var archivo = new File([t.blob], 'cita-' + cita.folio + '.png', { type: 'image/png' });
       var compartible = navigator.canShare && navigator.canShare({ files: [archivo] });
-      abre('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">' + (TOTAL ? 'Tu cita está apartada' : 'Tu ticket está listo') + '</h2>' + CERRAR + '</div>' +
+      abre('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">' + (TOTAL ? (cita.estado === 'confirmada' ? 'Tu cita está confirmada' : 'Tu cita está apartada') : 'Tu ticket está listo') + '</h2>' + CERRAR + '</div>' +
         '<img class="ticket-img" src="' + url + '" alt="Ticket de tu cita del ' + esc(fechaLarga(cita.fecha)) + ' a las ' + esc(hora12(cita.hora)) + '">' +
         '<div class="acciones">' +
         (TOTAL && N.anticipo ? (N.enlacePago ? '<a class="btn btn-oro btn-bloque" href="' + esc(N.enlacePago) + '" target="_blank" rel="noopener">Pagar anticipo · ' + pesos(N.anticipo) + '</a>'
@@ -462,7 +465,7 @@
       x.fillStyle = ORO; x.font = sans('400', 13); espaciado(N.giro.toUpperCase(), W / 2, 256, 4);
       // fecha y hora
       var y = top + 24 + 64;
-      x.fillStyle = ORO_TXT; x.font = sans('500', 14); espaciado((TOTAL ? 'CITA APARTADA' : 'SOLICITUD DE CITA'), W / 2, y, 5);
+      x.fillStyle = ORO_TXT; x.font = sans('500', 14); espaciado((TOTAL ? (cita.estado === 'confirmada' ? 'CITA CONFIRMADA' : 'CITA APARTADA') : 'SOLICITUD DE CITA'), W / 2, y, 5);
       x.fillStyle = TINTA; x.font = serif('600', 46); x.fillText(fechaLarga(cita.fecha), W / 2, y + 62);
       x.font = serif('italic 500', 40); x.fillText(hora12(cita.hora), W / 2, y + 112);
       // perforación con muescas

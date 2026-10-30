@@ -83,5 +83,19 @@ cierra todos los demás. Si ya no puede entrar en ninguno, Solida le da una clav
 sesiones y borra todos los Face ID. Las pruebas usan un autenticador simulado de Chromium en `http://localhost`
 (`WEBAUTHN_PRUEBA=1`, sólo en `.dev.vars`).
 
+**En la compu** (pantalla de 1024 px o más) la agenda cambia de acomodo, con los mismos datos: menú a la izquierda,
+«Hoy» con una columna por persona (media hora = una fila), «Semana» con los 7 días en columnas, y cada hoja (una cita,
+apartar, avisos…) se abre como panel a la derecha sin tapar la agenda. En el celular todo sigue igual.
+
+**Apartar en el local.** Al apartar una cita en la agenda se abre su detalle con «Mándale su cita»: por WhatsApp (abre el
+WhatsApp de la dueña con el mensaje listo, sin costo), por correo (Resend, sólo si la clienta da su correo) o con un QR en
+pantalla para que lo escanee ahí. El enlace es la página del negocio con `?cita=<folio>&t=<token>`; `app-clienta.js` lo
+manda a `POST /mis-citas/<folio>/guardar` y la cita queda en SU celular («Mis citas», avisos, instalar la app).
+
+**Tu código QR** (sección de la agenda): cartel para imprimir o guardar en PDF (carta, 2 por hoja o 8 tarjetitas; negro
+y dorado o blanco y negro; con una línea propia abajo), en pantalla, o imagen de 1080×1350 para redes. Lleva a la página con
+`?de=qr`; `plantilla.js` manda `via: 'qr'` al apartar y `GET /qr` cuenta las del mes, cuántas son nuevas y cuántas
+clientas tienen avisos. El QR lo dibuja `agenda/_app/qr.js` (qrcode-generator, MIT, sin cambios).
+
 **Página de prueba:** `/prueba-agenda/` está conectada a la agenda `prueba-solida` (no indexada). Se borra al terminar las pruebas.
 
