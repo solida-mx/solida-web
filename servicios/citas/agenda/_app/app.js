@@ -170,6 +170,7 @@
     var h = (DEMO ? '<div class="muestra"><span>Ejemplo de Solida · así ve su agenda la dueña</span><a href="https://solidaaplicaciones.com/ejemplos/unas/avanzado/">Ver la página de sus clientas ›</a></div>' : '') +
       '<header class="cab"><div class="envoltura"><div class="cab-fila"><span class="sello chico">' + esc(iniciales(perfil.nombre)) + '</span>' +
       '<div class="quien">' + cab + '</div>' +
+      '<button type="button" class="mas campana" id="abreAvisos" aria-label="Avisos de citas nuevas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></button>' +
       (vista !== 'tiempos' ? '<button type="button" class="mas" id="nuevaCita" aria-label="Apartar una cita que te pidieron por teléfono">+</button>' : '') + '</div>' + cifras + '</div></header>';
     h += '<main class="envoltura cuerpo">' + (vista === 'tiempos' ? htmlTiempos(d) : vista === 'semana' ? htmlSemana(d) : htmlHoy(d)) + pie() + '</main>' + tarjetaInstalar() + navHtml();
     var mismo = raiz.getAttribute('data-vista') === vista;
@@ -228,7 +229,10 @@
       var x = sumaDia(hoy, i), n = d.citas.filter(function (c) { return c.fecha === x && c.estado !== 'cancelada'; }).length;
       h += '<button type="button" class="dia-chip" data-dia="' + x + '" aria-pressed="' + (x === f) + '">' + esc(nombreDia(x, hoy)) + (n ? '<small>' + n + '</small>' : '') + '</button>';
     }
-    h += '</div><h2 class="etq dia-tit">' + esc(fechaLarga(f)) + '</h2>';
+    h += '</div>';
+    if (invitarAvisos()) h += '<section class="invita"><div><b>¿Te aviso de cada cita nueva?</b><span>Te llega al celular en cuanto alguien aparta en tu página.</span></div>' +
+      '<div class="dos"><button type="button" class="btn negro" id="invitaSi">Avísame</button><button type="button" class="btn" id="invitaNo">Ahora no</button></div></section>';
+    h += '<h2 class="etq dia-tit">' + esc(fechaLarga(f)) + '</h2>';
     var tiempos = tiemposDelDia(d, f), libres = libresDelDia(d, f, tiempos);
     var citas = d.citas.filter(function (c) { return c.fecha === f; });
     var items = citas.map(function (c) { return { ini: c.inicio_min, o: c.estado === 'cancelada' ? 3 : 0, html: filaCita(c, f, man) }; })
@@ -465,6 +469,103 @@
       qt.disabled = true;
       envia('/calendarios/' + c.id, { metodo: 'DELETE' }).then(function () { cierraHoja(); toast('Listo: desconectado'); carga(); }, function () { toast('Sin conexión'); qt.disabled = false; });
     };
+  }
+
+  // ───── avisos al celular y por correo ─────
+  var puedePush = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  var suscrito = false;
+  function invitarAvisos() {
+    if (DEMO || !puedePush || suscrito || Notification.permission === 'denied') return false;
+    if (esIos && !instalada) return false;
+    try { return !localStorage.getItem('agenda:noavisos:' + ID); } catch (e) { return false; }
+  }
+  function b64aU8(s) { var t = (s + '===='.slice((s.length + 3) % 4 + 1)).replace(/-/g, '+').replace(/_/g, '/'); var b = atob(t); return Uint8Array.from(b, function (c) { return c.charCodeAt(0); }); }
+  function registro() {
+    return Promise.race([navigator.serviceWorker.ready, new Promise(function (_, no) { setTimeout(function () { no(new Error('sin sw')); }, 8000); })]);
+  }
+  function revisaSuscripcion() {
+    if (DEMO || !puedePush) return Promise.resolve(false);
+    return registro().then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (s) { suscrito = !!s; return s; }).catch(function () { return null; });
+  }
+  function activaAvisos(vapid) {
+    if (!vapid) return Promise.reject(new Error('Los avisos al celular todavía no están activos. Escríbele a Solida.'));
+    return Notification.requestPermission().then(function (p) {
+      if (p !== 'granted') throw new Error(p === 'denied' ? 'Bloqueaste los avisos. Actívalos en los ajustes de tu navegador para esta página.' : 'No diste permiso para los avisos.');
+      return registro();
+    }).then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (s) { return s || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64aU8(vapid) }); });
+    }).then(function (sub) {
+      return api('/avisos/suscribir', { metodo: 'POST', body: { endpoint: sub.endpoint } });
+    }).then(function (x) {
+      if (x.status !== 200) throw new Error(x.d.error || 'No se pudo');
+      suscrito = true; return x.d;
+    });
+  }
+  function apagaAvisos() {
+    return registro().then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (s) {
+      if (!s) return null;
+      var ep = s.endpoint;
+      return s.unsubscribe().then(function () { return api('/avisos/quitar', { metodo: 'POST', body: { endpoint: ep } }); });
+    }).then(function () { suscrito = false; });
+  }
+  var MUESTRA_AVISO = '<div class="noti-muestra" aria-hidden="true"><span class="sello chico">' + '__INI__' + '</span><div><b>Nueva cita · __NEG__</b><span>Daniela Soto apartó Volumen ruso con Fernanda · vie 30 · 1:00 pm. Sin anticipo todavía.</span></div></div>';
+  function abreAvisos() {
+    var muestra = MUESTRA_AVISO.replace('__INI__', esc(iniciales(perfil.nombre))).replace('__NEG__', esc(perfil.nombre));
+    var hoja = abreHoja('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">Avisos</h2>' + CERRAR + '</div>' +
+      '<p class="nota" style="text-align:left;margin-top:2px">Te avisamos de cada cita nueva que llegue de tu página, y en la noche cuántas tienes mañana.</p>' +
+      '<span class="etq" style="color:var(--oro-txt);display:block;margin-top:14px">Así te llega</span>' + muestra + '<div id="avCuerpo"><p class="nota">Cargando…</p></div>');
+    var pintaCuerpo = function (st) {
+      var cel = '';
+      if (DEMO) cel = '<p class="nota" style="text-align:left">En la agenda de cada negocio, aquí se activan los avisos en su celular con un toque.</p>';
+      else if (!puedePush) cel = '<p class="nota" style="text-align:left">Este navegador no recibe avisos. En Android usa Chrome; en iPhone, instala tu agenda en la pantalla de inicio.</p>';
+      else if (esIos && !instalada) cel = '<p class="ojo">En iPhone los avisos llegan sólo con tu agenda instalada: en Safari toca Compartir (el cuadro con la flecha) → «Agregar a inicio», ábrela desde ahí y vuelve a esta pantalla.</p>';
+      else if (!st.vapid) cel = '<p class="nota" style="text-align:left">Los avisos al celular todavía no están activos. Escríbele a Solida.</p>';
+      else if (suscrito) cel = '<div class="fila-dato"><span>Este teléfono</span><b class="ok">Avisos activados</b></div><button type="button" class="btn bloque" id="avApaga" style="margin-top:10px">Apagar en este teléfono</button>';
+      else if (Notification.permission === 'denied') cel = '<p class="ojo">Bloqueaste los avisos para esta página. Actívalos en los ajustes de tu navegador y vuelve aquí.</p>';
+      else cel = '<button type="button" class="btn negro bloque grande" id="avActiva">Activar en este teléfono</button>';
+      var correo = !st.correoDisponible ? '<p class="nota" style="text-align:left">Muy pronto: los avisos por correo se encienden en cuanto Solida termine de conectar el servicio de correo.</p>'
+        : '<form id="fCorreo" novalidate><label class="etq" for="avCorreo" style="color:var(--oro-txt)">Tu correo</label><input class="campo" id="avCorreo" type="email" inputmode="email" autocomplete="email" maxlength="200" value="' + esc(st.correo) + '" placeholder="tu@correo.com">' +
+          '<label class="hor-si" style="width:auto;margin-top:8px"><input type="checkbox" id="avCorreoSi"' + (st.avisoCorreo ? ' checked' : '') + '><span style="text-transform:none;letter-spacing:0;font-size:14px">Mandarme cada cita nueva, con la cita para mi calendario</span></label>' +
+          '<p class="falta" id="avFalta" role="alert"></p><button class="btn bloque" id="avGuarda">Guardar</button></form>';
+      document.getElementById('avCuerpo').innerHTML = '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">Al celular</span>' + cel +
+        (st.telefonos ? '<p class="nota" style="text-align:left">Activos en ' + st.telefonos + (st.telefonos === 1 ? ' teléfono' : ' teléfonos') + '.</p>' : '') + '</section>' +
+        '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">Por correo</span>' + correo + '</section>' +
+        (!DEMO && (st.telefonos || st.avisoCorreo) ? '<button type="button" class="btn bloque" id="avPrueba" style="margin-top:14px">Mandarme un aviso de prueba</button>' : '');
+      var a = document.getElementById('avActiva');
+      if (a) a.onclick = function () {
+        a.disabled = true; a.textContent = 'Activando…';
+        activaAvisos(st.vapid).then(function (nuevo) { toast('Listo: te vamos a avisar en este teléfono'); pintaCuerpo(nuevo); },
+          function (e) { a.disabled = false; a.textContent = 'Activar en este teléfono'; toast(e.message || 'No se pudo'); });
+      };
+      var ap = document.getElementById('avApaga');
+      if (ap) ap.onclick = function () { ap.disabled = true; apagaAvisos().then(function () { toast('Avisos apagados en este teléfono'); return api('/avisos'); }).then(function (x) { pintaCuerpo(x.d); }, function () { ap.disabled = false; toast('No se pudo'); }); };
+      var fc = document.getElementById('fCorreo');
+      if (fc) fc.onsubmit = function (e) {
+        e.preventDefault();
+        var falta = document.getElementById('avFalta'); falta.textContent = '';
+        var c = document.getElementById('avCorreo').value.trim(), si = document.getElementById('avCorreoSi').checked;
+        if (si && !c) { falta.textContent = 'Escribe tu correo.'; return; }
+        if (DEMO) { toast('Listo. En el ejemplo no se guarda.'); return; }
+        api('/avisos/correo', { metodo: 'PUT', body: { correo: c, activo: si } }).then(function (x) {
+          if (x.status !== 200) { falta.textContent = x.d.error || 'No se pudo'; return; }
+          toast(x.d.avisoCorreo ? 'Listo: te mandamos cada cita nueva a ' + x.d.correo : 'Guardado'); pintaCuerpo(x.d);
+        }, function () { falta.textContent = 'Sin conexión.'; });
+      };
+      var pr = document.getElementById('avPrueba');
+      if (pr) pr.onclick = function () {
+        pr.disabled = true;
+        api('/avisos/prueba', { metodo: 'POST' }).then(function (x) {
+          pr.disabled = false;
+          if (x.status !== 200) { toast(x.d.error || 'No se pudo'); return; }
+          toast(x.d.push || x.d.correo ? 'Listo: revisa tu ' + (x.d.push ? 'celular' : '') + (x.d.push && x.d.correo ? ' y tu ' : '') + (x.d.correo ? 'correo' : '') : 'No se pudo mandar. Vuelve a activar los avisos.');
+        }, function () { pr.disabled = false; toast('Sin conexión'); });
+      };
+    };
+    if (DEMO) { pintaCuerpo({ vapid: '', telefonos: 0, correo: '', avisoCorreo: false, correoDisponible: true }); return; }
+    revisaSuscripcion().then(function () { return api('/avisos'); }).then(function (x) {
+      if (x.status === 401) return salir();
+      pintaCuerpo(x.status === 200 ? x.d : { vapid: '', telefonos: 0, correoDisponible: false });
+    }, function () { document.getElementById('avCuerpo').innerHTML = '<p class="falta">Sin conexión.</p>'; });
   }
 
   // ───── hoja (lo que se abre desde abajo) ─────
@@ -730,6 +831,15 @@
     raiz.querySelectorAll('[data-dia]').forEach(function (b) { if (b.classList.contains('dia-chip')) b.onclick = function () { diaSel = b.getAttribute('data-dia'); pinta(ultimo); }; });
     raiz.querySelectorAll('[data-ir]').forEach(function (b) { b.onclick = function () { diaSel = b.getAttribute('data-ir'); irA('hoy'); }; });
     var nc = document.getElementById('nuevaCita'); if (nc) nc.onclick = function () { abreNuevaCita(ultimo); };
+    var av = document.getElementById('abreAvisos'); if (av) av.onclick = abreAvisos;
+    var iSi = document.getElementById('invitaSi');
+    if (iSi) iSi.onclick = function () {
+      iSi.disabled = true;
+      api('/avisos').then(function (x) { return activaAvisos(x.d && x.d.vapid); }).then(function () { toast('Listo: te vamos a avisar en este teléfono'); pinta(ultimo); },
+        function (e) { iSi.disabled = false; toast(e.message || 'No se pudo'); });
+    };
+    var iNo = document.getElementById('invitaNo');
+    if (iNo) iNo.onclick = function () { try { localStorage.setItem('agenda:noavisos:' + ID, '1'); } catch (e) {} pinta(ultimo); };
     raiz.querySelectorAll('[data-libre]').forEach(function (b) {
       b.onclick = function () { var p = b.getAttribute('data-libre').split('|'); abreNuevaCita(ultimo, { fecha: p[0], ini: +p[1], persona: p[2] }); };
     });
@@ -875,6 +985,10 @@
     api('/perfil').then(function (x) {
       if (x.status !== 200) throw new Error(x.d.error || 'No existe');
       perfil = x.d; document.title = 'Agenda · ' + perfil.nombre;
+      // Al abrir desde un aviso: el día de esa cita
+      var dq = new URLSearchParams(location.search).get('dia');
+      if (dq && /^\d{4}-\d{2}-\d{2}$/.test(dq)) { diaSel = dq; vista = 'hoy'; history.replaceState(null, '', location.pathname); }
+      revisaSuscripcion().then(function () { if (token && ultimo) pinta(ultimo); });
       if (token) carga(); else pintaEntrar();
     }).catch(function () {
       raiz.innerHTML = '<div class="envoltura cuerpo"><p class="vacio">No se pudo abrir tu agenda. Revisa tu conexión e inténtalo de nuevo.</p></div>';

@@ -10,7 +10,10 @@ const MAESTRA = 'maestra-de-prueba-0123456789abcdef', SECRETO = 'secreto-de-prue
 const persist = mkdtempSync(join(tmpdir(), 'solida-citas-'));
 const devVars = new URL('../.dev.vars', import.meta.url);
 const previo = existsSync(devVars) ? readFileSync(devVars) : null;
-writeFileSync(devVars, `MAESTRA=${MAESTRA}\nSECRETO=${SECRETO}\nCALENDARIOS_PRUEBA=1\n`);
+// La llave para firmar avisos, como la de producción (se genera para la prueba)
+const parVapid = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+const jwkVapid = await crypto.subtle.exportKey('jwk', parVapid.privateKey);
+writeFileSync(devVars, `MAESTRA=${MAESTRA}\nSECRETO=${SECRETO}\nCALENDARIOS_PRUEBA=1\nPUSH_PRUEBA=1\nRESUMEN_PRUEBA=1\nRESEND_API_KEY=re_prueba\nRESEND_URL=http://127.0.0.1:8814/emails\nVAPID_PRIVADA='${JSON.stringify(jwkVapid)}'\n`);
 const pasos = []; const paso = (t) => { pasos.push(t); console.log('  ✓ ' + t); };
 let w;
 
@@ -450,6 +453,93 @@ try {
       assert.deepEqual(errores, []);
       paso('en el navegador: «Conectar mi calendario» desde Mis tiempos; lo ocupado sale en Hoy como «Ocupada en tu calendario», sin títulos; y se desconecta');
     } finally { calSrv.close(); }
+
+    // ───── Avisos al celular y por correo ─────
+    const empujes = [], correos = [];
+    let pushStatus = 201;
+    const pushSrv = createServer(async (q, s2) => { let b = ''; for await (const x of q) b += x; empujes.push({ url: q.url, auth: q.headers.authorization, ttl: q.headers.ttl, cuerpo: b }); s2.writeHead(pushStatus); s2.end(); });
+    const mailSrv = createServer(async (q, s2) => { let b = ''; for await (const x of q) b += x; correos.push({ auth: q.headers.authorization, d: JSON.parse(b) }); s2.writeHead(200, { 'Content-Type': 'application/json' }); s2.end('{"id":"x"}'); });
+    await new Promise((r2) => pushSrv.listen(8815, '127.0.0.1', r2));
+    await new Promise((r2) => mailSrv.listen(8814, '127.0.0.1', r2));
+    const espera = async (arr, n, que) => { for (let i = 0; i < 40; i++) { if (arr.length >= n) return; await new Promise((r2) => setTimeout(r2, 150)); } throw new Error('no llegó ' + que); };
+    try {
+      const EP = 'http://127.0.0.1:8815/push/telefono-de-mia';
+      assert.equal((await api('/api/atelier-mia/avisos')).status, 401);
+      let av = await api('/api/atelier-mia/avisos', { token: tok });
+      assert.equal(av.status, 200); assert.match(av.d.vapid, /^[A-Za-z0-9_-]{87}$/); assert.equal(av.d.telefonos, 0); assert.equal(av.d.correoDisponible, true);
+      assert.equal((await api('/api/atelier-mia/avisos/suscribir', { metodo: 'POST', token: tok, body: { endpoint: 'https://evil.example/x' } })).status, 400, 'sólo servicios de avisos de verdad');
+      av = await api('/api/atelier-mia/avisos/suscribir', { metodo: 'POST', token: tok, body: { endpoint: EP } });
+      assert.equal(av.d.telefonos, 1);
+      assert.equal((await api('/api/atelier-mia/avisos/correo', { metodo: 'PUT', token: tok, body: { correo: 'no-es-correo', activo: true } })).status, 400);
+      av = await api('/api/atelier-mia/avisos/correo', { metodo: 'PUT', token: tok, body: { correo: 'Mia@Atelier.mx', activo: true } });
+      assert.equal(av.d.correo, 'mia@atelier.mx'); assert.equal(av.d.avisoCorreo, true);
+
+      // Una cita llega de la página: señal al teléfono (sin datos) y correo con la cita adjunta
+      const F12 = elDia(4, 1);
+      const nueva = await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...base, fecha: F12, hora: '11:00', persona: 'fer', servicio: 'Volumen ruso', nombre: 'Daniela Soto', tel: '8440000400' }, ip: '10.0.2.1' });
+      assert.equal(nueva.status, 201);
+      await espera(empujes, 1, 'el aviso al teléfono'); await espera(correos, 1, 'el correo');
+      const e1 = empujes[0];
+      assert.equal(e1.url, '/push/telefono-de-mia'); assert.equal(e1.cuerpo, '', 'la señal no lleva datos: el servicio de avisos no ve nombres');
+      const am = e1.auth.match(/^vapid t=([^,]+), k=(.+)$/); assert.ok(am, e1.auth); assert.equal(am[2], av.d.vapid);
+      const [jc, jb, jf] = am[1].split('.');
+      const claims = JSON.parse(Buffer.from(jb, 'base64url').toString());
+      assert.equal(claims.aud, 'http://127.0.0.1:8815'); assert.ok(claims.exp > Date.now() / 1000); assert.match(claims.sub, /^mailto:/);
+      const pubKey = await crypto.subtle.importKey('raw', Buffer.from(am[2], 'base64url'), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+      assert.ok(await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pubKey, Buffer.from(jf, 'base64url'), new TextEncoder().encode(jc + '.' + jb)), 'la firma es válida');
+      const co = correos[0].d;
+      assert.equal(correos[0].auth, 'Bearer re_prueba'); assert.deepEqual(co.to, ['mia@atelier.mx']);
+      assert.match(co.subject, /Nueva cita: Daniela Soto/); assert.match(co.html, /Volumen ruso/); assert.match(co.html, /Fernanda/);
+      const icsTxt = Buffer.from(co.attachments[0].content, 'base64').toString();
+      assert.match(icsTxt, new RegExp('DTSTART;TZID=America/Monterrey:' + F12.replace(/-/g, '') + 'T110000')); assert.match(icsTxt, /SUMMARY:Volumen ruso · Daniela Soto/);
+      paso('cita nueva de la página: al teléfono le llega una señal firmada y sin datos, y por correo los datos con la cita lista para su calendario');
+
+      // El teléfono despierta y pregunta qué hay: sólo con su propia dirección de avisos
+      assert.equal((await api('/api/atelier-mia/avisos/pendientes', { metodo: 'POST', body: { endpoint: 'http://127.0.0.1:8815/push/otro' } })).status, 404);
+      const pen = await api('/api/atelier-mia/avisos/pendientes', { metodo: 'POST', body: { endpoint: EP } });
+      assert.equal(pen.d.avisos.length, 1); assert.equal(pen.d.avisos[0].titulo, 'Nueva cita · Atelier Mía');
+      assert.match(pen.d.avisos[0].cuerpo, /Daniela Soto apartó .*Volumen ruso.* con Fernanda/); assert.match(pen.d.avisos[0].url, new RegExp('/atelier-mia/\\?dia=' + F12));
+      assert.equal((await api('/api/atelier-mia/avisos/pendientes', { metodo: 'POST', body: { endpoint: EP } })).d.avisos.length, 0, 'lo ya enseñado no se repite');
+      // La que captura la dueña no avisa
+      await api('/api/atelier-mia/citas', { metodo: 'POST', token: tok, body: { ...base, fecha: F12, hora: '16:00', persona: 'fer', nombre: 'Por teléfono 2', tel: '8440000401' } });
+      await new Promise((r2) => setTimeout(r2, 600)); assert.equal(empujes.length, 1, 'la cita que capturó ella no le avisa');
+      paso('el teléfono pide el detalle con su propia dirección de avisos (otra no sirve) y no se repite; las citas que captura la dueña no le avisan');
+
+      // En la noche: «Mañana tienes N citas», una sola vez al día
+      const antes = empujes.length;
+      await fetch(URL0 + '/__scheduled?cron=' + encodeURIComponent('*/15 * * * *'));
+      await espera(empujes, antes + 1, 'el resumen de la noche');
+      const res1 = await api('/api/atelier-mia/avisos/pendientes', { metodo: 'POST', body: { endpoint: EP } });
+      assert.match(res1.d.avisos[0].titulo, /^Mañana tienes \d+ citas?$/);
+      await fetch(URL0 + '/__scheduled?cron=' + encodeURIComponent('*/15 * * * *'));
+      await new Promise((r2) => setTimeout(r2, 800)); assert.equal(empujes.length, antes + 1, 'una sola vez al día');
+      // Prueba
+      const pr = await api('/api/atelier-mia/avisos/prueba', { metodo: 'POST', token: tok });
+      assert.equal(pr.d.push, 1); assert.equal(pr.d.correo, true);
+      // Un teléfono que ya no existe (410) se borra solo
+      pushStatus = 410;
+      await api('/api/atelier-mia/avisos/prueba', { metodo: 'POST', token: tok });
+      assert.equal((await api('/api/atelier-mia/avisos', { token: tok })).d.telefonos, 0);
+      pushStatus = 201;
+      paso('en la noche le llega «Mañana tienes N citas» una vez; el aviso de prueba llega al teléfono y al correo; un teléfono que ya no existe se borra solo');
+
+      // En la app: la hoja de avisos
+      assert.ok(true);
+      // Chromium sin pantalla dice siempre «bloqueado»: se simula un teléfono que todavía no decide
+      await pg.evaluate(() => Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true }));
+      await pg.click('[data-vista="hoy"]'); await pg.click('#abreAvisos'); await pg.waitForSelector('#avCuerpo .campo-h');
+      const cel = await pg.textContent('#avCuerpo');
+      assert.match(await pg.textContent('.hoja'), /Así te llega/);
+      assert.equal(await pg.inputValue('#avCorreo'), 'mia@atelier.mx');
+      assert.ok(await pg.$('#avActiva'), 'el botón para activar en este teléfono: ' + cel);
+      await pg.uncheck('#avCorreoSi'); await pg.click('#avGuarda');
+      await pg.waitForFunction(() => /Guardado/.test(document.getElementById('toast').textContent));
+      assert.equal((await api('/api/atelier-mia/avisos', { token: tok })).d.avisoCorreo, false);
+      if (CAP) await pg.screenshot({ path: CAP + '/ag-avisos.png', fullPage: true });
+      await pg.keyboard.press('Escape');
+      assert.deepEqual(errores, []);
+      paso('en el navegador: la hoja «Avisos» enseña cómo llega, el botón para activarlos en el teléfono y el correo, que se guarda');
+    } finally { pushSrv.close(); mailSrv.close(); }
 
     // La muestra también tiene Mis tiempos
     await ej.click('[data-vista="tiempos"]'); await ej.waitForSelector('#apartar');
