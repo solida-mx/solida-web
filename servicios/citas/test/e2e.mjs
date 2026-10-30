@@ -515,7 +515,8 @@ try {
       assert.equal(pr.d.push, 1); assert.equal(correos.length, 0);
       const prc = await api('/api/atelier-mia/avisos/prueba', { metodo: 'POST', token: tok, body: { canal: 'correo' } });
       assert.equal(prc.d.correo, true); await espera(correos, 1, 'el correo de prueba');
-      assert.match(correos[0].d.subject, /correo de respaldo/); assert.deepEqual(correos[0].d.to, ['mia@atelier.mx']);
+      assert.match(correos[0].d.subject, /correo de respaldo/); assert.match(correos[0].d.html, /Así te llega una cita \(ejemplo\)/);
+      if (CAP) writeFileSync(CAP + '/correo-prueba.html', correos[0].d.html); assert.deepEqual(correos[0].d.to, ['mia@atelier.mx']);
       assert.match(correos[0].d.from, /@correo\.solidaaplicaciones\.com>$/);
       // Un teléfono que ya no existe (410) se borra solo
       pushStatus = 410;
@@ -533,6 +534,9 @@ try {
       const co = correos[correos.length - 1].d;
       assert.equal(correos[correos.length - 1].auth, 'Bearer re_prueba'); assert.deepEqual(co.to, ['mia@atelier.mx']);
       assert.match(co.subject, /Nueva cita: Daniela Respaldo/); assert.match(co.html, /Volumen ruso/); assert.match(co.html, /Fernanda/); assert.match(co.html, /ninguno de tus teléfonos/);
+      assert.ok(co.html.includes('/atelier-mia/?cita=' + resp.d.folio), '«Confirmar en mi agenda» abre esa cita');
+      assert.match(co.html, /wa\.me\/528440000402/); assert.match(co.text, /Confirmar en mi agenda: /);
+      if (CAP) writeFileSync(CAP + '/correo-cita.html', co.html);
       const icsTxt = Buffer.from(co.attachments[0].content, 'base64').toString();
       assert.match(icsTxt, new RegExp('DTSTART;TZID=America/Monterrey:' + F12.replace(/-/g, '') + 'T130000')); assert.match(icsTxt, /SUMMARY:Volumen ruso · Daniela Respaldo/);
       paso('si ningún teléfono tiene avisos activos, la cita le llega por correo de respaldo, con la cita lista para su calendario');
