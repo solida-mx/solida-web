@@ -119,6 +119,92 @@ try {
   assert.equal(tel.status, 201); assert.equal(tel.d.estado, 'confirmada');
   paso('la dueña puede apartar una cita que le pidieron por teléfono; entra ya confirmada');
 
+  // ───── la agenda de la dueña, aparte de su página ─────
+  const crudo = (ruta, op = {}) => fetch(URL0 + ruta, { redirect: 'manual', ...op });
+  const pf0 = await api('/api/atelier-mia/perfil');
+  assert.equal(pf0.status, 200); assert.deepEqual(pf0.d, { id: 'atelier-mia', nombre: 'Atelier Mía', equipo: [], pagina: '' });
+  assert.equal((await api('/api/admin/negocios/atelier-mia/perfil', { metodo: 'POST', body: { equipo: ['x'] } })).status, 401);
+  const pf = await api('/api/admin/negocios/atelier-mia/perfil', { metodo: 'POST', maestra: true,
+    body: { equipo: ['Mía', { id: 'fer', nombre: 'Fernanda' }, 'Mía', '', '<b>Caro</b>'], pagina: 'https://ateliermia.solidaaplicaciones.com/' } });
+  assert.equal(pf.status, 200);
+  assert.deepEqual(pf.d.equipo.slice(0, 2), [{ id: 'mia', nombre: 'Mía' }, { id: 'fer', nombre: 'Fernanda' }], 'saca el id del nombre, sin acentos, y no repite');
+  assert.equal(pf.d.equipo.length, 3); assert.ok(!/[<>]/.test(pf.d.equipo[2].nombre), 'sin < >');
+  assert.equal(pf.d.pagina, 'https://ateliermia.solidaaplicaciones.com/');
+  assert.equal((await api('/api/admin/negocios/atelier-mia/perfil', { metodo: 'POST', maestra: true, body: { pagina: 'javascript:alert(1)' } })).d.pagina, '', 'sólo páginas https');
+  await api('/api/admin/negocios/atelier-mia/perfil', { metodo: 'POST', maestra: true, body: { pagina: 'https://ateliermia.solidaaplicaciones.com/' } });
+  const otraClave = await api('/api/admin/negocios', { metodo: 'POST', maestra: true, body: { id: 'atelier-mia', nombre: 'Atelier Mía' } });
+  assert.equal(otraClave.d.agenda, 'https://agenda.solidaaplicaciones.com/atelier-mia/');
+  assert.equal((await api('/api/atelier-mia/perfil')).d.equipo.length, 3, 'darle clave nueva no borra su equipo');
+  assert.equal((await api('/api/admin/negocios', { metodo: 'POST', maestra: true, body: { id: 'ejemplo', nombre: 'Yo' } })).status, 400, '«ejemplo» está reservado');
+  const CLAVE2 = otraClave.d.clave;
+  paso('Solida le pone a la agenda su equipo y la dirección de su página; darle otra clave no los borra');
+
+  let r = await crudo('/atelier-mia');
+  assert.equal(r.status, 301); assert.match(r.headers.get('location'), /\/atelier-mia\/$/);
+  r = await crudo('/atelier-mia/');
+  assert.equal(r.status, 200); assert.match(r.headers.get('content-type'), /text\/html/);
+  assert.match(r.headers.get('content-security-policy'), /default-src 'self'/); assert.match(r.headers.get('content-security-policy'), /frame-ancestors 'none'/);
+  assert.match(await r.text(), /\/_app\/app\.js/);
+  const mani = await (await crudo('/atelier-mia/manifest.webmanifest')).json();
+  assert.equal(mani.name, 'Agenda · Atelier Mía'); assert.equal(mani.start_url, '/atelier-mia/'); assert.equal(mani.scope, '/atelier-mia/'); assert.equal(mani.display, 'standalone');
+  const ico = await crudo('/atelier-mia/icono.svg');
+  assert.equal(ico.headers.get('content-type'), 'image/svg+xml'); assert.match(await ico.text(), />AM</);
+  for (const f of ['/_app/app.js', '/_app/app.css', '/_app/icono-192.png', '/_app/icono-512.png', '/_app/icono-180.png', '/atelier-mia/sw.js']) assert.equal((await crudo(f)).status, 200, f);
+  assert.equal((await crudo('/no-existe/')).status, 404); assert.equal((await crudo('/index.html')).status, 404);
+  assert.equal((await crudo('/ejemplo/')).status, 200, 'la muestra del catálogo abre sin estar en la base');
+  assert.equal((await crudo('/atelier-mia/', { method: 'POST' })).status, 405);
+  paso('la agenda vive en su propia dirección (/atelier-mia/), con manifiesto e icono con su nombre, para instalarla como app');
+
+  // En un navegador de verdad
+  const { createRequire } = await import('node:module');
+  const { chromium } = createRequire(import.meta.url)('playwright');
+  const nav = await chromium.launch();
+  try {
+    const ctx = await nav.newContext({ viewport: { width: 390, height: 844 } });
+    await ctx.route('https://wa.me/**', (r) => r.fulfill({ body: 'WhatsApp', contentType: 'text/plain' }));
+    await ctx.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ body: '', contentType: 'text/css' }));
+    const pg = await ctx.newPage();
+    const errores = []; pg.on('pageerror', (e) => errores.push(e.message)); pg.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|status of 401/.test(m.text())) errores.push(m.text()); });
+    await pg.goto(URL0 + '/atelier-mia/');
+    await pg.waitForSelector('#clave');
+    assert.match(await pg.textContent('.portada'), /Atelier Mía/);
+    const CAP = process.env.CAPTURAS;
+    if (CAP) await pg.screenshot({ path: CAP + '/ag-entrar.png', fullPage: true });
+    await pg.fill('#clave', 'MALA-MALA-MALA'); await pg.click('#fEntrar button');
+    await pg.waitForFunction(() => document.getElementById('falta').textContent.length > 0);
+    await pg.fill('#clave', CLAVE2); await pg.click('#fEntrar button');
+    await pg.waitForSelector('.cab');
+    if (CAP) await pg.screenshot({ path: CAP + '/ag-agenda.png', fullPage: true });
+    const txt = await pg.textContent('#app');
+    assert.match(txt, /Andrea|Bea|Caro/); assert.match(txt, /Con Fernanda/, 'pone el nombre del equipo, no su id');
+    assert.ok(!(await pg.$('img')), 'el nombre con <img> se pinta como texto');
+    assert.equal(await pg.getAttribute('a.btn[href^="https://ateliermia"]', 'href'), 'https://ateliermia.solidaaplicaciones.com/');
+    // Cerrar un horario desde la app y que la página ya no pueda apartarlo
+    const F9 = fecha(9);
+    await pg.fill('#bFecha', F9); await pg.fill('#bDesde', '10:00'); await pg.fill('#bHasta', '12:00'); await pg.fill('#bMotivo', 'Dentista');
+    await pg.click('#fBloqueo button');
+    await pg.waitForFunction(() => /Dentista/.test(document.body.textContent));
+    assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...cita, fecha: F9, hora: '10:30', persona: 'mia', nombre: 'Iris', tel: '8440000014' }, ip: '8.8.8.20' })).status, 409);
+    // Confirmar una cita pendiente
+    const pendientes = await pg.$$('[data-estado="confirmada"]');
+    assert.ok(pendientes.length > 0, 'hay citas por confirmar');
+    const [popup] = await Promise.all([ctx.waitForEvent('page'), pendientes[0].click()]);
+    await popup.waitForURL(/wa\.me/, { timeout: 8000 }); assert.match(popup.url(), /wa\.me\/52\d{10}\?text=/); await popup.close();
+    await pg.waitForFunction((n) => document.querySelectorAll('[data-estado="confirmada"]').length === n - 1, pendientes.length);
+    // Se queda abierta al volver a entrar
+    await pg.reload(); await pg.waitForSelector('.cab');
+    assert.deepEqual(errores, []);
+    paso('en el navegador: entra con su clave, ve sus citas con los nombres de su equipo, cierra un horario y confirma una cita avisando por WhatsApp');
+
+    const ej = await ctx.newPage();
+    await ej.goto(URL0 + '/ejemplo/'); await ej.waitForSelector('.cab');
+    assert.match(await ej.textContent('.muestra'), /Ejemplo de Solida/);
+    if (CAP) await ej.screenshot({ path: CAP + '/ag-ejemplo.png', fullPage: true });
+    assert.ok((await ej.$$('.cita')).length >= 6); assert.ok(!(await ej.$('#clave')), 'la muestra no pide clave');
+    const ancho = await ej.evaluate(() => document.documentElement.scrollWidth); assert.ok(ancho <= 390, 'sin scroll de lado: ' + ancho);
+    paso('la agenda de muestra (/ejemplo/) abre sin clave, con citas de ejemplo, para el catálogo');
+  } finally { await nav.close(); }
+
   console.log(`\n${pasos.length} pasos correctos.`);
 } catch (e) {
   console.error('\n✗ FALLÓ:', e.message); process.exitCode = 1;

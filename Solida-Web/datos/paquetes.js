@@ -150,7 +150,8 @@ var SEGMENTS = {
        feats:["Todo lo de Catálogo","Diseños sin límite, con filtros","La clienta elige diseño, largo, día y hora","Te manda su cita como ticket en imagen por WhatsApp","Tu equipo y los cuidados antes de la cita"]},
       {level:"Premium",name:"Agenda Total",amount:"$4,290",unit:"pago único",lv:3,
        demo:SITIO+"/ejemplos/unas/avanzado",
-       feats:["Todo lo de Agenda Pro","Las horas ocupadas se bloquean solas","Anticipo para apartar, directo a tu cuenta","Lista de citas con recordatorio de un toque","Dominio propio incluido (1 año)"]}
+       agenda:"https://agenda.solidaaplicaciones.com/ejemplo/",   // la app de la dueña, aparte de su página
+       feats:["Todo lo de Agenda Pro","Las horas ocupadas se bloquean solas","Anticipo para apartar, directo a tu cuenta","Su agenda como app en su celular, aparte de su página, con recordatorio de un toque","Dominio propio incluido (1 año)"]}
     ]
   }
 };

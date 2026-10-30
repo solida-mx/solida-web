@@ -1,11 +1,17 @@
 {
-  // Servicio de citas de Agenda Total: citas.solidaaplicaciones.com
+  // Servicio de citas de Agenda Total: citas.solidaaplicaciones.com (lo usan las páginas)
+  // y agenda.solidaaplicaciones.com/<negocio>/ (la app de la dueña, archivos en agenda/).
   "name": "solida-citas",
   "main": "src/index.js",
   "compatibility_date": "2026-10-01",
   "workers_dev": true,
   "preview_urls": false,
-  "routes": [{ "pattern": "citas.solidaaplicaciones.com", "custom_domain": true }],
+  "routes": [
+    { "pattern": "citas.solidaaplicaciones.com", "custom_domain": true },
+    { "pattern": "agenda.solidaaplicaciones.com", "custom_domain": true }
+  ],
+  // Los archivos de la app (agenda/) van empaquetados dentro del Worker: se publica en un solo paso.
+  "build": { "command": "node scripts/empaquetar.mjs", "watch_dir": "agenda" },
   "d1_databases": [
     {
       "binding": "DB",
