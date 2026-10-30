@@ -204,3 +204,27 @@ select.campo{appearance:auto}
 .hor-horas{flex:1;display:flex;align-items:center;gap:6px;min-width:0}
 .hor-horas .campo{min-height:44px;padding:0 6px;font-size:15px;min-width:0}
 .hor-no{flex:1;color:var(--rojo);font-size:14px}
+
+/* Su calendario */
+.cal-card{display:flex;align-items:center;gap:12px;width:100%;margin-top:24px;padding:16px;background:var(--papel);border:1px solid var(--linea);text-align:left;cursor:pointer;color:var(--negro)}
+.cal-ico{width:44px;height:44px;flex:none;border:1px solid var(--linea2);display:flex;align-items:center;justify-content:center}
+.cal-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cal-txt b{font:600 19px var(--serif)}
+.cal-txt span{font-size:12.5px;color:var(--gris)}
+.cal-txt .ok,.fila-dato .ok{color:var(--verde)}
+.cal-txt .mal,.fila-dato .mal{color:var(--rojo)}
+.paso{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--linea)}
+.paso .n{width:30px;height:30px;flex:none;border-radius:999px;background:var(--negro);color:var(--oro);display:flex;align-items:center;justify-content:center;font:600 16px var(--serif)}
+.paso b{display:block;font:600 18px/1.2 var(--serif)}
+.paso span{font:400 13px/1.45 var(--sans);color:var(--gris)}
+.guardamos{margin-top:16px;padding:16px;background:var(--negro);color:var(--marfil)}
+.guardamos p{margin:8px 0 0;font:300 13.5px/1.5 var(--sans);color:#e5ddd0}
+.guardamos b{font-weight:500}
+.guardamos .suave{color:var(--gris-claro);font-size:13px}
+.filas{margin-top:8px}
+.fila-dato{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linea);font-size:13.5px}
+.fila-dato span{color:var(--gris);flex:none}
+.fila-dato b{font-weight:500;text-align:right;overflow-wrap:anywhere}
+.btn.rojo-linea{border-color:var(--rojo);color:var(--rojo)}
+.cambiar{margin-top:14px}
+.cambiar summary{min-height:44px;display:flex;align-items:center;color:var(--oro-txt);font-size:13.5px;cursor:pointer}
