@@ -52,7 +52,7 @@ y guarda sólo de qué hora a qué hora está ocupada en los próximos 90 días 
 
 **Avisos.** Cada cita que llega de la página avisa a la dueña (`src/avisos.js`): al celular con Web Push firmado con VAPID
 (secreto `VAPID_PRIVADA`), como una señal sin datos; el teléfono pide el detalle a `/avisos/pendientes` con su propia dirección
-de avisos. Por correo, con Resend (secretos `RESEND_API_KEY` y `CORREO_DE`), con la cita adjunta en `.ics`. A partir de las
+de avisos. Por correo, con Resend (secreto `RESEND_API_KEY`; sale de `avisos@correo.solidaaplicaciones.com`, cuenta de Resend de solidaaplicaciones@gmail.com), con la cita adjunta en `.ics`. A partir de las
 8 pm (hora del negocio) llega «Mañana tienes N citas». Sin esos secretos no se rompe nada: ese aviso simplemente no se manda.
 
 Pendientes de convertir: profesional, taller, nutriólogo, invitación, uniformes y barbería.
