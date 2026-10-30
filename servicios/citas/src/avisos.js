@@ -8,6 +8,8 @@
 // Secretos: VAPID_PRIVADA (la llave para firmar los avisos, en JWK) y, para correo, RESEND_API_KEY y CORREO_DE.
 // Sin ellos no se rompe nada: simplemente no se manda ese tipo de aviso.
 
+import { correoCitaNueva, correoPrueba } from './correos.js';
+
 const enc = new TextEncoder();
 const ahora = () => Math.floor(Date.now() / 1000);
 const b64url = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -72,7 +74,6 @@ export async function pendientes(env, negocio, endpoint) {
 // ── correo ──
 export const correoValido = (v) => { const t = String(v || '').trim().toLowerCase(); return /^[^\s@<>"']{1,64}@[a-z0-9.-]{1,180}\.[a-z]{2,}$/.test(t) ? t : ''; };
 export const correoDisponible = (env) => !!env.RESEND_API_KEY;
-const escH = (x) => String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 async function mandaCorreo(env, para, asunto, html, texto, adjuntos) {
   if (!correoDisponible(env) || !para) return false;
   try {
@@ -100,7 +101,6 @@ const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const fechaCorta = (f) => { const d = new Date(f + 'T12:00:00Z'); return DIAS[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MESES[d.getUTCMonth()]; };
 const hora12 = (m) => { const h = Math.floor(m / 60), mi = m % 60; return (h % 12 || 12) + ':' + String(mi).padStart(2, '0') + (h < 12 ? ' am' : ' pm'); };
-const pesos = (n) => '$' + Number(n || 0).toLocaleString('es-MX');
 
 // ── lo que dispara cada aviso ──
 export async function avisaCitaNueva(env, neg, c, agendaBase, nombreDe) {
@@ -113,30 +113,17 @@ export async function avisaCitaNueva(env, neg, c, agendaBase, nombreDe) {
   const a = await avisa(env, neg.id, { titulo, cuerpo, url });
   // Respaldo: sólo si ningún teléfono recibió el aviso (no tiene avisos activos o fallaron todos). Nunca los dos.
   if (a.enviados === 0 && neg.correo) {
-    const link = agendaBase + url;
-    const filas = [['Servicio', c.diseno ? c.diseno + ' (' + c.servicio + ')' : c.servicio], ['Cuándo', fechaCorta(c.fecha) + ' · ' + hora12(c.ini) + ' a ' + hora12(c.fin)],
-      quien ? ['Con', quien] : null, ['Precio', pesos(c.precio)], ['Anticipo', c.anticipo ? pesos(c.anticipo) : 'Todavía no'], ['WhatsApp', c.tel], ['Folio', c.folio]].filter(Boolean);
-    const html = '<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:24px;background:#f7f3ec;color:#161412">' +
-      '<p style="font:600 11px Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#86672f;margin:0">' + escH(neg.nombre) + ' · cita nueva</p>' +
-      '<h1 style="font-weight:500;font-size:28px;margin:8px 0 4px">' + escH(c.nombre) + ' apartó contigo</h1>' +
-      '<p style="font:14px Arial,sans-serif;color:#6b6157;margin:0 0 16px">Llegó desde tu página. Te adjuntamos la cita para que entre a tu calendario.</p>' +
-      '<table style="width:100%;border-collapse:collapse;font:14px Arial,sans-serif">' + filas.map((x) =>
-        '<tr><td style="padding:9px 0;border-bottom:1px solid #e2d9ca;color:#6b6157">' + escH(x[0]) + '</td><td style="padding:9px 0;border-bottom:1px solid #e2d9ca;text-align:right;font-weight:600">' + escH(x[1]) + '</td></tr>').join('') + '</table>' +
-      '<p style="margin:20px 0 0"><a href="' + escH(link) + '" style="display:inline-block;background:#161412;color:#f7f3ec;padding:14px 22px;font:600 12px Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;text-decoration:none">Abrir mi agenda</a></p>' +
-      '<p style="font:12px Arial,sans-serif;color:#6b6157;margin:20px 0 0">Te llega por correo porque en ninguno de tus teléfonos están activos los avisos. Actívalos desde la campana de tu agenda y dejamos de escribirte.</p></div>';
-    const texto = titulo + '\n\n' + filas.map((x) => x[0] + ': ' + x[1]).join('\n') + '\n\nAbrir mi agenda: ' + link;
-    await mandaCorreo(env, neg.correo, 'Nueva cita: ' + c.nombre + ' · ' + fechaCorta(c.fecha) + ', ' + hora12(c.ini), html, texto,
-      [{ filename: 'cita.ics', content: btoa(String.fromCharCode(...enc.encode(icsDeCita(neg, c, link)))), content_type: 'text/calendar; charset=utf-8; method=PUBLISH' }]);
+    const m = correoCitaNueva(neg, c, quien, agendaBase);
+    await mandaCorreo(env, neg.correo, 'Nueva cita: ' + c.nombre + ' · ' + fechaCorta(c.fecha) + ', ' + hora12(c.ini), m.html, m.texto,
+      [{ filename: 'cita.ics', content: btoa(String.fromCharCode(...enc.encode(icsDeCita(neg, c, m.agenda)))), content_type: 'text/calendar; charset=utf-8; method=PUBLISH' }]);
   }
 }
 // La prueba de cada canal por separado: el celular, o el correo de respaldo.
 export async function avisaPrueba(env, neg, agendaBase, canal) {
   if (canal === 'correo') {
-    const ok = await mandaCorreo(env, neg.correo, 'Prueba: tu correo de respaldo de ' + neg.nombre,
-      '<div style="font-family:Arial,sans-serif;padding:20px;max-width:520px"><p>Hola 👋 Éste es el correo de respaldo de tu agenda de <b>' + escH(neg.nombre) + '</b>.</p>' +
-      '<p>Sólo te escribimos aquí si llega una cita y en ninguno de tus teléfonos están activos los avisos. Mientras tu celular te avise, no te llega nada por correo.</p>' +
-      '<p><a href="' + escH(agendaBase + '/' + neg.id + '/') + '">Abrir mi agenda</a></p></div>',
-      'Este es el correo de respaldo de tu agenda. Sólo te escribimos aquí si en ninguno de tus teléfonos están activos los avisos.');
+    const n = await env.DB.prepare('SELECT COUNT(*) n FROM suscripciones WHERE negocio_id=?').bind(neg.id).first();
+    const m = correoPrueba(neg, n ? n.n : 0, neg.correo, agendaBase);
+    const ok = await mandaCorreo(env, neg.correo, 'Prueba: tu correo de respaldo de ' + neg.nombre, m.html, m.texto);
     return { correo: ok };
   }
   const a = await avisa(env, neg.id, { titulo: 'Así te van a llegar los avisos', cuerpo: 'Cada vez que alguien aparte en tu página te llega uno como éste. Al tocarlo se abre la cita. Y en la noche, cuántas citas tienes mañana.', url: '/' + neg.id + '/' });
