@@ -128,3 +128,19 @@ export function correoCancelada(neg, c, quien, pagina) {
   'Tu cita del ' + fechaLarga(c.fecha) + ' se canceló', '');
   return { html, texto: 'Hola ' + c.nombre + ', tu cita en ' + neg.nombre + ' del ' + fechaLarga(c.fecha) + ' a las ' + hora12(c.ini) + ' se canceló.' + (pagina ? '\n\nAgendar otra vez: ' + pagina : '') };
 }
+// La dueña le apartó la cita en el local (o por teléfono) y se la manda: su cita y el enlace para guardarla en su celular.
+export function correoTuCita(neg, c, quien, link) {
+  const servicio = (c.diseno ? c.diseno + ' (' + c.servicio + ')' : c.servicio) + (quien ? ' con ' + quien : '');
+  const html = marco(neg, `<tr><td style="padding:0 16px"><div style="margin-top:-18px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.papel}" style="border:1px solid ${C.linea}">` +
+    `<tr><td align="center" style="padding:20px 18px 16px"><div style="font-family:${SANS};font-size:11px;letter-spacing:3px;text-transform:uppercase;color:${C.verde}">Tu cita quedó lista</div>` +
+    `<div style="font-family:${SERIF};font-size:27px;line-height:31px;color:${C.negro};margin-top:8px">Hola ${esc(c.nombre)}, te esperamos</div></td></tr>` +
+    separador() + `<tr><td style="padding:8px 18px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    fila('Cuándo', may(fechaLarga(c.fecha)) + ' · ' + hora12(c.ini)) + fila('Servicio', servicio) + fila('Folio', c.folio) + `</table></td></tr>` +
+    (link ? `<tr><td style="padding:16px 18px 6px">${boton('Ver mi cita', link, true)}</td></tr>` +
+      `<tr><td align="center" style="padding:6px 22px 20px;font-family:${SANS};font-size:13px;line-height:19px;color:${C.gris}">Ahí la cambias si lo necesitas, te recordamos antes de tu cita y la próxima la apartas tú, a la hora que quieras.</td></tr>` : '') +
+    `</table></div></td></tr>`,
+  may(fechaLarga(c.fecha)) + ' · ' + hora12(c.ini), '');
+  const texto = 'Hola ' + c.nombre + ', tu cita en ' + neg.nombre + ' quedó lista.\n\nCuándo: ' + fechaLarga(c.fecha) + ' · ' + hora12(c.ini) + '\nServicio: ' + servicio + '\nFolio: ' + c.folio +
+    (link ? '\n\nVer mi cita (la cambias, te recordamos y la próxima la apartas tú): ' + link : '');
+  return { html, texto };
+}

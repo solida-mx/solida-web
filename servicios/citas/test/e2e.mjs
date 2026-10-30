@@ -387,9 +387,14 @@ try {
     assert.equal(await pg.inputValue('#ncFecha'), MARTES); assert.equal(await pg.inputValue('#ncHora'), String(Math.floor(hueco[1] / 60)).padStart(2, '0') + ':' + String(hueco[1] % 60).padStart(2, '0'));
     await pg.click('#ncOk'); assert.match(await pg.textContent('#ncFalta'), /nombre/);
     await pg.fill('#ncNombre', 'Rosa Tel'); await pg.fill('#ncTel', '844 555 0101'); await pg.fill('#ncServ', 'Gelish'); await pg.click('[data-dur="90"]'); await pg.fill('#ncPrecio', '$300');
-    await pg.click('#ncOk'); await pg.waitForSelector('#ncAvisar');
-    assert.match(decodeURIComponent(await pg.getAttribute('#ncAvisar', 'href')), /wa\.me\/528445550101\?text=Hola Rosa Tel/);
-    await pg.click('#hojaListo');
+    // Al apartar se abre su cita con «Mándale su cita»: por WhatsApp va su enlace
+    await pg.click('#ncOk'); await pg.waitForSelector('.manda.recien');
+    assert.match(await pg.textContent('.manda-ok'), /Rosa Tel/);
+    const [waPop] = await Promise.all([ctx.waitForEvent('page'), pg.click('[data-manda="wa"]')]);
+    await waPop.waitForURL(/wa\.me/, { timeout: 8000 });
+    assert.match(decodeURIComponent(waPop.url()), /wa\.me\/528445550101\?text=Hola Rosa Tel, te escribo de Atelier Mía\. Tu cita quedó.*ateliermia\.solidaaplicaciones\.com\/\?cita=C-[A-Z2-9]{6}&t=/s);
+    await waPop.close();
+    await pg.keyboard.press('Escape');
     const ag5 = await api('/api/atelier-mia/agenda', { token: tok });
     const rosa = ag5.d.citas.find((c) => c.nombre === 'Rosa Tel');
     assert.ok(rosa); assert.equal(rosa.estado, 'confirmada'); assert.equal(rosa.origen, 'negocio'); assert.equal(rosa.persona, 'mia');
@@ -585,7 +590,7 @@ try {
       if (CAP) await pg.screenshot({ path: CAP + '/ag-avisos.png', fullPage: true });
       await pg.keyboard.press('Escape');
       // En Hoy se le dice que en este teléfono están apagados
-      await pg.waitForSelector('.invita'); assert.match(await pg.textContent('.invita'), /apagados en este teléfono/);
+      await pg.waitForSelector('.invita'); assert.match(await pg.textContent('.invita'), /apagados en (este teléfono|esta computadora)/);
       await pg.click('#invitaNo'); await pg.waitForFunction(() => !document.querySelector('.invita'));
       // Tocar el aviso: abre esa cita, con sus datos y sus botones
       await pg.goto(URL0 + '/atelier-mia/?cita=' + nueva.d.folio); await pg.waitForSelector('#dcCancela');
@@ -775,6 +780,76 @@ try {
         assert.equal((await cli('/mis-citas', { disp: dispP })).d.citas[0].estado, 'cancelada');
         assert.deepEqual(errs, []);
         await cx.close();
+        paso('la app de la clienta: aparta y su teléfono la recuerda (Mis citas, Repetir, Cambiar o cancelar); la guía de instalar cambia en iPhone, Android y desde Instagram');
+
+        // ───── Apartada en el local: su enlace la guarda en SU celular; también por correo ─────
+        const loc = await api('/api/atelier-mia/citas', { metodo: 'POST', token: tok, body: { ...cita, fecha: fecha(6), hora: '16:00', persona: 'mia', nombre: 'Valeria Local', tel: '8440000888' } });
+        assert.equal(loc.status, 201);
+        const en1 = await api(`/api/atelier-mia/citas/${loc.d.folio}/enlace`, { metodo: 'POST', token: tok });
+        assert.equal(en1.status, 200); assert.match(en1.d.enlace, new RegExp('^https://ateliermia\\.solidaaplicaciones\\.com/\\?cita=' + loc.d.folio + '&t=[A-Z2-9]{20}$'));
+        assert.equal((await api(`/api/atelier-mia/citas/${loc.d.folio}/enlace`, { metodo: 'POST', token: tok })).d.enlace, en1.d.enlace, 'el enlace no cambia');
+        assert.equal((await api(`/api/atelier-mia/citas/${loc.d.folio}/enlace`, { metodo: 'POST' })).status, 401, 'sólo la dueña lo pide');
+        const tLoc = new URL(en1.d.enlace).searchParams.get('t');
+        assert.equal((await cli(`/mis-citas/${loc.d.folio}/guardar`, { metodo: 'POST', disp: 'otro-telefono-0123456789abcd', body: { t: 'MALO' + tLoc.slice(4) } })).status, 404, 'con otro t no se la lleva');
+        {
+          const cx2 = await nav.newContext({ viewport: { width: 390, height: 844 }, userAgent: IPHONE });
+          await cx2.route('**/prueba-agenda/datos.js', (r2) => r2.fulfill({ contentType: 'text/javascript', body: datosPrueba }));
+          await cx2.route('https://fonts.googleapis.com/**', (r2) => r2.fulfill({ body: '', contentType: 'text/css' }));
+          const pv2 = await cx2.newPage(); const errs2 = []; pv2.on('pageerror', (e) => errs2.push(e.message));
+          await pv2.goto('http://127.0.0.1:8817/prueba-agenda/' + new URL(en1.d.enlace).search); await pv2.waitForSelector('.ticket-img', { timeout: 20000 });
+          assert.ok(!/t=/.test(pv2.url()), 'el enlace se limpia de la barra de direcciones');
+          assert.ok(await pv2.$('#clientaTicket [data-cl="guia"]'), 'abajo de su ticket: instalar la app');
+          if (CAP) await pv2.screenshot({ path: CAP + '/cl-cita-del-local.png' });
+          await pv2.keyboard.press('Escape'); await pv2.waitForSelector('.cl-prox');
+          const dispV = await pv2.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('citas:disp:')).map((k) => localStorage.getItem(k))[0]);
+          assert.ok((await cli('/mis-citas', { disp: dispV })).d.citas.some((c) => c.folio === loc.d.folio), 'su cita quedó en SU celular');
+          assert.deepEqual(errs2, []);
+          // Escaneando el QR del local: sus citas cuentan como «del QR»
+          await pv2.goto('http://127.0.0.1:8817/prueba-agenda/?de=qr'); await pv2.waitForSelector('.hero');
+          await pv2.click('[data-agendar]'); await pv2.click('[data-serv="gelish"]'); await pv2.click('[data-persona="fer"]');
+          await pv2.click(`[data-fecha="${fecha(4)}"]`).catch(async () => { await pv2.click('[data-fecha]'); });
+          await pv2.click('[data-hora]:not([disabled])');
+          await pv2.fill('#cNombre', 'Qr Nueva'); await pv2.fill('#cTel', '8440000777');
+          await pv2.click('[data-confirma]'); await pv2.waitForSelector('.ticket-img', { timeout: 20000 });
+          assert.deepEqual(errs2, []);
+          await cx2.close();
+        }
+        const qrD = await api('/api/atelier-mia/qr', { token: tok });
+        assert.equal(qrD.d.url, 'https://ateliermia.solidaaplicaciones.com/?de=qr'); assert.equal(qrD.d.delQr, 1); assert.equal(qrD.d.nuevas, 1);
+        assert.equal((await api('/api/atelier-mia/citas/' + loc.d.folio + '/correo', { metodo: 'POST', token: tok, body: { correo: 'no-es' } })).status, 400);
+        const nC = correos2.length;
+        assert.equal((await api('/api/atelier-mia/citas/' + loc.d.folio + '/correo', { metodo: 'POST', token: tok, body: { correo: 'Vale@Correo.mx' } })).status, 200);
+        await espera2(() => correos2.length > nC, 'el correo de su cita');
+        const cv = correos2[correos2.length - 1];
+        assert.deepEqual(cv.to, ['vale@correo.mx']); assert.match(cv.subject, /Tu cita en Atelier Mía/);
+        assert.ok(cv.html.includes(en1.d.enlace.replace(/&/g, '&amp;')) && cv.text.includes(en1.d.enlace), 'trae su enlace');
+        if (CAP) writeFileSync(CAP + '/correo-tu-cita.html', cv.html);
+        paso('apartada en el local: su enlace guarda la cita en SU celular (y la invita a la app), por correo le llega con el mismo enlace; las citas que llegan escaneando el QR se cuentan');
+
+        // ───── En la compu: menú a un lado, Hoy por columnas, la cita a la derecha con «Mándale su cita»; y Tu código QR ─────
+        await pg.setViewportSize({ width: 1280, height: 860 }); await pg.reload();
+        await pg.waitForSelector('.lado'); assert.ok(!(await pg.isVisible('.barra-nav')), 'en la compu no va la barra de abajo');
+        await pg.click('.lado [data-vista="hoy"]'); await pg.click(`[data-dia="${fecha(6)}"]`);
+        await pg.waitForSelector(`.rej-cita[data-detalle="${loc.d.folio}"]`);
+        assert.ok((await pg.$$('.rej-quien')).length >= 2, 'una columna por persona');
+        await pg.click(`.rej-cita[data-detalle="${loc.d.folio}"]`); await pg.waitForSelector('.hoja .manda');
+        assert.ok(await pg.evaluate(() => document.body.classList.contains('con-panel')), 'la cita se abre a un lado, sin tapar la agenda');
+        await pg.click('[data-manda="qr"]'); await pg.waitForSelector('.manda-qr svg');
+        if (CAP) await pg.screenshot({ path: CAP + '/ag-compu-cita.png' });
+        await pg.click('[data-manda="grande"]'); await pg.waitForSelector('.qr-grande'); await pg.keyboard.press('Escape');
+        await pg.waitForFunction(() => !document.querySelector('.qr-grande'));
+        await pg.keyboard.press('Escape');
+        await pg.click('.lado [data-vista="semana"]'); await pg.waitForSelector('.sem-rejilla');
+        assert.ok(await pg.evaluate(() => getComputedStyle(document.querySelector('.sem-rejilla')).gridTemplateColumns.split(' ').length === 7), 'la semana en 7 columnas');
+        await pg.click('.lado [data-vista="qr"]'); await pg.waitForSelector('#qrPrevia .ct'); await pg.waitForSelector('#qrCifras .cifra');
+        assert.match(await pg.textContent('#qrCifras'), /1\s*apartaron desde tu QR/);
+        await pg.click('[data-qrtam="tarjetas"]'); assert.equal((await pg.$$('#qrPrevia .ct')).length, 8);
+        if (CAP) await pg.screenshot({ path: CAP + '/ag-compu-qr.png', fullPage: true });
+        await pg.setViewportSize({ width: 390, height: 844 }); await pg.waitForSelector('.barra-nav');
+        await pg.click('[data-vista="hoy"]');
+        assert.deepEqual(errores, []);
+        paso('en la compu: menú a un lado, Hoy con una columna por persona, la cita a la derecha con «Mándale su cita» y su QR, la semana en columnas y «Tu código QR» con su cartel');
+
         // Android (Chrome): sin el aviso del navegador todavía, la explicación del menú; desde Instagram: copiar el enlace
         const and = await abreCliente('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36');
         await and.pc.waitForSelector('#misCitas .cl-card'); assert.match(await and.pc.textContent('#misCitas'), /Instalar app|Agregar a pantalla principal/);
@@ -783,7 +858,6 @@ try {
         await ig.pc.waitForSelector('[data-cl="copiar"]'); assert.match(await ig.pc.textContent('#misCitas'), /no se puede instalar/);
         await ig.cx.close();
       } finally { web2.close(); }
-      paso('la app de la clienta: aparta y su teléfono la recuerda (Mis citas, Repetir, Cambiar o cancelar); la guía de instalar cambia en iPhone, Android y desde Instagram');
 
       // En el navegador: la dueña «Se me atravesó algo»
       await pg.click('[data-vista="hoy"]'); await pg.click(`[data-dia="${fecha(2)}"]`);

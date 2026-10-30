@@ -35,7 +35,7 @@
 import ARCHIVOS from './agenda.generados.js';
 import { horasOcupadas, aInstante } from './ical.js';
 import { validaEndpoint, vapidPublica, avisa, pendientes, correoValido, correoDisponible, avisaCitaNueva, avisaPrueba, mandaCorreo } from './avisos.js';
-import { correoPropuesta, correoCancelada } from './correos.js';
+import { correoPropuesta, correoCancelada, correoTuCita } from './correos.js';
 import { verificaAlta, verificaEntrada, ErrorLlave, b64url } from './webauthn.js';
 
 const DIAS_GUARDADO = 120;
@@ -135,6 +135,12 @@ async function enrutar(request, env, ctx) {
     }
     if (!disp) throw new ErrorHttp(401, 'Este teléfono todavía no tiene citas aquí.');
     if (sub === '/mis-citas' && m === 'GET') return json(await misCitas(env, neg, disp));
+    // La cita que le apartaron en el local: con el enlace (folio + t) queda en ESTE teléfono, en «Mis citas», con sus avisos.
+    if ((p = sub.match(/^\/mis-citas\/([A-Z0-9-]{4,20})\/guardar$/)) && m === 'POST') {
+      const c = await citaDeClienta(env, neg, p[1], String((await cuerpo(request)).t || ''), '');
+      await env.DB.prepare('UPDATE citas SET disp=? WHERE id=?').bind(disp, c.id).run();
+      return json(await misCitas(env, neg, disp));
+    }
     if ((p = sub.match(/^\/mis-citas\/([A-Z0-9-]{4,20})\/(cancelar|mover)$/)) && m === 'POST') {
       const c = await citaDeClienta(env, neg, p[1], '', disp);
       return json(p[2] === 'cancelar' ? await cancelaClienta(env, neg, c, ctx) : await mueveClienta(env, neg, c, await cuerpo(request), ctx));
@@ -206,6 +212,19 @@ async function enrutar(request, env, ctx) {
     return json({ ok: true });
   }
   if (sub === '/agenda' && m === 'GET') return json(await agenda(env, neg, url));
+  if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/enlace$/)) && m === 'POST') return json({ enlace: await enlaceDeCita(env, neg, p[1]) });
+  if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/correo$/)) && m === 'POST') {
+    const correo = correoValido((await cuerpo(request)).correo);
+    if (!correo) throw new ErrorHttp(400, 'Ese correo no parece válido');
+    if (!correoDisponible(env)) throw new ErrorHttp(400, 'El correo no está activo todavía. Mándasela por WhatsApp.');
+    const enlace = await enlaceDeCita(env, neg, p[1]);
+    const c = await env.DB.prepare('SELECT * FROM citas WHERE negocio_id=? AND folio=?').bind(neg.id, p[1]).first();
+    await env.DB.prepare('UPDATE citas SET correo=? WHERE id=?').bind(correo, c.id).run();
+    const mc = correoTuCita(neg, { ...c, ini: c.inicio_min }, nombreEnEquipo(neg, c.persona), enlace);
+    if (!(await mandaCorreo(env, correo, 'Tu cita en ' + neg.nombre, mc.html, mc.texto))) throw new ErrorHttp(502, 'No se pudo mandar el correo. Inténtalo otra vez o mándasela por WhatsApp.');
+    return json({ ok: true });
+  }
+  if (sub === '/qr' && m === 'GET') return json(await datosQr(env, neg));
   if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/estado$/)) && m === 'POST') {
     const d = await cuerpo(request);
     if (!['confirmada', 'cancelada', 'apartada'].includes(d.estado)) throw new ErrorHttp(400, 'Estado no válido');
@@ -232,7 +251,7 @@ async function enrutar(request, env, ctx) {
   if (sub === '/mover/proponer' && m === 'POST') return json(await proponeMovidas(env, neg, await cuerpo(request)));
   if (sub === '/avisos/suscribir' && m === 'POST') {
     const ep = validaEndpoint((await cuerpo(request)).endpoint, env);
-    if (!ep) throw new ErrorHttp(400, 'Ese teléfono no dio una dirección de avisos válida');
+    if (!ep) throw new ErrorHttp(400, 'Ese dispositivo no dio una dirección de avisos válida');
     const ultimo = await env.DB.prepare('SELECT COALESCE(MAX(id),0) n FROM avisos WHERE negocio_id=?').bind(neg.id).first();
     await env.DB.prepare("INSERT INTO suscripciones (negocio_id, endpoint, visto, creado, disp) VALUES (?,?,?,?,'') ON CONFLICT(endpoint) DO UPDATE SET negocio_id=excluded.negocio_id, disp='', fallos=0")
       .bind(neg.id, ep, ultimo.n, ahora()).run();
@@ -453,7 +472,10 @@ async function apartar(env, neg, d, deLaDueña) {
         AND (?17 = 1 OR NOT EXISTS (SELECT 1 FROM cal_ocupado WHERE negocio_id=?1 AND fecha=?3 AND inicio_min < ?5 AND fin_min > ?4 AND (persona=?6 OR persona='')))`)
       .bind(neg.id, folio, c.fecha, c.ini, c.fin, persona, c.servicio, c.diseno, c.detalle, c.precio, c.anticipo, c.nombre, c.tel,
         deLaDueña ? 'confirmada' : 'apartada', deLaDueña ? 'negocio' : 'pagina', ahora(), deLaDueña ? 1 : 0, wd, dispH, correoCli).run();
-    if (r.meta.changes) return { folio, persona, estado: deLaDueña ? 'confirmada' : 'apartada', cita: c };
+    if (r.meta.changes) {
+      if (!deLaDueña && d.via === 'qr') await env.DB.prepare("UPDATE citas SET via='qr' WHERE negocio_id=? AND folio=?").bind(neg.id, folio).run();
+      return { folio, persona, estado: deLaDueña ? 'confirmada' : 'apartada', cita: c };
+    }
   }
   throw new ErrorHttp(409, 'Esa hora ya no está disponible. Elige otra.');
 }
@@ -595,7 +617,7 @@ function rpDe(url, env, request) {
   // En las pruebas (wrangler dev cambia el host de la dirección): sólo http://localhost:<puerto>
   const o = request.headers.get('Origin') || '';
   if (env.WEBAUTHN_PRUEBA === '1' && /^http:\/\/localhost:\d+$/.test(o)) return { id: 'localhost', origen: o };
-  throw new ErrorHttp(400, 'Abre tu agenda en agenda.solidaaplicaciones.com para usar Face ID o huella.');
+  throw new ErrorHttp(400, 'Abre tu agenda en agenda.solidaaplicaciones.com para entrar sin clave (Face ID, huella o PIN).');
 }
 async function nuevoReto(env, negocio, tipo) {
   const id = b64url(crypto.getRandomValues(new Uint8Array(32)));
@@ -648,6 +670,28 @@ async function limpia(env) {
 const DISP = /^[A-Za-z0-9_-]{20,80}$/;
 async function dispDe(request) { const t = request.headers.get('X-Dispositivo') || ''; return DISP.test(t) ? sha256('disp|' + t) : ''; }
 async function cuerpoCopia(request) { try { return JSON.parse(await request.clone().text() || '{}') || {}; } catch { return {}; } }
+// El enlace de «su cita» en la página del negocio: la abre, la guarda en su teléfono y la invita a instalar la app.
+async function enlaceDeCita(env, neg, folio) {
+  if (!neg.pagina) throw new ErrorHttp(400, 'Tu agenda todavía no tiene página conectada. Escríbele a Solida.');
+  const c = await env.DB.prepare('SELECT id, resp, estado FROM citas WHERE negocio_id=? AND folio=?').bind(neg.id, folio).first();
+  if (!c) throw new ErrorHttp(404, 'No existe esa cita');
+  let resp = c.resp;
+  if (!resp) { resp = aleatorio(20); await env.DB.prepare('UPDATE citas SET resp=? WHERE id=?').bind(resp, c.id).run(); }
+  return neg.pagina + (neg.pagina.includes('?') ? '&' : '?') + 'cita=' + encodeURIComponent(folio) + '&t=' + encodeURIComponent(resp);
+}
+// «Tu código QR»: a dónde lleva y cuántas clientas trajo este mes.
+async function datosQr(env, neg) {
+  const hoy = hoyEn(neg.zona).fecha, mes = hoy.slice(0, 7);
+  const desde = Math.floor(new Date(mes + '-01T06:00:00Z').getTime() / 1000);
+  const del = (await env.DB.prepare("SELECT tel, creada FROM citas WHERE negocio_id=? AND via='qr' AND estado<>'cancelada' AND creada>=?").bind(neg.id, desde).all()).results;
+  let nuevas = 0;
+  for (const c of del) {
+    const antes = await env.DB.prepare('SELECT 1 FROM citas WHERE negocio_id=? AND tel=? AND creada<? LIMIT 1').bind(neg.id, c.tel, c.creada).first();
+    if (!antes) nuevas++;
+  }
+  const conApp = await env.DB.prepare("SELECT COUNT(DISTINCT disp) n FROM suscripciones WHERE negocio_id=? AND disp<>''").bind(neg.id).first();
+  return { url: neg.pagina ? neg.pagina + (neg.pagina.includes('?') ? '&' : '?') + 'de=qr' : '', pagina: neg.pagina || '', nombre: neg.nombre, mes, delQr: del.length, nuevas, conApp: conApp.n };
+}
 const enlacePropuesta = (neg, folio, resp) => AGENDA + '/' + neg.id + '/cita/' + encodeURIComponent(folio) + '?t=' + encodeURIComponent(resp);
 const DIAS_C = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'], MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const fechaCorta = (f) => { const d = new Date(f + 'T12:00:00Z'); return DIAS_C[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MESES_C[d.getUTCMonth()]; };
