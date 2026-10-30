@@ -52,6 +52,9 @@
   var aviso = null;
   var instalada = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   var esIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  // ¿Teléfono o computadora? Para decir «este teléfono» o «esta computadora» donde toca.
+  var esCompu = !esIos && !/android|mobile/i.test(navigator.userAgent) && !(/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  var este = esCompu ? 'esta computadora' : 'este teléfono', Este = esCompu ? 'Esta computadora' : 'Este teléfono';
   window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); aviso = e; pintaInstalar(); });
   window.addEventListener('appinstalled', function () { instalada = true; aviso = null; pintaInstalar(); toast('Listo: ya la tienes en tu pantalla de inicio'); });
   function tarjetaInstalar() {
@@ -78,7 +81,7 @@
       '<input class="campo clave" id="clave" autocomplete="current-password" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="14" placeholder="XXXX-XXXX-XXXX" required></label>' +
       '<p class="falta" id="falta" role="alert"></p><button class="btn negro bloque" id="conClave">Entrar</button>' +
       '<button type="button" class="btn bloque bio" id="conBio" hidden>Entrar con ' + BIO + '</button>' +
-      '<p class="nota">Se queda abierta 7 días en este teléfono. La clave te la da Solida Aplicaciones; si la perdiste, escríbenos y te damos otra.</p></form>' +
+      '<p class="nota">Se queda abierta 7 días en ' + este + '. La clave te la da Solida Aplicaciones; si la perdiste, escríbenos y te damos otra.</p></form>' +
       tarjetaInstalar() + '</div>';
     pintaInstalar();
     // Los guiones se ponen solos: ella sólo escribe las letras y los números (y en minúsculas también sirve).
@@ -122,7 +125,9 @@
   var ofrecerBio = false;
   var LLAVE_BIO = 'agenda:llave:' + ID, BLOQUEO = 'agenda:bloqueo:' + ID, NO_BIO = 'agenda:nobio:' + ID;
   var esAndroid = /android/i.test(navigator.userAgent);
-  var BIO = esIos ? 'Face ID' : esAndroid ? 'huella' : 'Face ID o huella';
+  // En la compu: Windows Hello (PIN, huella o cara) o Touch ID en la Mac. Un iPad se presenta como Mac, pero con pantalla táctil.
+  var esWin = /Windows/.test(navigator.userAgent), esMac = /Macintosh/.test(navigator.userAgent) && !(navigator.maxTouchPoints > 1);
+  var BIO = esIos || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) ? 'Face ID' : esAndroid ? 'huella' : esWin ? 'Windows Hello' : esMac ? 'Touch ID' : 'tu huella o PIN';
   function lee(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function pon(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} }
   function aB64(buf) { var s = '', u = new Uint8Array(buf); for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
@@ -135,7 +140,7 @@
   }
   function errorBio(e) {
     if (e && e.name === 'NotAllowedError') return 'Se canceló. Inténtalo de nuevo cuando quieras.';
-    if (e && e.name === 'InvalidStateError') return 'Este teléfono ya tiene ' + BIO + ' activado para tu agenda.';
+    if (e && e.name === 'InvalidStateError') return Este + ' ya tiene ' + BIO + ' activado para tu agenda.';
     return (e && e.mensaje) || 'No se pudo usar ' + BIO + '. Entra con tu clave.';
   }
   // Pide la firma del teléfono y la manda a «ruta» (entrar o desbloquear).
@@ -177,7 +182,7 @@
     puedeBio().then(function (si) {
       if (!si || !token || document.getElementById('velo')) return;
       var hoja = abreHoja('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">¿Entrar con ' + BIO + '?</h2>' + CERRAR + '</div>' +
-        '<p class="nota" style="text-align:left">La próxima vez entras con ' + BIO + ' en lugar de escribir tu clave. Tu cara o tu huella no salen de tu teléfono: nosotros no las vemos ni las guardamos.</p>' +
+        '<p class="nota" style="text-align:left">La próxima vez entras con ' + BIO + ' en lugar de escribir tu clave. ' + (esCompu ? 'Tu PIN, tu huella o tu cara no salen de ' + este : 'Tu cara o tu huella no salen de tu teléfono') + ': nosotros no los vemos ni los guardamos.</p>' +
         '<p class="falta" id="bioFalta" role="alert"></p><button type="button" class="btn negro bloque grande" id="bioSi">Activar ' + BIO + '</button>' +
         '<button type="button" class="btn bloque" id="bioNo" style="margin-top:8px">Ahora no</button>');
       hoja.querySelector('#bioNo').onclick = function () { pon(NO_BIO, String(Date.now())); cierraHoja(); };
@@ -237,29 +242,29 @@
     var pintaSeg = function (st, bio) {
       var mia = lee(LLAVE_BIO), tengo = mia && st.llaves.some(function (l) { return l.id === mia; });
       if (mia && !tengo) { pon(LLAVE_BIO, ''); pon(BLOQUEO, ''); tengo = false; }
-      var h = '<section class="campo-h"><span class="etq">' + esc(BIO.charAt(0).toUpperCase() + BIO.slice(1)) + ' en este teléfono</span>';
+      var h = '<section class="campo-h"><span class="etq">' + esc(BIO.charAt(0).toUpperCase() + BIO.slice(1)) + ' en ' + este + '</span>';
       if (tengo) {
         h += '<div class="fila-dato"><span>Entrar con ' + BIO + '</span><b class="ok">Activado</b></div>' +
-          '<label class="interruptor"><input type="checkbox" id="segBloqueo"' + (lee(BLOQUEO) === '1' ? ' checked' : '') + '><span>Pedir ' + BIO + ' al abrir la agenda<small>Si alguien toma tu teléfono desbloqueado, no ve tus citas. Se pide al abrirla y al volver después de 5 minutos.</small></span></label>';
+          '<label class="interruptor"><input type="checkbox" id="segBloqueo"' + (lee(BLOQUEO) === '1' ? ' checked' : '') + '><span>Pedir ' + BIO + ' al abrir la agenda<small>Si alguien usa ' + este + ' con tu sesión abierta, no ve tus citas. Se pide al abrirla y al volver después de 5 minutos.</small></span></label>';
       } else if (bio) {
-        h += '<p class="nota" style="text-align:left;margin:0">Entra con ' + BIO + ' en lugar de escribir tu clave. Tu cara o tu huella no salen del teléfono.</p>' +
+        h += '<p class="nota" style="text-align:left;margin:0">Entra con ' + BIO + ' en lugar de escribir tu clave. ' + (esCompu ? 'Tu PIN, tu huella o tu cara no salen de ' + este + '.' : 'Tu cara o tu huella no salen del teléfono.') + '</p>' +
           '<button type="button" class="btn negro bloque" id="segActiva">Activar ' + BIO + '</button>';
       } else {
-        h += '<p class="nota" style="text-align:left;margin:0">' + (esIos || esAndroid ? 'Este teléfono no tiene ' + BIO + ' disponible aquí. Abre tu agenda en Safari (iPhone) o Chrome (Android), o desde la app instalada.' : 'Este aparato no tiene Face ID ni huella disponibles.') + '</p>';
+        h += '<p class="nota" style="text-align:left;margin:0">' + (esIos || esAndroid ? 'Este teléfono no tiene ' + BIO + ' disponible aquí. Abre tu agenda en Safari (iPhone) o Chrome (Android), o desde la app instalada.' : esWin ? 'Esta computadora no tiene Windows Hello configurado. Actívalo en Configuración → Cuentas → Opciones de inicio de sesión (PIN, huella o cara), cierra y vuelve a abrir el navegador, y regresa aquí.' : esMac ? 'Esta Mac no ofrece Touch ID aquí. Usa Safari o Chrome actualizados.' : 'Este aparato no tiene Face ID ni huella disponibles.') + '</p>';
       }
       h += '<p class="falta" id="segFalta" role="alert"></p></section>';
       h += '<section class="campo-h"><span class="etq">Dónde está abierta tu agenda</span>' + st.sesiones.map(function (s) {
-        return '<div class="disp"><div><b>' + esc(s.nombre) + (s.actual ? ' <span class="pill confirmada">Este teléfono</span>' : '') + '</b>' +
-          '<small>' + (s.metodo === 'llave' ? 'Entró con Face ID o huella' : 'Entró con tu clave') + ' · usada ' + haceTxt(s.ultimo) + ' · cierra sola el ' + fechaSeg(s.expira) + '</small></div>' +
+        return '<div class="disp"><div><b>' + esc(s.nombre) + (s.actual ? ' <span class="pill confirmada">' + Este + '</span>' : '') + '</b>' +
+          '<small>' + (s.metodo === 'llave' ? 'Entró sin clave (Face ID, huella o PIN)' : 'Entró con tu clave') + ' · usada ' + haceTxt(s.ultimo) + ' · cierra sola el ' + fechaSeg(s.expira) + '</small></div>' +
           '<button type="button" class="btn rojo-linea" data-quita-sesion="' + esc(s.id) + '"' + (s.actual ? ' data-actual="1"' : '') + '>' + (s.actual ? 'Salir' : 'Quitar') + '</button></div>';
       }).join('') +
         (st.sesiones.length > 1 ? '<button type="button" class="btn bloque rojo-linea" id="segOtras">Cerrar en todos los demás</button>' : '') + '</section>';
-      if (st.llaves.length) h += '<section class="campo-h"><span class="etq">Teléfonos que pueden entrar con Face ID o huella</span>' + st.llaves.map(function (l) {
-        return '<div class="disp"><div><b>' + esc(l.nombre) + (l.id === mia ? ' <span class="pill confirmada">Este teléfono</span>' : '') + '</b>' +
+      if (st.llaves.length) h += '<section class="campo-h"><span class="etq">Pueden entrar sin clave (Face ID, huella o PIN)</span>' + st.llaves.map(function (l) {
+        return '<div class="disp"><div><b>' + esc(l.nombre) + (l.id === mia ? ' <span class="pill confirmada">' + Este + '</span>' : '') + '</b>' +
           '<small>Desde el ' + fechaSeg(l.creado) + (l.ultimo ? ' · usada ' + haceTxt(l.ultimo) : ' · todavía no se usa') + '</small></div>' +
           '<button type="button" class="btn rojo-linea" data-quita-llave="' + esc(l.id) + '">Quitar</button></div>';
-      }).join('') + '<p class="nota" style="text-align:left;margin:0">Quitar un teléfono de aquí no lo saca de tu agenda: quítalo también de la lista de arriba.</p></section>';
-      h += '<p class="ojo"><b>¿Perdiste o te robaron un teléfono?</b> Entra desde otro y quítalo de las dos listas: en ese momento deja de ver tu agenda. Si ya no puedes entrar en ninguno, escríbenos a Solida y te damos una clave nueva: eso cierra la agenda en todos tus teléfonos y borra los Face ID o huellas.</p>';
+      }).join('') + '<p class="nota" style="text-align:left;margin:0">Quitar uno de aquí no lo saca de tu agenda: quítalo también de la lista de arriba.</p></section>';
+      h += '<p class="ojo"><b>¿Perdiste o te robaron un teléfono o tu computadora?</b> Entra desde otro y quítalo de las dos listas: en ese momento deja de ver tu agenda. Si ya no puedes entrar en ninguno, escríbenos a Solida y te damos una clave nueva: eso cierra la agenda en todos tus teléfonos y borra los Face ID o huellas.</p>';
       cuerpo.innerHTML = h;
       var falta = cuerpo.querySelector('#segFalta');
       var b;
@@ -269,20 +274,20 @@
       };
       if ((b = cuerpo.querySelector('#segBloqueo'))) b.onchange = function () { pon(BLOQUEO, this.checked ? '1' : ''); toast(this.checked ? 'Se pedirá ' + BIO + ' al abrir' : 'Ya no se pide ' + BIO + ' al abrir'); };
       if ((b = cuerpo.querySelector('#segOtras'))) b.onclick = function () {
-        if (!confirm('¿Cerrar tu agenda en todos los demás teléfonos? Tendrán que volver a entrar con tu clave o con su Face ID / huella.')) return;
+        if (!confirm('¿Cerrar tu agenda en todos los demás? Tendrán que volver a entrar con tu clave o sin clave (Face ID, huella o PIN).')) return;
         api('/dispositivos/cerrar-otras', { metodo: 'POST' }).then(trae, sinRed);
       };
       cuerpo.querySelectorAll('[data-quita-sesion]').forEach(function (x) {
         x.onclick = function () {
-          if (x.getAttribute('data-actual')) { if (confirm('¿Salir de tu agenda en este teléfono?')) { cierraHoja(); salir(); } return; }
-          if (!confirm('¿Quitar este teléfono? Deja de ver tu agenda en ese momento.')) return;
+          if (x.getAttribute('data-actual')) { if (confirm('¿Salir de tu agenda en ' + este + '?')) { cierraHoja(); salir(); } return; }
+          if (!confirm('¿Quitarlo? Deja de ver tu agenda en ese momento.')) return;
           api('/dispositivos/sesion/' + encodeURIComponent(x.getAttribute('data-quita-sesion')), { metodo: 'DELETE' }).then(trae, sinRed);
         };
       });
       cuerpo.querySelectorAll('[data-quita-llave]').forEach(function (x) {
         x.onclick = function () {
           var id = x.getAttribute('data-quita-llave');
-          if (!confirm('¿Quitar ' + BIO + ' de ese teléfono? Ya no podrá entrar con su cara o su huella.')) return;
+          if (!confirm('¿Quitar esta llave? Ya no podrá entrar sin clave (Face ID, huella o PIN).')) return;
           api('/dispositivos/llave/' + encodeURIComponent(id), { metodo: 'DELETE' }).then(function (r) { if (id === lee(LLAVE_BIO)) { pon(LLAVE_BIO, ''); pon(BLOQUEO, ''); } trae(r); }, sinRed);
         };
       });
@@ -445,9 +450,9 @@
     }
     h += '</div><button type="button" class="btn bloque atraveso" id="atraveso">Se me atravesó algo</button>';
     var et = estadoAvisosTel();
-    if (et === 'apagado') h += '<section class="invita"><div><b>Los avisos de citas nuevas están apagados en este teléfono</b><span>Actívalos y te llega un aviso en cuanto alguien aparte en tu página.</span></div>' +
+    if (et === 'apagado') h += '<section class="invita"><div><b>Los avisos de citas nuevas están apagados en ' + este + '</b><span>Actívalos y te llega un aviso en cuanto alguien aparte en tu página.</span></div>' +
       '<div class="dos"><button type="button" class="btn negro" id="invitaSi">Activar</button><button type="button" class="btn" id="invitaNo">Ahora no</button></div></section>';
-    else if (et === 'bloqueado' || et === 'instalar') h += '<section class="invita"><div><b>Los avisos de citas nuevas están apagados en este teléfono</b><span>' +
+    else if (et === 'bloqueado' || et === 'instalar') h += '<section class="invita"><div><b>Los avisos de citas nuevas están apagados en ' + este + '</b><span>' +
       (et === 'bloqueado' ? 'Los bloqueaste para esta página: actívalos en los ajustes de tu navegador.' : 'En iPhone llegan sólo con tu agenda instalada: Compartir → «Agregar a inicio», y ábrela desde ahí.') +
       '</span></div><button type="button" class="btn" id="invitaNo">Entendido</button></section>';
     h += '<h2 class="etq dia-tit">' + esc(fechaLarga(f)) + '</h2>';
@@ -742,20 +747,20 @@
     var pintaCuerpo = function (st) {
       var cel = '';
       if (DEMO) cel = '<p class="nota" style="text-align:left">En la agenda de cada negocio, aquí se activan los avisos en su celular con un toque.</p>';
-      else if (!puedePush) cel = '<p class="nota" style="text-align:left">Este navegador no recibe avisos. En Android usa Chrome; en iPhone, instala tu agenda en la pantalla de inicio.</p>';
+      else if (!puedePush) cel = '<p class="nota" style="text-align:left">' + (esCompu ? 'Este navegador no recibe avisos. Usa Chrome, Edge o Safari actualizados.' : 'Este navegador no recibe avisos. En Android usa Chrome; en iPhone, instala tu agenda en la pantalla de inicio.') + '</p>';
       else if (esIos && !instalada) cel = '<p class="ojo">En iPhone los avisos llegan sólo con tu agenda instalada: en Safari toca Compartir (el cuadro con la flecha) → «Agregar a inicio», ábrela desde ahí y vuelve a esta pantalla.</p>';
       else if (!st.vapid) cel = '<p class="nota" style="text-align:left">Los avisos al celular todavía no están activos. Escríbele a Solida.</p>';
-      else if (suscrito) cel = '<div class="fila-dato"><span>Este teléfono</span><b class="ok">Avisos activados</b></div><button type="button" class="btn bloque" id="avApaga" style="margin-top:10px">Apagar en este teléfono</button>';
+      else if (suscrito) cel = '<div class="fila-dato"><span>' + Este + '</span><b class="ok">Avisos activados</b></div><button type="button" class="btn bloque" id="avApaga" style="margin-top:10px">Apagar en ' + este + '</button>';
       else if (Notification.permission === 'denied') cel = '<p class="ojo">Bloqueaste los avisos para esta página. Actívalos en los ajustes de tu navegador y vuelve aquí.</p>';
-      else cel = '<button type="button" class="btn negro bloque grande" id="avActiva">Activar en este teléfono</button>';
+      else cel = '<button type="button" class="btn negro bloque grande" id="avActiva">Activar en ' + este + '</button>' + (esCompu ? '<p class="nota" style="text-align:left">En la computadora te llegan mientras el navegador esté abierto (aunque esté minimizado). Puedes tenerlos aquí y en tu celular a la vez.</p>' : '');
       // El correo es sólo respaldo: no se enseña si el servicio de correo no está conectado.
       var correo = !st.correoDisponible ? '' : '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">Correo de respaldo</span>' +
-        '<p class="nota" style="text-align:left;margin:0">Sólo te escribimos si llega una cita y en ninguno de tus teléfonos están activos los avisos. Nunca te llegan los dos.</p>' +
+        '<p class="nota" style="text-align:left;margin:0">Sólo te escribimos si llega una cita y en ninguno de tus dispositivos están activos los avisos. Nunca te llegan los dos.</p>' +
         '<form id="fCorreo" novalidate><input class="campo" id="avCorreo" type="email" inputmode="email" autocomplete="email" maxlength="200" value="' + esc(st.correo) + '" placeholder="tu@correo.com" aria-label="Tu correo de respaldo">' +
         '<p class="falta" id="avFalta" role="alert"></p><div class="dos"><button class="btn" id="avGuarda">Guardar</button>' +
         '<button type="button" class="btn" id="avPruebaCorreo"' + (st.correo && !DEMO ? '' : ' disabled') + '>Probar el correo</button></div></form></section>';
-      document.getElementById('avCuerpo').innerHTML = '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">Al celular</span>' + cel +
-        (st.telefonos ? '<p class="nota" style="text-align:left">Activos en ' + st.telefonos + (st.telefonos === 1 ? ' teléfono' : ' teléfonos') + '.</p>' : '') +
+      document.getElementById('avCuerpo').innerHTML = '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">' + (esCompu ? 'En ' + este : 'Al celular') + '</span>' + cel +
+        (st.telefonos ? '<p class="nota" style="text-align:left">Activos en ' + st.telefonos + (st.telefonos === 1 ? ' dispositivo' : ' dispositivos') + '.</p>' : '') +
         (!DEMO && suscrito ? '<button type="button" class="btn bloque" id="avPrueba" style="margin-top:6px">Mandarme un aviso de prueba</button>' : '') + '</section>' + correo +
         '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">A tus clientas</span>' +
         '<p class="nota" style="text-align:left;margin:0">Las que tienen la app de tu página reciben su recordatorio solas' + (st.clientasConApp != null ? ' (hoy: ' + st.clientasConApp + (st.clientasConApp === 1 ? ' clienta' : ' clientas') + ')' : '') + '. A las demás les recuerdas por WhatsApp, como siempre.</p>' +
@@ -773,11 +778,11 @@
       var a = document.getElementById('avActiva');
       if (a) a.onclick = function () {
         a.disabled = true; a.textContent = 'Activando…';
-        activaAvisos(st.vapid).then(function (nuevo) { toast('Listo: te vamos a avisar en este teléfono'); pintaCuerpo(nuevo); },
-          function (e) { a.disabled = false; a.textContent = 'Activar en este teléfono'; toast(e.message || 'No se pudo'); });
+        activaAvisos(st.vapid).then(function (nuevo) { toast('Listo: te vamos a avisar en ' + este); pintaCuerpo(nuevo); },
+          function (e) { a.disabled = false; a.textContent = 'Activar en ' + este; toast(e.message || 'No se pudo'); });
       };
       var ap = document.getElementById('avApaga');
-      if (ap) ap.onclick = function () { ap.disabled = true; apagaAvisos().then(function () { toast('Avisos apagados en este teléfono'); return api('/avisos'); }).then(function (x) { pintaCuerpo(x.d); }, function () { ap.disabled = false; toast('No se pudo'); }); };
+      if (ap) ap.onclick = function () { ap.disabled = true; apagaAvisos().then(function () { toast('Avisos apagados en ' + este); return api('/avisos'); }).then(function (x) { pintaCuerpo(x.d); }, function () { ap.disabled = false; toast('No se pudo'); }); };
       var fc = document.getElementById('fCorreo');
       if (fc) fc.onsubmit = function (e) {
         e.preventDefault();
@@ -797,7 +802,7 @@
             b.disabled = false;
             if (x.status !== 200) { toast(x.d.error || 'No se pudo'); return; }
             if (canal === 'correo') toast(x.d.correo ? 'Listo: revisa tu correo (y la carpeta de spam)' : 'No se pudo mandar el correo. Avísale a Solida.');
-            else toast(x.d.push ? 'Listo: revisa tu celular' : 'No se pudo mandar. Apaga y vuelve a activar los avisos.');
+            else toast(x.d.push ? (esCompu ? 'Listo: te debe salir el aviso en la pantalla' : 'Listo: revisa tu celular') : 'No se pudo mandar. Apaga y vuelve a activar los avisos.');
           }, function () { b.disabled = false; toast('Sin conexión'); });
         };
       };
@@ -1187,7 +1192,7 @@
   }
 
   function ata(d) {
-    var s = document.getElementById('salir'); if (s) s.onclick = function () { if (confirm('¿Salir de tu agenda en este teléfono?')) salir(); };
+    var s = document.getElementById('salir'); if (s) s.onclick = function () { if (confirm('¿Salir de tu agenda en ' + este + '?')) salir(); };
     var sg = document.getElementById('seguridad'); if (sg) sg.onclick = abreSeguridad;
     raiz.querySelectorAll('[data-vista]').forEach(function (b) {
       b.onclick = function () { irA(b.getAttribute('data-vista')); };
@@ -1201,7 +1206,7 @@
     var iSi = document.getElementById('invitaSi');
     if (iSi) iSi.onclick = function () {
       iSi.disabled = true;
-      api('/avisos').then(function (x) { return activaAvisos(x.d && x.d.vapid); }).then(function () { toast('Listo: te vamos a avisar en este teléfono'); pinta(ultimo); },
+      api('/avisos').then(function (x) { return activaAvisos(x.d && x.d.vapid); }).then(function () { toast('Listo: te vamos a avisar en ' + este); pinta(ultimo); },
         function (e) { iSi.disabled = false; toast(e.message || 'No se pudo'); });
     };
     var iNo = document.getElementById('invitaNo');

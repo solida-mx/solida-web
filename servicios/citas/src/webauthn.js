@@ -79,8 +79,8 @@ const sha256 = async (u8) => new Uint8Array(await crypto.subtle.digest('SHA-256'
 const iguales = (a, b) => a.length === b.length && a.every((x, k) => x === b[k]);
 
 function revisaCliente(clientDataB64, tipo, reto, origen) {
-  let cd; try { cd = JSON.parse(new TextDecoder().decode(deB64url(clientDataB64))); } catch { falla('Respuesta del teléfono no válida'); }
-  if (cd.type !== tipo) falla('Respuesta del teléfono no válida');
+  let cd; try { cd = JSON.parse(new TextDecoder().decode(deB64url(clientDataB64))); } catch { falla('Respuesta del dispositivo no válida'); }
+  if (cd.type !== tipo) falla('Respuesta del dispositivo no válida');
   if (cd.challenge !== reto) falla('La solicitud ya venció. Inténtalo de nuevo.');
   if (cd.origin !== origen) falla('Esta llave no es de esta página');
   return cd;
@@ -94,8 +94,8 @@ export async function verificaAlta({ credencial, reto, origen, rpId }) {
   if (!(att instanceof Map) || !(att.get('authData') instanceof Uint8Array)) falla('Datos de la llave no válidos');
   const ad = leeAuthData(att.get('authData'));
   if (!iguales(ad.rpIdHash, await sha256(enc.encode(rpId)))) falla('Esta llave no es de esta página');
-  if (!ad.up || !ad.uv) falla('El teléfono no confirmó que eres tú (Face ID o huella)');
-  if (!ad.credId || !ad.cose) falla('El teléfono no mandó la llave');
+  if (!ad.up || !ad.uv) falla('No se confirmó que eres tú (Face ID, huella o PIN)');
+  if (!ad.credId || !ad.cose) falla('El dispositivo no mandó la llave');
   const { alg, jwk } = coseAJwk(ad.cose);
   return { id: b64url(ad.credId), alg, jwk, contador: ad.contador };
 }
@@ -106,7 +106,7 @@ export async function verificaEntrada({ credencial, reto, origen, rpId, llave })
   revisaCliente(r.clientDataJSON, 'webauthn.get', reto, origen);
   const adBytes = deB64url(r.authenticatorData), ad = leeAuthData(adBytes);
   if (!iguales(ad.rpIdHash, await sha256(enc.encode(rpId)))) falla('Esta llave no es de esta página');
-  if (!ad.up || !ad.uv) falla('El teléfono no confirmó que eres tú (Face ID o huella)');
+  if (!ad.up || !ad.uv) falla('No se confirmó que eres tú (Face ID, huella o PIN)');
   // El contador sube en llaves que lo usan; si baja, alguien copió la llave. Los iPhone siempre mandan 0.
   if (ad.contador && llave.contador && ad.contador <= llave.contador) falla('Esta llave parece copiada. Por seguridad, entra con tu clave.');
   const datos = new Uint8Array([...adBytes, ...(await sha256(deB64url(r.clientDataJSON)))]);

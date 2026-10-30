@@ -585,7 +585,7 @@ try {
       if (CAP) await pg.screenshot({ path: CAP + '/ag-avisos.png', fullPage: true });
       await pg.keyboard.press('Escape');
       // En Hoy se le dice que en este teléfono están apagados
-      await pg.waitForSelector('.invita'); assert.match(await pg.textContent('.invita'), /apagados en este teléfono/);
+      await pg.waitForSelector('.invita'); assert.match(await pg.textContent('.invita'), /apagados en (este teléfono|esta computadora)/);
       await pg.click('#invitaNo'); await pg.waitForFunction(() => !document.querySelector('.invita'));
       // Tocar el aviso: abre esa cita, con sus datos y sus botones
       await pg.goto(URL0 + '/atelier-mia/?cita=' + nueva.d.folio); await pg.waitForSelector('#dcCancela');

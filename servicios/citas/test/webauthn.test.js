@@ -60,14 +60,14 @@ test('se rechaza: otro reto, otra página, otro sitio, sin Face ID, firma altera
   await assert.rejects(verificaAlta({ credencial: await t.crea('a', O), reto: 'b', origen: O, rpId: R }), /venció/);
   await assert.rejects(verificaAlta({ credencial: await t.crea('a', 'https://falso.com'), reto: 'a', origen: O, rpId: R }), /no es de esta página/);
   await assert.rejects(verificaAlta({ credencial: await (await telefono('falso.com')).crea('a', O), reto: 'a', origen: O, rpId: R }), /no es de esta página/);
-  await assert.rejects(verificaAlta({ credencial: await t.crea('a', O, 0x41), reto: 'a', origen: O, rpId: R }), /no confirmó/);
+  await assert.rejects(verificaAlta({ credencial: await t.crea('a', O, 0x41), reto: 'a', origen: O, rpId: R }), /confirmó que eres tú/);
   const alta = await verificaAlta({ credencial: await t.crea('a', O), reto: 'a', origen: O, rpId: R });
   const llave = { jwk: JSON.stringify(alta.jwk), alg: -7, contador: 0 };
   const f = await t.firma('c', O); const sig = Uint8Array.from(atob(f.response.signature.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (4 - f.response.signature.length % 4) % 4)), (c) => c.charCodeAt(0));
   sig[sig.length - 1] ^= 1; f.response.signature = b64url(sig);
   await assert.rejects(verificaEntrada({ credencial: f, reto: 'c', origen: O, rpId: R, llave }), /No pudimos comprobar/);
   await assert.rejects(verificaEntrada({ credencial: await otro.firma('d', O), reto: 'd', origen: O, rpId: R, llave }), /No pudimos comprobar/, 'la firma de otro teléfono no sirve');
-  await assert.rejects(verificaEntrada({ credencial: await t.firma('e', O, { flags: 0x01 }), reto: 'e', origen: O, rpId: R, llave }), /no confirmó/);
+  await assert.rejects(verificaEntrada({ credencial: await t.firma('e', O, { flags: 0x01 }), reto: 'e', origen: O, rpId: R, llave }), /confirmó que eres tú/);
 });
 
 test('un contador que no sube delata una llave copiada', async () => {
@@ -82,4 +82,27 @@ test('un contador que no sube delata una llave copiada', async () => {
 test('CBOR y DER', () => {
   assert.deepEqual(leeCbor(new Uint8Array([0xa1, 0x61, 0x61, 0x01])).valor, new Map([['a', 1]]));
   assert.equal(derARaw(new Uint8Array([0x30, 6, 2, 1, 5, 2, 1, 7])).length, 64);
+});
+
+// Windows Hello (PIN, huella o cara en la compu) suele mandar llaves RSA (RS256) en vez de ECDSA.
+test('Windows Hello: alta y entrada con llave RSA', async () => {
+  const par = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  const jwk = await crypto.subtle.exportKey('jwk', par.publicKey);
+  const deB = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+  const credId = crypto.getRandomValues(new Uint8Array(32));
+  const base = async (flags) => [...await sha(enc.encode(R)), flags, 0, 0, 0, 0];
+  const cose = new Map([[1, 3], [3, -257], [-1, deB(jwk.n)], [-2, deB(jwk.e)]]);
+  const cd1 = enc.encode(JSON.stringify({ type: 'webauthn.create', challenge: 'w1', origin: O }));
+  const ad1 = new Uint8Array([...await base(0x45), ...new Uint8Array(16), 0, 32, ...credId, ...cbor(cose)]);
+  const att = new Uint8Array(cbor(new Map([['fmt', 'none'], ['attStmt', new Map()], ['authData', ad1]])));
+  const alta = await verificaAlta({ credencial: { response: { clientDataJSON: b64url(cd1), attestationObject: b64url(att) } }, reto: 'w1', origen: O, rpId: R });
+  assert.equal(alta.alg, -257); assert.equal(alta.jwk.kty, 'RSA');
+  const cd2 = enc.encode(JSON.stringify({ type: 'webauthn.get', challenge: 'w2', origin: O }));
+  const ad2 = new Uint8Array(await base(0x05));
+  const firma = new Uint8Array(await crypto.subtle.sign({ name: 'RSASSA-PKCS1-v1_5' }, par.privateKey, new Uint8Array([...ad2, ...await sha(cd2)])));
+  const llave = { jwk: JSON.stringify(alta.jwk), alg: -257, contador: 0 };
+  const cred = { response: { clientDataJSON: b64url(cd2), authenticatorData: b64url(ad2), signature: b64url(firma) } };
+  await verificaEntrada({ credencial: cred, reto: 'w2', origen: O, rpId: R, llave });
+  firma[10] ^= 1; cred.response.signature = b64url(firma);
+  await assert.rejects(verificaEntrada({ credencial: cred, reto: 'w2', origen: O, rpId: R, llave }), /No pudimos comprobar/);
 });

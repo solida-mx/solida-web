@@ -232,7 +232,7 @@ async function enrutar(request, env, ctx) {
   if (sub === '/mover/proponer' && m === 'POST') return json(await proponeMovidas(env, neg, await cuerpo(request)));
   if (sub === '/avisos/suscribir' && m === 'POST') {
     const ep = validaEndpoint((await cuerpo(request)).endpoint, env);
-    if (!ep) throw new ErrorHttp(400, 'Ese teléfono no dio una dirección de avisos válida');
+    if (!ep) throw new ErrorHttp(400, 'Ese dispositivo no dio una dirección de avisos válida');
     const ultimo = await env.DB.prepare('SELECT COALESCE(MAX(id),0) n FROM avisos WHERE negocio_id=?').bind(neg.id).first();
     await env.DB.prepare("INSERT INTO suscripciones (negocio_id, endpoint, visto, creado, disp) VALUES (?,?,?,?,'') ON CONFLICT(endpoint) DO UPDATE SET negocio_id=excluded.negocio_id, disp='', fallos=0")
       .bind(neg.id, ep, ultimo.n, ahora()).run();
@@ -595,7 +595,7 @@ function rpDe(url, env, request) {
   // En las pruebas (wrangler dev cambia el host de la dirección): sólo http://localhost:<puerto>
   const o = request.headers.get('Origin') || '';
   if (env.WEBAUTHN_PRUEBA === '1' && /^http:\/\/localhost:\d+$/.test(o)) return { id: 'localhost', origen: o };
-  throw new ErrorHttp(400, 'Abre tu agenda en agenda.solidaaplicaciones.com para usar Face ID o huella.');
+  throw new ErrorHttp(400, 'Abre tu agenda en agenda.solidaaplicaciones.com para entrar sin clave (Face ID, huella o PIN).');
 }
 async function nuevoReto(env, negocio, tipo) {
   const id = b64url(crypto.getRandomValues(new Uint8Array(32)));
