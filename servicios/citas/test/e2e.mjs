@@ -601,6 +601,9 @@ try {
       assert.equal(mc.d.citas.length, 1); assert.equal(mc.d.citas[0].folio, k1.d.folio); assert.equal(mc.d.citas[0].con, 'Fernanda');
       assert.ok(!JSON.stringify(mc.d).includes('8440000500') || true);
       assert.equal((await cli('/mis-avisos', { metodo: 'POST', disp: DISP, body: { endpoint: EP_C } })).status, 200);
+      // La página del negocio vive en otro dominio: el navegador pregunta antes si puede mandar X-Dispositivo
+      const pre = await fetch(URL0 + '/api/atelier-mia/mis-citas', { method: 'OPTIONS', headers: { Origin: 'https://ateliermia.com', 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'x-dispositivo' } });
+      assert.match(pre.headers.get('access-control-allow-headers') || '', /X-Dispositivo/i, 'el servidor deja que la página mande el teléfono de la clienta');
       paso('la clienta: su teléfono (sin cuenta) ve sus citas y nadie más; puede activar sus avisos');
 
       // La dueña confirma: a la clienta le llega, a la dueña no

@@ -919,7 +919,7 @@ function cors(res, request) {
   r.headers.set('Access-Control-Allow-Origin', request.headers.get('Origin') || '*');
   r.headers.set('Vary', 'Origin');
   r.headers.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  r.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  r.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Dispositivo');   // X-Dispositivo: el teléfono de la clienta
   r.headers.set('Access-Control-Max-Age', '86400');
   return r;
 }
