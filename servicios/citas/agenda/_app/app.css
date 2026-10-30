@@ -228,3 +228,4 @@ select.campo{appearance:auto}
 .btn.rojo-linea{border-color:var(--rojo);color:var(--rojo)}
 .cambiar{margin-top:14px}
 .cambiar summary{min-height:44px;display:flex;align-items:center;color:var(--oro-txt);font-size:13.5px;cursor:pointer}
+.guardamos a{color:var(--oro);min-height:32px;display:inline-flex;align-items:center}

@@ -418,7 +418,8 @@
     var c = calDe(d, p);
     var guardamos = '<section class="guardamos"><span class="etq" style="color:var(--oro)">Lo que guardamos</span>' +
       '<p>Sólo <b>de qué hora a qué hora estás ocupada</b>. Nunca el nombre de tus eventos, ni con quién, ni dónde. La dirección se guarda cifrada.</p>' +
-      '<p class="suave">Para cortarlo: «Desconectar» aquí, o en Google le das «Restablecer» a esa dirección y deja de servir al instante.</p></section>';
+      '<p class="suave">Para cortarlo: «Desconectar» aquí, o en Google le das «Restablecer» a esa dirección y deja de servir al instante.</p>' +
+      '<p class="suave"><a href="https://solidaaplicaciones.com/privacidad.html" target="_blank" rel="noopener">Aviso de privacidad ›</a></p></section>';
     var forma = '<form id="fCal" novalidate>' +
       '<div class="paso"><span class="n">1</span><div><b>Abre Google Calendar en la computadora</b><span>Configuración → tu calendario → «Integrar el calendario».</span></div></div>' +
       '<div class="paso"><span class="n">2</span><div><b>Copia la «Dirección secreta en formato iCal»</b><span>Es la que termina en <i>basic.ics</i>. Sólo sirve para leer: con ella no se puede cambiar nada de tu calendario.</span></div></div>' +
