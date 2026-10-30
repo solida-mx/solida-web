@@ -54,6 +54,9 @@
   function bloqueApp(corto) {
     if (instalada) {
       if (!puedePush) return '';
+      // Si los apagó en los ajustes del teléfono, el servidor sigue mandando pero el teléfono no los enseña: se lo decimos.
+      if (suscrito && Notification.permission !== 'granted') return '<div class="cl-card"><b>Los avisos están apagados en tus ajustes</b><span>' +
+        (esIos ? 'Abre Ajustes → Notificaciones → ' + esc(N.nombre) + ' y activa «Permitir notificaciones».' : 'Abre los ajustes de tu celular → Notificaciones → ' + esc(N.nombre) + ' y actívalas.') + ' Así te llega el recordatorio de tu cita.</span></div>';
       if (suscrito) return '<p class="cl-ok">🔔 Te avisamos antes de tu cita' + (datos && datos.negocio.recordar === '120' ? ' (2 horas antes).' : datos && datos.negocio.recordar === 'dia60' ? ' (el día anterior y 1 hora antes).' : ' (1 hora antes).') + '</p>';
       return '<div class="cl-card"><b>¿Te avisamos antes de tu cita?</b><span>Te llega al celular, y también si ' + esc(N.nombre) + ' confirma o cambia tu cita.</span>' +
         '<button class="btn btn-negro btn-bloque" type="button" data-cl="avisos">Avisarme</button></div>';
@@ -88,6 +91,8 @@
       var x = r[0]; if (x.status === 200) datos = x.d; pinta();
     }, function () { pinta(); });
   }
+  // Al volver de los ajustes del teléfono, se vuelve a pintar (por si activó o apagó los avisos).
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') pinta(); });
   function proxima() {
     if (!datos) return null;
     var hoy = datos.hoy, l = datos.citas.filter(function (c) { return c.estado !== 'cancelada' && c.fecha >= hoy; });

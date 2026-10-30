@@ -76,8 +76,9 @@
       '<p>Sólo para ti. Tus clientas apartan en tu página; aquí ves y manejas todo.</p></section>' +
       '<div class="envoltura"><form class="forma" id="fEntrar"><label><span class="etq" style="color:var(--oro-txt)">Tu clave</span>' +
       '<input class="campo clave" id="clave" autocomplete="current-password" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="14" placeholder="XXXX-XXXX-XXXX" required></label>' +
-      '<p class="falta" id="falta" role="alert"></p><button class="btn negro bloque">Entrar</button>' +
-      '<p class="nota">Se queda abierta 30 días en este teléfono. La clave te la da Solida Aplicaciones; si la perdiste, escríbenos y te damos otra.</p></form>' +
+      '<p class="falta" id="falta" role="alert"></p><button class="btn negro bloque" id="conClave">Entrar</button>' +
+      '<button type="button" class="btn bloque bio" id="conBio" hidden>Entrar con ' + BIO + '</button>' +
+      '<p class="nota">Se queda abierta 7 días en este teléfono. La clave te la da Solida Aplicaciones; si la perdiste, escríbenos y te damos otra.</p></form>' +
       tarjetaInstalar() + '</div>';
     pintaInstalar();
     // Los guiones se ponen solos: ella sólo escribe las letras y los números (y en minúsculas también sirve).
@@ -88,17 +89,214 @@
       if (cl.value !== conGuiones) cl.value = conGuiones;
       document.getElementById('falta').textContent = '';
     });
+    // Si este teléfono ya tiene Face ID / huella, ése es el botón principal.
+    var bb = document.getElementById('conBio');
+    puedeBio().then(function (si) {
+      if (!si || !bb.isConnected) return;
+      bb.hidden = false;
+      if (lee(LLAVE_BIO)) { bb.className = 'btn negro bloque bio'; document.getElementById('conClave').className = 'btn bloque'; }
+    });
+    bb.onclick = function () {
+      var f = document.getElementById('falta'); bb.disabled = true; f.textContent = '';
+      firmaConBio('/passkey/entrar').then(function (d) { token = d.token; pon(LLAVE, token); carga(); }, function (e) { f.textContent = errorBio(e); bb.disabled = false; });
+    };
     document.getElementById('fEntrar').onsubmit = function (e) {
       e.preventDefault();
-      var b = e.target.querySelector('button'), f = document.getElementById('falta');
+      var b = document.getElementById('conClave'), f = document.getElementById('falta');
       b.disabled = true; f.textContent = '';
       api('/entrar', { metodo: 'POST', body: { clave: document.getElementById('clave').value } }).then(function (x) {
-        if (x.status === 200 && x.d.token) { token = x.d.token; try { localStorage.setItem(LLAVE, token); } catch (er) {} carga(); return; }
+        if (x.status === 200 && x.d.token) { token = x.d.token; pon(LLAVE, token); ofrecerBio = true; carga(); return; }
         f.textContent = x.d.error || 'No se pudo entrar.'; b.disabled = false;
       }, function () { f.textContent = 'Sin conexión. Revisa tu internet.'; b.disabled = false; });
     };
   }
-  function salir() { token = ''; try { localStorage.removeItem(LLAVE); } catch (e) {} pintaEntrar(); }
+  function salir(remoto) {
+    if (remoto !== false && token) api('/salir', { metodo: 'POST' }).catch(function () {});
+    token = ''; try { localStorage.removeItem(LLAVE); } catch (e) {}
+    quitaCandado(); pintaEntrar();
+  }
+
+  // ───── Face ID / huella, candado al abrir y dispositivos ─────
+  // El teléfono guarda la llave privada y nunca la suelta; el servidor sólo comprueba firmas.
+  // La sesión dura 7 días. «Pedir Face ID al abrir» es opcional y se guarda sólo en este teléfono.
+  var ofrecerBio = false;
+  var LLAVE_BIO = 'agenda:llave:' + ID, BLOQUEO = 'agenda:bloqueo:' + ID, NO_BIO = 'agenda:nobio:' + ID;
+  var esAndroid = /android/i.test(navigator.userAgent);
+  var BIO = esIos ? 'Face ID' : esAndroid ? 'huella' : 'Face ID o huella';
+  function lee(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+  function pon(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} }
+  function aB64(buf) { var s = '', u = new Uint8Array(buf); for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function deB64(s) { var t = String(s).replace(/-/g, '+').replace(/_/g, '/'); t += '==='.slice((t.length + 3) % 4); var b = atob(t), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  var _puedeBio = null;
+  function puedeBio() {
+    if (DEMO || !window.PublicKeyCredential || !PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) return Promise.resolve(false);
+    if (!_puedeBio) _puedeBio = PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(function () { return false; });
+    return _puedeBio;
+  }
+  function errorBio(e) {
+    if (e && e.name === 'NotAllowedError') return 'Se canceló. Inténtalo de nuevo cuando quieras.';
+    if (e && e.name === 'InvalidStateError') return 'Este teléfono ya tiene ' + BIO + ' activado para tu agenda.';
+    return (e && e.mensaje) || 'No se pudo usar ' + BIO + '. Entra con tu clave.';
+  }
+  // Pide la firma del teléfono y la manda a «ruta» (entrar o desbloquear).
+  function firmaConBio(ruta) {
+    return api('/passkey/opciones-entrar', { metodo: 'POST' }).then(function (x) {
+      if (x.status !== 200) throw { mensaje: x.d.error };
+      if (x.d.sinLlaves) throw { mensaje: 'Todavía no activas ' + BIO + '. Entra con tu clave y actívalo desde «Seguridad y dispositivos».' };
+      var o = x.d;
+      return navigator.credentials.get({ publicKey: { challenge: deB64(o.challenge), rpId: o.rpId, timeout: o.timeout, userVerification: o.userVerification,
+        allowCredentials: o.allowCredentials.map(function (c) { return { type: c.type, id: deB64(c.id) }; }) } });
+    }).then(function (c) {
+      if (!c) throw { mensaje: 'Se canceló.' };
+      var r = c.response;
+      return api(ruta, { metodo: 'POST', body: { credencial: { id: c.id, type: c.type, response: { clientDataJSON: aB64(r.clientDataJSON), authenticatorData: aB64(r.authenticatorData), signature: aB64(r.signature) } } } });
+    }).then(function (x) {
+      if (x.status !== 200) throw { mensaje: x.d.error };
+      return x.d;
+    });
+  }
+  function activaBio() {
+    return api('/passkey/opciones-alta', { metodo: 'POST' }).then(function (x) {
+      if (x.status !== 200) throw { mensaje: x.d.error };
+      var o = x.d;
+      return navigator.credentials.create({ publicKey: { challenge: deB64(o.challenge), rp: o.rp, user: { id: deB64(o.user.id), name: o.user.name, displayName: o.user.displayName },
+        pubKeyCredParams: o.pubKeyCredParams, timeout: o.timeout, attestation: o.attestation, authenticatorSelection: o.authenticatorSelection,
+        excludeCredentials: o.excludeCredentials.map(function (c) { return { type: c.type, id: deB64(c.id) }; }) } });
+    }).then(function (c) {
+      if (!c) throw { mensaje: 'Se canceló.' };
+      return api('/passkey/alta', { metodo: 'POST', body: { credencial: { id: c.id, type: c.type, response: { clientDataJSON: aB64(c.response.clientDataJSON), attestationObject: aB64(c.response.attestationObject) } } } });
+    }).then(function (x) {
+      if (x.status !== 200) throw { mensaje: x.d.error };
+      pon(LLAVE_BIO, x.d.id); pon(NO_BIO, '');
+      return x.d;
+    });
+  }
+  // Recién entró con la clave: una sola vez le ofrecemos Face ID (si dice «ahora no», no insistimos en 30 días).
+  function ofreceBio() {
+    if (lee(LLAVE_BIO) || Date.now() - (+lee(NO_BIO) || 0) < 30 * 86400000) return;
+    puedeBio().then(function (si) {
+      if (!si || !token || document.getElementById('velo')) return;
+      var hoja = abreHoja('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">¿Entrar con ' + BIO + '?</h2>' + CERRAR + '</div>' +
+        '<p class="nota" style="text-align:left">La próxima vez entras con ' + BIO + ' en lugar de escribir tu clave. Tu cara o tu huella no salen de tu teléfono: nosotros no las vemos ni las guardamos.</p>' +
+        '<p class="falta" id="bioFalta" role="alert"></p><button type="button" class="btn negro bloque grande" id="bioSi">Activar ' + BIO + '</button>' +
+        '<button type="button" class="btn bloque" id="bioNo" style="margin-top:8px">Ahora no</button>');
+      hoja.querySelector('#bioNo').onclick = function () { pon(NO_BIO, String(Date.now())); cierraHoja(); };
+      hoja.querySelector('#bioSi').onclick = function () {
+        var b = this; b.disabled = true;
+        activaBio().then(function () { cierraHoja(); toast('Listo: la próxima vez entras con ' + BIO); }, function (e) { hoja.querySelector('#bioFalta').textContent = errorBio(e); b.disabled = false; });
+      };
+    });
+  }
+
+  // Candado: con «Pedir Face ID al abrir», la agenda se tapa al abrirla y al volver después de 5 minutos fuera.
+  function conCandado() { return !!(token && lee(BLOQUEO) === '1' && lee(LLAVE_BIO)); }
+  function quitaCandado() { var c = document.getElementById('candado'); if (c) { c.remove(); document.body.style.overflow = ''; } }
+  function ponCandado(luego) {
+    if (document.getElementById('candado')) return;
+    var c = document.createElement('div'); c.id = 'candado'; c.className = 'candado'; c.setAttribute('role', 'dialog'); c.setAttribute('aria-modal', 'true'); c.setAttribute('aria-labelledby', 'candTit');
+    c.innerHTML = '<span class="sello">' + esc(iniciales(perfil.nombre)) + '</span><h1 class="titulo" id="candTit">Tu agenda</h1>' +
+      '<p class="nota">Está protegida con ' + BIO + '.</p><p class="falta" id="candFalta" role="alert"></p>' +
+      '<button type="button" class="btn negro bloque grande" id="candBio">Abrir con ' + BIO + '</button>' +
+      '<button type="button" class="btn bloque" id="candClave" style="margin-top:8px">Entrar con mi clave</button>';
+    document.body.appendChild(c); document.body.style.overflow = 'hidden';
+    var b = c.querySelector('#candBio');
+    b.onclick = function () {
+      b.disabled = true; c.querySelector('#candFalta').textContent = '';
+      firmaConBio('/passkey/desbloquear').then(function () { quitaCandado(); if (luego) luego(); }, function (e) { c.querySelector('#candFalta').textContent = errorBio(e); b.disabled = false; });
+    };
+    c.querySelector('#candClave').onclick = function () { salir(); };
+    b.focus();
+  }
+  // Antes de pedir Face ID, ¿sigue viva esta sesión y la llave de este teléfono? Si la quitaron desde otro, no tiene caso.
+  function abreConCandado() {
+    raiz.innerHTML = '';
+    api('/dispositivos').then(function (x) {
+      if (x.status === 401) return salir(false);
+      if (x.status === 200 && !x.d.llaves.some(function (l) { return l.id === lee(LLAVE_BIO); })) { pon(LLAVE_BIO, ''); pon(BLOQUEO, ''); return carga(); }
+      ponCandado(carga);
+    }, function () { ponCandado(carga); });
+  }
+  var fueraDesde = 0;
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') { fueraDesde = Date.now(); return; }
+    if (fueraDesde && Date.now() - fueraDesde > 5 * 60000 && conCandado()) { cierraHoja(); ponCandado(); }
+    fueraDesde = 0;
+  });
+
+  function haceTxt(seg) {
+    var s = Math.max(0, Math.floor(Date.now() / 1000) - seg);
+    if (s < 600) return 'ahora';
+    if (s < 3600) return 'hace ' + Math.round(s / 60) + ' min';
+    if (s < 86400) { var h = Math.round(s / 3600); return 'hace ' + h + (h === 1 ? ' hora' : ' horas'); }
+    var d = Math.round(s / 86400); return 'hace ' + d + (d === 1 ? ' día' : ' días');
+  }
+  function fechaSeg(seg) { var d = new Date(seg * 1000); return d.getDate() + ' ' + MESES[d.getMonth()]; }
+  function abreSeguridad() {
+    var hoja = abreHoja('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">Seguridad y dispositivos</h2>' + CERRAR + '</div><div id="segCuerpo"><p class="nota">Cargando…</p></div>');
+    var cuerpo = hoja.querySelector('#segCuerpo');
+    var pintaSeg = function (st, bio) {
+      var mia = lee(LLAVE_BIO), tengo = mia && st.llaves.some(function (l) { return l.id === mia; });
+      if (mia && !tengo) { pon(LLAVE_BIO, ''); pon(BLOQUEO, ''); tengo = false; }
+      var h = '<section class="campo-h"><span class="etq">' + esc(BIO.charAt(0).toUpperCase() + BIO.slice(1)) + ' en este teléfono</span>';
+      if (tengo) {
+        h += '<div class="fila-dato"><span>Entrar con ' + BIO + '</span><b class="ok">Activado</b></div>' +
+          '<label class="interruptor"><input type="checkbox" id="segBloqueo"' + (lee(BLOQUEO) === '1' ? ' checked' : '') + '><span>Pedir ' + BIO + ' al abrir la agenda<small>Si alguien toma tu teléfono desbloqueado, no ve tus citas. Se pide al abrirla y al volver después de 5 minutos.</small></span></label>';
+      } else if (bio) {
+        h += '<p class="nota" style="text-align:left;margin:0">Entra con ' + BIO + ' en lugar de escribir tu clave. Tu cara o tu huella no salen del teléfono.</p>' +
+          '<button type="button" class="btn negro bloque" id="segActiva">Activar ' + BIO + '</button>';
+      } else {
+        h += '<p class="nota" style="text-align:left;margin:0">' + (esIos || esAndroid ? 'Este teléfono no tiene ' + BIO + ' disponible aquí. Abre tu agenda en Safari (iPhone) o Chrome (Android), o desde la app instalada.' : 'Este aparato no tiene Face ID ni huella disponibles.') + '</p>';
+      }
+      h += '<p class="falta" id="segFalta" role="alert"></p></section>';
+      h += '<section class="campo-h"><span class="etq">Dónde está abierta tu agenda</span>' + st.sesiones.map(function (s) {
+        return '<div class="disp"><div><b>' + esc(s.nombre) + (s.actual ? ' <span class="pill confirmada">Este teléfono</span>' : '') + '</b>' +
+          '<small>' + (s.metodo === 'llave' ? 'Entró con Face ID o huella' : 'Entró con tu clave') + ' · usada ' + haceTxt(s.ultimo) + ' · cierra sola el ' + fechaSeg(s.expira) + '</small></div>' +
+          '<button type="button" class="btn rojo-linea" data-quita-sesion="' + esc(s.id) + '"' + (s.actual ? ' data-actual="1"' : '') + '>' + (s.actual ? 'Salir' : 'Quitar') + '</button></div>';
+      }).join('') +
+        (st.sesiones.length > 1 ? '<button type="button" class="btn bloque rojo-linea" id="segOtras">Cerrar en todos los demás</button>' : '') + '</section>';
+      if (st.llaves.length) h += '<section class="campo-h"><span class="etq">Teléfonos que pueden entrar con Face ID o huella</span>' + st.llaves.map(function (l) {
+        return '<div class="disp"><div><b>' + esc(l.nombre) + (l.id === mia ? ' <span class="pill confirmada">Este teléfono</span>' : '') + '</b>' +
+          '<small>Desde el ' + fechaSeg(l.creado) + (l.ultimo ? ' · usada ' + haceTxt(l.ultimo) : ' · todavía no se usa') + '</small></div>' +
+          '<button type="button" class="btn rojo-linea" data-quita-llave="' + esc(l.id) + '">Quitar</button></div>';
+      }).join('') + '<p class="nota" style="text-align:left;margin:0">Quitar un teléfono de aquí no lo saca de tu agenda: quítalo también de la lista de arriba.</p></section>';
+      h += '<p class="ojo"><b>¿Perdiste o te robaron un teléfono?</b> Entra desde otro y quítalo de las dos listas: en ese momento deja de ver tu agenda. Si ya no puedes entrar en ninguno, escríbenos a Solida y te damos una clave nueva: eso cierra la agenda en todos tus teléfonos y borra los Face ID o huellas.</p>';
+      cuerpo.innerHTML = h;
+      var falta = cuerpo.querySelector('#segFalta');
+      var b;
+      if ((b = cuerpo.querySelector('#segActiva'))) b.onclick = function () {
+        b.disabled = true;
+        activaBio().then(function () { toast('Listo: ya entras con ' + BIO); recarga(); }, function (e) { falta.textContent = errorBio(e); b.disabled = false; });
+      };
+      if ((b = cuerpo.querySelector('#segBloqueo'))) b.onchange = function () { pon(BLOQUEO, this.checked ? '1' : ''); toast(this.checked ? 'Se pedirá ' + BIO + ' al abrir' : 'Ya no se pide ' + BIO + ' al abrir'); };
+      if ((b = cuerpo.querySelector('#segOtras'))) b.onclick = function () {
+        if (!confirm('¿Cerrar tu agenda en todos los demás teléfonos? Tendrán que volver a entrar con tu clave o con su Face ID / huella.')) return;
+        api('/dispositivos/cerrar-otras', { metodo: 'POST' }).then(trae, sinRed);
+      };
+      cuerpo.querySelectorAll('[data-quita-sesion]').forEach(function (x) {
+        x.onclick = function () {
+          if (x.getAttribute('data-actual')) { if (confirm('¿Salir de tu agenda en este teléfono?')) { cierraHoja(); salir(); } return; }
+          if (!confirm('¿Quitar este teléfono? Deja de ver tu agenda en ese momento.')) return;
+          api('/dispositivos/sesion/' + encodeURIComponent(x.getAttribute('data-quita-sesion')), { metodo: 'DELETE' }).then(trae, sinRed);
+        };
+      });
+      cuerpo.querySelectorAll('[data-quita-llave]').forEach(function (x) {
+        x.onclick = function () {
+          var id = x.getAttribute('data-quita-llave');
+          if (!confirm('¿Quitar ' + BIO + ' de ese teléfono? Ya no podrá entrar con su cara o su huella.')) return;
+          api('/dispositivos/llave/' + encodeURIComponent(id), { metodo: 'DELETE' }).then(function (r) { if (id === lee(LLAVE_BIO)) { pon(LLAVE_BIO, ''); pon(BLOQUEO, ''); } trae(r); }, sinRed);
+        };
+      });
+    };
+    var sinRed = function () { var f = cuerpo.querySelector('#segFalta'); if (f) f.textContent = 'Sin conexión. Inténtalo de nuevo.'; };
+    var trae = function (x) {
+      if (x.status === 401) { cierraHoja(); return salir(false); }
+      if (x.status !== 200) { cuerpo.innerHTML = '<p class="falta">' + esc(x.d.error || 'No se pudo cargar.') + '</p>'; return; }
+      puedeBio().then(function (bio) { if (cuerpo.isConnected) pintaSeg(x.d, bio); });
+    };
+    var recarga = function () { api('/dispositivos').then(trae, sinRed); };
+    if (DEMO) { cuerpo.innerHTML = '<p class="nota" style="text-align:left">En la agenda de cada negocio, aquí activas ' + BIO + ', ves en qué teléfonos está abierta tu agenda y quitas los que ya no quieras (por ejemplo, si te roban uno).</p>'; return; }
+    recarga();
+  }
 
   // ───── la agenda ─────
   // Tres secciones, en la barra de abajo: «Hoy» (el día, hora por hora), «Semana» (los próximos 7 días)
@@ -119,7 +317,7 @@
   function carga() {
     if (DEMO) { pinta(demo()); return; }
     api('/agenda').then(function (x) {
-      if (x.status === 401) return salir();
+      if (x.status === 401) return salir(false);
       if (x.status !== 200) throw new Error(x.d.error);
       pinta(x.d);
     }).catch(function () {
@@ -193,11 +391,12 @@
     pintaInstalar();
     ata(d);
     if (citaPendiente && !document.getElementById('velo')) { var f = citaPendiente; citaPendiente = null; abreCita(f); }
+    if (ofrecerBio) { ofrecerBio = false; ofreceBio(); }
   }
   function pie() {
     return '<div class="pie">' + (perfil.pagina ? '<a class="btn" href="' + esc(perfil.pagina) + '" target="_blank" rel="noopener">Ver mi página</a>' : '') +
       (DEMO ? '<a class="btn negro" href="https://wa.me/528443604349?text=' + encodeURIComponent('Hola 👋 Vi la agenda de ejemplo y quiero una para mi negocio.') + '" target="_blank" rel="noopener">Quiero una así</a>'
-        : '<button class="btn" type="button" id="salir">Salir</button>') +
+        : '<button class="btn" type="button" id="seguridad">Seguridad y dispositivos</button><button class="btn" type="button" id="salir">Salir</button>') +
       '<p class="nota">' + (DEMO ? 'Es un ejemplo: puedes tocar todo, nada se guarda.' : 'Se actualiza sola cada minuto.') + '</p></div>';
   }
 
@@ -471,7 +670,7 @@
       if (!url) { falta.textContent = 'Pega la dirección de tu calendario.'; return; }
       b.disabled = true; b.textContent = 'Leyendo tu calendario…';
       envia('/calendarios', { metodo: 'POST', body: { url: url, persona: p } }).then(function (x) {
-        if (x.status === 401) return salir();
+        if (x.status === 401) return salir(false);
         if (x.status !== 201) { falta.textContent = x.d.error || 'No se pudo'; b.disabled = false; b.textContent = c ? 'Cambiar por esta' : 'Conectar'; return; }
         cierraHoja(); toast('Listo: tu página ya da por ocupado lo de tu calendario'); carga();
       }, function () { falta.textContent = 'Sin conexión.'; b.disabled = false; b.textContent = 'Conectar'; });
@@ -607,7 +806,7 @@
     };
     if (DEMO) { pintaCuerpo({ vapid: '', telefonos: 0, correo: '', avisoCorreo: false, correoDisponible: true }); return; }
     revisaSuscripcion().then(function () { return api('/avisos'); }).then(function (x) {
-      if (x.status === 401) return salir();
+      if (x.status === 401) return salir(false);
       pintaCuerpo(x.status === 200 ? x.d : { vapid: '', telefonos: 0, correoDisponible: false });
     }, function () { document.getElementById('avCuerpo').innerHTML = '<p class="falta">Sin conexión.</p>'; });
   }
@@ -745,7 +944,7 @@
       }
       var b = document.getElementById('apOk'); b.disabled = true;
       envia(ruta, { metodo: 'POST', body: cuerpo }).then(function (x) {
-        if (x.status === 401) return salir();
+        if (x.status === 401) return salir(false);
         if (x.status !== 201) { falta.textContent = x.d.error || 'No se pudo'; b.disabled = false; return; }
         var ch = choques(ultimo, bloque);
         listo(hoja, 'Listo: tu página ya no ofrece ese tiempo.', ch);
@@ -779,7 +978,7 @@
       }
       var b = document.getElementById('horOk'); b.disabled = true;
       envia('/horario', { metodo: 'PUT', body: { persona: p, semana: nueva } }).then(function (x) {
-        if (x.status === 401) return salir();
+        if (x.status === 401) return salir(false);
         if (x.status !== 200) { falta.textContent = x.d.error || 'No se pudo'; b.disabled = false; return; }
         listo(hoja, 'Listo: tu página ya ofrece este horario.', choques(ultimo, { tipo: 'horario', persona: p, semana: nueva }));
         carga();
@@ -807,7 +1006,7 @@
     var cambia = function (est, aviso) {
       var ventana = aviso ? window.open('', '_blank') : null;
       envia('/citas/' + encodeURIComponent(c.folio) + '/estado', { metodo: 'POST', body: { estado: est } }).then(function (x) {
-        if (x.status === 401) return salir();
+        if (x.status === 401) return salir(false);
         if (x.status !== 200) { if (ventana) ventana.close(); toast(x.d.error || 'No se pudo'); return; }
         if (ventana) ventana.location = aviso;
         cierraHoja(); toast(est === 'confirmada' ? 'Confirmada. Avísale por WhatsApp.' : 'Cancelada. La hora quedó libre.'); carga();
@@ -851,7 +1050,7 @@
         : { fecha: st.fecha, desde: st.todo ? '' : st.de, hasta: st.todo ? '' : st.a, persona: st.quien };
       document.getElementById('mvCuerpo').innerHTML = cab(una ? 'Proponerle otra hora' : 'Se me atravesó algo') + '<p class="nota">Buscando horas libres…</p>'; ataCerrar();
       envia('/mover/sugerir', { metodo: 'POST', body: cuerpo }).then(function (x) {
-        if (x.status === 401) return salir();
+        if (x.status === 401) return salir(false);
         if (x.status !== 200) return una ? (cierraHoja(), toast(x.d.error || 'No se pudo')) : paso1(x.d.error || 'No se pudo');
         st.sug = x.d; if (una) st.sug.afectadas = st.sug.afectadas.filter(function (a) { return a.folio === una.folio; });
         st.elegidas = {}; st.sug.afectadas.forEach(function (a) { if (a.propuesta) st.elegidas[a.folio] = a.propuesta; });
@@ -885,7 +1084,7 @@
         var cuerpo = { propuestas: Object.keys(st.elegidas).map(function (f) { return { folio: f, fecha: st.elegidas[f].fecha, hora: hhmm(st.elegidas[f].ini) }; }) };
         if (!una) cuerpo.bloqueo = { fecha: st.sug.fecha, desde: st.todo ? '' : st.de, hasta: st.todo ? '' : st.a, persona: st.quien, motivo: st.motivo || '' };
         envia('/mover/proponer', { metodo: 'POST', body: cuerpo }).then(function (x) {
-          if (x.status === 401) return salir();
+          if (x.status === 401) return salir(false);
           if (x.status !== 200) { b.disabled = false; document.getElementById('mvFalta2').textContent = x.d.error || 'No se pudo'; return; }
           paso3(x.d.resultados || []); carga();
         }, function () { b.disabled = false; document.getElementById('mvFalta2').textContent = 'Sin conexión.'; });
@@ -941,7 +1140,7 @@
       if (!c.fecha) { falta.textContent = 'Elige el día.'; return; }
       var b = document.getElementById('ncOk'); b.disabled = true;
       envia('/citas', { metodo: 'POST', body: c }).then(function (x) {
-        if (x.status === 401) return salir();
+        if (x.status === 401) return salir(false);
         if (x.status !== 201) { falta.textContent = x.status === 409 ? 'A esa hora ya hay otra cita' + (c.persona ? ' con ' + nombreDe(c.persona) : '') + '. Elige otra hora.' : (x.d.error || 'No se pudo'); b.disabled = false; return; }
         var msg = 'Hola ' + c.nombre + ' 👋 Quedó tu cita en ' + perfil.nombre + ' el ' + fechaLarga(c.fecha) + ' a las ' + hora12(aMin(c.hora)) + ' (' + c.servicio + '). ¡Te esperamos!';
         diaSel = c.fecha; carga();
@@ -989,6 +1188,7 @@
 
   function ata(d) {
     var s = document.getElementById('salir'); if (s) s.onclick = function () { if (confirm('¿Salir de tu agenda en este teléfono?')) salir(); };
+    var sg = document.getElementById('seguridad'); if (sg) sg.onclick = abreSeguridad;
     raiz.querySelectorAll('[data-vista]').forEach(function (b) {
       b.onclick = function () { irA(b.getAttribute('data-vista')); };
     });
@@ -1024,7 +1224,7 @@
         var ventana = avisar ? window.open('', '_blank') : null;
         b.disabled = true;
         envia('/citas/' + encodeURIComponent(folio) + '/estado', { metodo: 'POST', body: { estado: est } }).then(function (x) {
-          if (x.status === 401) return salir();
+          if (x.status === 401) return salir(false);
           if (x.status !== 200) { if (ventana) ventana.close(); toast(x.d.error || 'No se pudo'); b.disabled = false; return; }
           if (ventana) ventana.location = avisar;
           toast(est === 'confirmada' ? 'Confirmada. Avísale por WhatsApp.' : 'Cancelada. La hora quedó libre.'); carga();
@@ -1173,13 +1373,13 @@
       if (cq && /^[A-Z0-9-]{4,20}$/.test(cq)) { citaPendiente = cq; vista = 'hoy'; }
       if (dq || cq) history.replaceState(null, '', location.pathname);
       revisaSuscripcion().then(function () { if (token && ultimo) pinta(ultimo); });
-      if (token) carga(); else pintaEntrar();
+      if (!token) pintaEntrar(); else if (conCandado()) abreConCandado(); else carga();
     }).catch(function () {
       raiz.innerHTML = '<div class="envoltura cuerpo"><p class="vacio">No se pudo abrir tu agenda. Revisa tu conexión e inténtalo de nuevo.</p></div>';
     });
   }
   setInterval(function () {
-    if (!token || DEMO || document.visibilityState !== 'visible' || document.getElementById('velo')) return;
+    if (!token || DEMO || document.visibilityState !== 'visible' || document.getElementById('velo') || document.getElementById('candado')) return;
     var a = document.activeElement;
     if (a && a.matches && a.matches('input,select,textarea')) return;
     carga();

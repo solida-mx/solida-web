@@ -13,7 +13,7 @@ const previo = existsSync(devVars) ? readFileSync(devVars) : null;
 // La llave para firmar avisos, como la de producción (se genera para la prueba)
 const parVapid = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
 const jwkVapid = await crypto.subtle.exportKey('jwk', parVapid.privateKey);
-writeFileSync(devVars, `MAESTRA=${MAESTRA}\nSECRETO=${SECRETO}\nCALENDARIOS_PRUEBA=1\nPUSH_PRUEBA=1\nRESUMEN_PRUEBA=1\nRESEND_API_KEY=re_prueba\nRESEND_URL=http://127.0.0.1:8814/emails\nVAPID_PRIVADA='${JSON.stringify(jwkVapid)}'\n`);
+writeFileSync(devVars, `MAESTRA=${MAESTRA}\nSECRETO=${SECRETO}\nCALENDARIOS_PRUEBA=1\nPUSH_PRUEBA=1\nRESUMEN_PRUEBA=1\nWEBAUTHN_PRUEBA=1\nRESEND_API_KEY=re_prueba\nRESEND_URL=http://127.0.0.1:8814/emails\nVAPID_PRIVADA='${JSON.stringify(jwkVapid)}'\n`);
 const pasos = []; const paso = (t) => { pasos.push(t); console.log('  ✓ ' + t); };
 let w, log = '';
 
@@ -33,7 +33,7 @@ const fecha = (n) => { const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'A
 
 try {
   execFileSync('npx', ['wrangler', 'd1', 'migrations', 'apply', 'solida-citas', '--local', '--persist-to', persist], { stdio: 'ignore' });
-  w = spawn('npx', ['wrangler', 'dev', '--ip', '127.0.0.1', '--port', String(PUERTO), '--persist-to', persist, '--show-interactive-dev-session=false', '--test-scheduled'],
+  w = spawn('npx', ['wrangler', 'dev', '--ip', '127.0.0.1', '--port', String(PUERTO), '--persist-to', persist, '--show-interactive-dev-session=false', '--test-scheduled', '--local-upstream', 'localhost:' + PUERTO],
     { detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, NO_PROXY: '127.0.0.1,localhost', no_proxy: '127.0.0.1,localhost' } });
   w.stdout.on('data', (x) => (log += x)); w.stderr.on('data', (x) => (log += x));
   for (let i = 0; i < 120; i++) { try { if ((await fetch(URL0 + '/')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 500)); if (i === 119) throw new Error('wrangler dev no arrancó\n' + log); }
@@ -143,7 +143,32 @@ try {
   assert.equal((await api('/api/atelier-mia/perfil')).d.equipo.length, 3, 'darle clave nueva no borra su equipo');
   assert.equal((await api('/api/admin/negocios', { metodo: 'POST', maestra: true, body: { id: 'ejemplo', nombre: 'Yo' } })).status, 400, '«ejemplo» está reservado');
   const CLAVE2 = otraClave.d.clave;
-  paso('Solida le pone a la agenda su equipo y la dirección de su página; darle otra clave no los borra');
+  assert.equal((await api('/api/atelier-mia/agenda', { token: TOKEN })).status, 401, 'la clave nueva cierra la agenda en todos los teléfonos');
+  paso('Solida le pone a la agenda su equipo y la dirección de su página; darle otra clave no los borra y cierra las sesiones abiertas');
+
+  // Sesiones de 7 días que se ven y se quitan
+  {
+    const s1 = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.7.1' })).d;
+    const s2 = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.7.2' })).d;
+    assert.match(s1.token, /^s\.[A-Z2-9]{16}\.[A-Z2-9]{32}$/);
+    assert.ok(Math.abs(s1.expira - Date.now() / 1000 - 7 * 86400) < 120, 'dura 7 días');
+    assert.equal((await api('/api/atelier-mia/agenda', { token: 's.' + s1.sesion + '.' + 'A'.repeat(32) })).status, 401, 'el id sin su secreto no sirve');
+    let ds = await api('/api/atelier-mia/dispositivos', { token: s1.token });
+    assert.equal(ds.status, 200); assert.equal(ds.d.sesiones.length, 2); assert.equal(ds.d.sesiones.filter((x) => x.actual).length, 1);
+    assert.ok(!JSON.stringify(ds.d).includes(s2.token.split('.')[2]), 'la lista no trae los secretos');
+    ds = await api('/api/atelier-mia/dispositivos/sesion/' + s2.sesion, { metodo: 'DELETE', token: s1.token });
+    assert.equal(ds.d.sesiones.length, 1);
+    assert.equal((await api('/api/atelier-mia/agenda', { token: s2.token })).status, 401, 'el teléfono quitado deja de ver la agenda');
+    const s3 = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.7.3' })).d;
+    await api('/api/atelier-mia/dispositivos/cerrar-otras', { metodo: 'POST', token: s3.token });
+    assert.equal((await api('/api/atelier-mia/agenda', { token: s1.token })).status, 401, '«cerrar en los demás» cierra los otros');
+    assert.equal((await api('/api/atelier-mia/agenda', { token: s3.token })).status, 200, 'y deja éste');
+    assert.equal((await api('/api/atelier-mia/salir', { metodo: 'POST', token: s3.token })).status, 200);
+    assert.equal((await api('/api/atelier-mia/agenda', { token: s3.token })).status, 401, 'salir cierra la sesión en el servidor');
+    assert.match((await api('/api/atelier-mia/passkey/opciones-entrar', { metodo: 'POST' })).d.error, /^Abre tu agenda en agenda\.solidaaplicaciones\.com/, 'Face ID sólo en la dirección de la agenda');
+    assert.equal((await api('/api/atelier-mia/passkey/opciones-alta', { metodo: 'POST' })).status, 401, 'activar Face ID pide sesión');
+  }
+  paso('la sesión dura 7 días y vive en el servidor: la dueña ve dónde está abierta, quita un teléfono o todos los demás, y «Salir» la cierra de verdad');
 
   let r = await crudo('/atelier-mia');
   assert.equal(r.status, 301); assert.match(r.headers.get('location'), /\/atelier-mia\/$/);
@@ -773,6 +798,77 @@ try {
       assert.deepEqual(errores, []);
       paso('en el navegador: la dueña aparta «Se me atravesó algo», ve a quién se le propone qué hora y por dónde se le avisa');
     } finally { push2.close(); mail2.close(); }
+
+    // ───── Face ID / huella (con un autenticador simulado de Chromium) ─────
+    {
+      const URLH = `http://localhost:${PUERTO}`; let errB = [];
+      const cx = await nav.newContext({ viewport: { width: 390, height: 844 } });
+      await cx.route('https://fonts.googleapis.com/**', (r2) => r2.fulfill({ body: '', contentType: 'text/css' }));
+      const pb = await cx.newPage();
+      try {
+      errB = []; pb.on('pageerror', (e) => errB.push(e.message)); pb.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|status of 40[019]/.test(m.text())) errB.push(m.text()); });
+      pb.on('dialog', (dg) => dg.accept());
+      const cdp = await cx.newCDPSession(pb);
+      await cdp.send('WebAuthn.enable');
+      const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+      await pb.goto(URLH + '/atelier-mia/'); await pb.waitForSelector('#clave');
+      await pb.waitForSelector('#conBio:not([hidden])');
+      await pb.fill('#clave', CLAVE2); await pb.click('#conClave');
+      await pb.waitForSelector('#bioSi');
+      if (CAP) await pb.screenshot({ path: CAP + '/ag-bio-oferta.png' });
+      await pb.click('#bioSi');
+      await pb.waitForFunction(() => !document.getElementById('velo') && localStorage.getItem('agenda:llave:atelier-mia'), null, { timeout: 8000 }).catch(async () => { throw new Error('no se activó: ' + JSON.stringify(await pb.evaluate(() => ({ u: location.href, velo: !!document.getElementById('velo'), ll: localStorage.getItem('agenda:llave:atelier-mia'), f: (document.getElementById('bioFalta') || {}).textContent, html: document.body.innerHTML.slice(0, 300) }))) + ' ' + errB.join(' | ')); });
+      await pb.waitForFunction(() => !document.getElementById('velo') && localStorage.getItem('agenda:llave:atelier-mia'));
+      assert.equal((await cdp.send('WebAuthn.getCredentials', { authenticatorId })).credentials.length, 1, 'el teléfono guardó su llave');
+      // Seguridad: Face ID activado y «pedir al abrir»
+      await pb.click('#seguridad'); await pb.waitForSelector('#segBloqueo');
+      assert.match(await pb.textContent('.hoja'), /Activado/);
+      assert.equal((await pb.$$('[data-quita-llave]')).length, 1, 'una llave'); assert.equal((await pb.$$('[data-quita-sesion][data-actual]')).length, 1, 'y «Este teléfono» entre las sesiones');
+      await pb.check('#segBloqueo');
+      if (CAP) await pb.screenshot({ path: CAP + '/ag-seguridad.png', fullPage: true });
+      await pb.keyboard.press('Escape');
+      await pb.reload(); await pb.waitForSelector('#candBio');
+      assert.ok(!(await pb.$('.cab')), 'con candado no se ve la agenda');
+      if (CAP) await pb.screenshot({ path: CAP + '/ag-candado.png' });
+      await pb.click('#candBio'); await pb.waitForSelector('.cab'); assert.ok(!(await pb.$('#candado')));
+      // Salir y volver a entrar con Face ID (ya es el botón principal)
+      await pb.click('#salir'); await pb.waitForSelector('#conBio:not([hidden])');
+      assert.match(await pb.getAttribute('#conBio', 'class'), /negro/);
+      await pb.click('#conBio'); await pb.waitForSelector('.cab');
+      const sb = await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.7.9' });
+      let dv = await api('/api/atelier-mia/dispositivos', { token: sb.d.token });
+      assert.equal(dv.d.llaves.length, 1); assert.ok(dv.d.sesiones.some((x) => x.metodo === 'llave'), 'la sesión dice que entró con Face ID');
+      assert.ok(dv.d.llaves[0].ultimo > 0);
+      // Desde el navegador quita el otro teléfono
+      await pb.click('#seguridad'); await pb.waitForSelector(`[data-quita-sesion="${sb.d.sesion}"]`);
+      await pb.click(`[data-quita-sesion="${sb.d.sesion}"]`);
+      await pb.waitForFunction((id) => !document.querySelector(`[data-quita-sesion="${id}"]`), sb.d.sesion);
+      assert.equal((await api('/api/atelier-mia/agenda', { token: sb.d.token })).status, 401, 'el teléfono quitado desde la app deja de ver la agenda');
+      await pb.keyboard.press('Escape');
+      // Si le roban este teléfono: desde otro quita su llave y su sesión
+      const sc = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.7.10' })).d;
+      dv = await api('/api/atelier-mia/dispositivos', { token: sc.token });
+      await api('/api/atelier-mia/dispositivos/llave/' + encodeURIComponent(dv.d.llaves[0].id), { metodo: 'DELETE', token: sc.token });
+      await api('/api/atelier-mia/dispositivos/cerrar-otras', { metodo: 'POST', token: sc.token });
+      await pb.reload(); await pb.waitForSelector('#conBio:not([hidden])');
+      await pb.click('#conBio'); await pb.waitForFunction(() => document.getElementById('falta').textContent.length > 0);
+      assert.match(await pb.textContent('#falta'), /Todavía no activas|ya no está activa/, 'la llave quitada ya no abre: ' + await pb.textContent('#falta'));
+      assert.ok(!(await pb.$('.cab')));
+      // Clave nueva desde Solida: también borra las llaves de Face ID (un teléfono robado trae la suya)
+      const sd = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.7.11' })).d;
+      await pb.evaluate(() => localStorage.clear()); await pb.reload(); await pb.waitForSelector('#clave');
+      await pb.fill('#clave', CLAVE2); await pb.click('#conClave'); await pb.waitForSelector('#bioSi'); await pb.click('#bioSi');
+      await pb.waitForFunction(() => !document.getElementById('velo') && localStorage.getItem('agenda:llave:atelier-mia'));
+      assert.equal((await api('/api/atelier-mia/dispositivos', { token: sd.token })).d.llaves.length, 1);
+      const cl3 = await api('/api/admin/negocios', { metodo: 'POST', maestra: true, body: { id: 'atelier-mia', nombre: 'Atelier Mía' } });
+      const sf = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: cl3.d.clave }, ip: '6.6.7.12' })).d;
+      assert.equal((await api('/api/atelier-mia/dispositivos', { token: sf.token })).d.llaves.length, 0, 'la clave nueva borra los Face ID');
+      assert.equal((await api('/api/atelier-mia/agenda', { token: sd.token })).status, 401);
+      } catch (e) { e.message += ' · pantalla: ' + JSON.stringify(await pb.evaluate(() => ({ cand: !!document.getElementById('candado'), velo: !!document.getElementById('velo'), ll: localStorage.getItem('agenda:llave:atelier-mia'), bl: localStorage.getItem('agenda:bloqueo:atelier-mia'), txt: document.body.innerText.slice(0, 300) }))) + ' ' + errB.join(' | '); throw e; }
+      assert.deepEqual(errB, []);
+      await cx.close();
+    }
+    paso('Face ID / huella: se activa después de entrar con la clave, abre la agenda, puede pedirse al abrir, y desde otro teléfono se quita (si te lo roban); una clave nueva borra todos los Face ID');
 
     // La muestra también tiene Mis tiempos
     await ej.click('[data-vista="tiempos"]'); await ej.waitForSelector('#apartar');
