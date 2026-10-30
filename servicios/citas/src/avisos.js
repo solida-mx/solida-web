@@ -1,4 +1,5 @@
-// Avisos a la dueña: al celular (Web Push) y por correo (Resend), con cada cita nueva y un resumen en la noche.
+// Avisos a la dueña: al celular (Web Push), con cada cita nueva y un resumen en la noche.
+// Un solo aviso: el correo (Resend) es sólo RESPALDO, y sale únicamente cuando no se le pudo avisar a ningún teléfono.
 //
 // Al celular va una señal SIN datos: el servicio de avisos del teléfono (Google, Apple, Mozilla, Microsoft) nunca ve
 // nombres ni teléfonos. El teléfono despierta, le pregunta a este servidor qué hay de nuevo (con la dirección de su
@@ -103,13 +104,15 @@ const pesos = (n) => '$' + Number(n || 0).toLocaleString('es-MX');
 
 // ── lo que dispara cada aviso ──
 export async function avisaCitaNueva(env, neg, c, agendaBase, nombreDe) {
-  const url = '/' + neg.id + '/?dia=' + c.fecha;
+  // Al tocar el aviso se abre esa cita en su agenda
+  const url = '/' + neg.id + '/?cita=' + encodeURIComponent(c.folio);
   const quien = nombreDe(c.persona);
   const titulo = 'Nueva cita · ' + neg.nombre;
   const cuerpo = c.nombre + ' apartó ' + (c.diseno ? c.diseno + ' (' + c.servicio + ')' : c.servicio) + (quien ? ' con ' + quien : '') + ' · ' + fechaCorta(c.fecha) + ' · ' + hora12(c.ini) +
     (c.anticipo ? '' : '. Sin anticipo todavía.');
-  await avisa(env, neg.id, { titulo, cuerpo, url });
-  if (neg.aviso_correo && neg.correo) {
+  const a = await avisa(env, neg.id, { titulo, cuerpo, url });
+  // Respaldo: sólo si ningún teléfono recibió el aviso (no tiene avisos activos o fallaron todos). Nunca los dos.
+  if (a.enviados === 0 && neg.correo) {
     const link = agendaBase + url;
     const filas = [['Servicio', c.diseno ? c.diseno + ' (' + c.servicio + ')' : c.servicio], ['Cuándo', fechaCorta(c.fecha) + ' · ' + hora12(c.ini) + ' a ' + hora12(c.fin)],
       quien ? ['Con', quien] : null, ['Precio', pesos(c.precio)], ['Anticipo', c.anticipo ? pesos(c.anticipo) : 'Todavía no'], ['WhatsApp', c.tel], ['Folio', c.folio]].filter(Boolean);
@@ -120,17 +123,22 @@ export async function avisaCitaNueva(env, neg, c, agendaBase, nombreDe) {
       '<table style="width:100%;border-collapse:collapse;font:14px Arial,sans-serif">' + filas.map((x) =>
         '<tr><td style="padding:9px 0;border-bottom:1px solid #e2d9ca;color:#6b6157">' + escH(x[0]) + '</td><td style="padding:9px 0;border-bottom:1px solid #e2d9ca;text-align:right;font-weight:600">' + escH(x[1]) + '</td></tr>').join('') + '</table>' +
       '<p style="margin:20px 0 0"><a href="' + escH(link) + '" style="display:inline-block;background:#161412;color:#f7f3ec;padding:14px 22px;font:600 12px Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;text-decoration:none">Abrir mi agenda</a></p>' +
-      '<p style="font:12px Arial,sans-serif;color:#6b6157;margin:20px 0 0">Te llega porque tienes los avisos por correo encendidos. Se apagan desde tu agenda.</p></div>';
+      '<p style="font:12px Arial,sans-serif;color:#6b6157;margin:20px 0 0">Te llega por correo porque en ninguno de tus teléfonos están activos los avisos. Actívalos desde la campana de tu agenda y dejamos de escribirte.</p></div>';
     const texto = titulo + '\n\n' + filas.map((x) => x[0] + ': ' + x[1]).join('\n') + '\n\nAbrir mi agenda: ' + link;
     await mandaCorreo(env, neg.correo, 'Nueva cita: ' + c.nombre + ' · ' + fechaCorta(c.fecha) + ', ' + hora12(c.ini), html, texto,
       [{ filename: 'cita.ics', content: btoa(String.fromCharCode(...enc.encode(icsDeCita(neg, c, link)))), content_type: 'text/calendar; charset=utf-8; method=PUBLISH' }]);
   }
 }
-export async function avisaPrueba(env, neg, agendaBase) {
-  const a = await avisa(env, neg.id, { titulo: 'Así te van a llegar los avisos', cuerpo: 'Cada vez que alguien aparte en tu página te llega uno como éste. Y en la noche, cuántas citas tienes mañana.', url: '/' + neg.id + '/' });
-  let correo = false;
-  if (neg.aviso_correo && neg.correo) correo = await mandaCorreo(env, neg.correo, 'Así te van a llegar los avisos de tu agenda',
-    '<div style="font-family:Arial,sans-serif;padding:20px"><p>Hola 👋 Este es un correo de prueba de <b>' + escH(neg.nombre) + '</b>.</p><p>Cada vez que alguien aparte una cita en tu página te llegará un correo así, con la cita adjunta para tu calendario.</p><p><a href="' + escH(agendaBase + '/' + neg.id + '/') + '">Abrir mi agenda</a></p></div>',
-    'Este es un correo de prueba de tu agenda. Cada cita nueva te llegará así.');
-  return { push: a.enviados, correo };
+// La prueba de cada canal por separado: el celular, o el correo de respaldo.
+export async function avisaPrueba(env, neg, agendaBase, canal) {
+  if (canal === 'correo') {
+    const ok = await mandaCorreo(env, neg.correo, 'Prueba: tu correo de respaldo de ' + neg.nombre,
+      '<div style="font-family:Arial,sans-serif;padding:20px;max-width:520px"><p>Hola 👋 Éste es el correo de respaldo de tu agenda de <b>' + escH(neg.nombre) + '</b>.</p>' +
+      '<p>Sólo te escribimos aquí si llega una cita y en ninguno de tus teléfonos están activos los avisos. Mientras tu celular te avise, no te llega nada por correo.</p>' +
+      '<p><a href="' + escH(agendaBase + '/' + neg.id + '/') + '">Abrir mi agenda</a></p></div>',
+      'Este es el correo de respaldo de tu agenda. Sólo te escribimos aquí si en ninguno de tus teléfonos están activos los avisos.');
+    return { correo: ok };
+  }
+  const a = await avisa(env, neg.id, { titulo: 'Así te van a llegar los avisos', cuerpo: 'Cada vez que alguien aparte en tu página te llega uno como éste. Al tocarlo se abre la cita. Y en la noche, cuántas citas tienes mañana.', url: '/' + neg.id + '/' });
+  return { push: a.enviados };
 }

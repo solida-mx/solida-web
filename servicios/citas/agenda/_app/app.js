@@ -137,8 +137,13 @@
     }).join('') + '</nav>';
   }
 
+  var citaPendiente = null;   // la cita que pidió abrir un aviso; se abre en cuanto haya datos (y sesión)
   function pinta(d) {
     ultimo = d;
+    if (citaPendiente) {
+      var cp = d.citas.filter(function (x) { return x.folio === citaPendiente; })[0];
+      if (cp) diaSel = cp.fecha;
+    }
     var y = scrollY;
     var hoy = d.hoy;
     if (!diaSel || diaSel < hoy) diaSel = hoy;
@@ -179,6 +184,7 @@
     if (mismo) scrollTo(0, y);
     pintaInstalar();
     ata(d);
+    if (citaPendiente && !document.getElementById('velo')) { var f = citaPendiente; citaPendiente = null; abreCita(f); }
   }
   function pie() {
     return '<div class="pie">' + (perfil.pagina ? '<a class="btn" href="' + esc(perfil.pagina) + '" target="_blank" rel="noopener">Ver mi página</a>' : '') +
@@ -230,8 +236,12 @@
       h += '<button type="button" class="dia-chip" data-dia="' + x + '" aria-pressed="' + (x === f) + '">' + esc(nombreDia(x, hoy)) + (n ? '<small>' + n + '</small>' : '') + '</button>';
     }
     h += '</div>';
-    if (invitarAvisos()) h += '<section class="invita"><div><b>¿Te aviso de cada cita nueva?</b><span>Te llega al celular en cuanto alguien aparta en tu página.</span></div>' +
-      '<div class="dos"><button type="button" class="btn negro" id="invitaSi">Avísame</button><button type="button" class="btn" id="invitaNo">Ahora no</button></div></section>';
+    var et = estadoAvisosTel();
+    if (et === 'apagado') h += '<section class="invita"><div><b>Los avisos de citas nuevas están apagados en este teléfono</b><span>Actívalos y te llega un aviso en cuanto alguien aparte en tu página.</span></div>' +
+      '<div class="dos"><button type="button" class="btn negro" id="invitaSi">Activar</button><button type="button" class="btn" id="invitaNo">Ahora no</button></div></section>';
+    else if (et === 'bloqueado' || et === 'instalar') h += '<section class="invita"><div><b>Los avisos de citas nuevas están apagados en este teléfono</b><span>' +
+      (et === 'bloqueado' ? 'Los bloqueaste para esta página: actívalos en los ajustes de tu navegador.' : 'En iPhone llegan sólo con tu agenda instalada: Compartir → «Agregar a inicio», y ábrela desde ahí.') +
+      '</span></div><button type="button" class="btn" id="invitaNo">Entendido</button></section>';
     h += '<h2 class="etq dia-tit">' + esc(fechaLarga(f)) + '</h2>';
     var tiempos = tiemposDelDia(d, f), libres = libresDelDia(d, f, tiempos);
     var citas = d.citas.filter(function (c) { return c.fecha === f; });
@@ -473,19 +483,23 @@
 
   // ───── avisos al celular y por correo ─────
   var puedePush = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-  var suscrito = false;
-  function invitarAvisos() {
-    if (DEMO || !puedePush || suscrito || Notification.permission === 'denied') return false;
-    if (esIos && !instalada) return false;
-    try { return !localStorage.getItem('agenda:noavisos:' + ID); } catch (e) { return false; }
+  var suscrito = null;   // null = todavía no se sabe
+  // Cómo están los avisos en ESTE teléfono. Si están apagados se le dice en Hoy (y «Ahora no» lo esconde 3 días, no para siempre).
+  function estadoAvisosTel() {
+    if (DEMO || suscrito === null) return 'ok';
+    try { var n = +localStorage.getItem('agenda:noavisos:' + ID) || 0; if (Date.now() - n < 3 * 86400000) return 'ok'; } catch (e) { return 'ok'; }
+    if (esIos && !instalada) return 'instalar';
+    if (!puedePush) return 'sin';
+    if (suscrito) return 'ok';
+    return Notification.permission === 'denied' ? 'bloqueado' : 'apagado';
   }
   function b64aU8(s) { var t = (s + '===='.slice((s.length + 3) % 4 + 1)).replace(/-/g, '+').replace(/_/g, '/'); var b = atob(t); return Uint8Array.from(b, function (c) { return c.charCodeAt(0); }); }
   function registro() {
     return Promise.race([navigator.serviceWorker.ready, new Promise(function (_, no) { setTimeout(function () { no(new Error('sin sw')); }, 8000); })]);
   }
   function revisaSuscripcion() {
-    if (DEMO || !puedePush) return Promise.resolve(false);
-    return registro().then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (s) { suscrito = !!s; return s; }).catch(function () { return null; });
+    if (DEMO || !puedePush) { suscrito = false; return Promise.resolve(false); }
+    return registro().then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (s) { suscrito = !!s; return s; }).catch(function () { suscrito = false; return null; });
   }
   function activaAvisos(vapid) {
     if (!vapid) return Promise.reject(new Error('Los avisos al celular todavía no están activos. Escríbele a Solida.'));
@@ -523,14 +537,15 @@
       else if (suscrito) cel = '<div class="fila-dato"><span>Este teléfono</span><b class="ok">Avisos activados</b></div><button type="button" class="btn bloque" id="avApaga" style="margin-top:10px">Apagar en este teléfono</button>';
       else if (Notification.permission === 'denied') cel = '<p class="ojo">Bloqueaste los avisos para esta página. Actívalos en los ajustes de tu navegador y vuelve aquí.</p>';
       else cel = '<button type="button" class="btn negro bloque grande" id="avActiva">Activar en este teléfono</button>';
-      var correo = !st.correoDisponible ? '<p class="nota" style="text-align:left">Muy pronto: los avisos por correo se encienden en cuanto Solida termine de conectar el servicio de correo.</p>'
-        : '<form id="fCorreo" novalidate><label class="etq" for="avCorreo" style="color:var(--oro-txt)">Tu correo</label><input class="campo" id="avCorreo" type="email" inputmode="email" autocomplete="email" maxlength="200" value="' + esc(st.correo) + '" placeholder="tu@correo.com">' +
-          '<label class="hor-si" style="width:auto;margin-top:8px"><input type="checkbox" id="avCorreoSi"' + (st.avisoCorreo ? ' checked' : '') + '><span style="text-transform:none;letter-spacing:0;font-size:14px">Mandarme cada cita nueva, con la cita para mi calendario</span></label>' +
-          '<p class="falta" id="avFalta" role="alert"></p><button class="btn bloque" id="avGuarda">Guardar</button></form>';
+      // El correo es sólo respaldo: no se enseña si el servicio de correo no está conectado.
+      var correo = !st.correoDisponible ? '' : '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">Correo de respaldo</span>' +
+        '<p class="nota" style="text-align:left;margin:0">Sólo te escribimos si llega una cita y en ninguno de tus teléfonos están activos los avisos. Nunca te llegan los dos.</p>' +
+        '<form id="fCorreo" novalidate><input class="campo" id="avCorreo" type="email" inputmode="email" autocomplete="email" maxlength="200" value="' + esc(st.correo) + '" placeholder="tu@correo.com" aria-label="Tu correo de respaldo">' +
+        '<p class="falta" id="avFalta" role="alert"></p><div class="dos"><button class="btn" id="avGuarda">Guardar</button>' +
+        '<button type="button" class="btn" id="avPruebaCorreo"' + (st.correo && !DEMO ? '' : ' disabled') + '>Probar el correo</button></div></form></section>';
       document.getElementById('avCuerpo').innerHTML = '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">Al celular</span>' + cel +
-        (st.telefonos ? '<p class="nota" style="text-align:left">Activos en ' + st.telefonos + (st.telefonos === 1 ? ' teléfono' : ' teléfonos') + '.</p>' : '') + '</section>' +
-        '<section class="campo-h"><span class="etq" style="color:var(--oro-txt)">Por correo</span>' + correo + '</section>' +
-        (!DEMO && (st.telefonos || st.avisoCorreo) ? '<button type="button" class="btn bloque" id="avPrueba" style="margin-top:14px">Mandarme un aviso de prueba</button>' : '');
+        (st.telefonos ? '<p class="nota" style="text-align:left">Activos en ' + st.telefonos + (st.telefonos === 1 ? ' teléfono' : ' teléfonos') + '.</p>' : '') +
+        (!DEMO && suscrito ? '<button type="button" class="btn bloque" id="avPrueba" style="margin-top:6px">Mandarme un aviso de prueba</button>' : '') + '</section>' + correo;
       var a = document.getElementById('avActiva');
       if (a) a.onclick = function () {
         a.disabled = true; a.textContent = 'Activando…';
@@ -543,23 +558,27 @@
       if (fc) fc.onsubmit = function (e) {
         e.preventDefault();
         var falta = document.getElementById('avFalta'); falta.textContent = '';
-        var c = document.getElementById('avCorreo').value.trim(), si = document.getElementById('avCorreoSi').checked;
-        if (si && !c) { falta.textContent = 'Escribe tu correo.'; return; }
+        var c = document.getElementById('avCorreo').value.trim();
         if (DEMO) { toast('Listo. En el ejemplo no se guarda.'); return; }
-        api('/avisos/correo', { metodo: 'PUT', body: { correo: c, activo: si } }).then(function (x) {
+        api('/avisos/correo', { metodo: 'PUT', body: { correo: c } }).then(function (x) {
           if (x.status !== 200) { falta.textContent = x.d.error || 'No se pudo'; return; }
-          toast(x.d.avisoCorreo ? 'Listo: te mandamos cada cita nueva a ' + x.d.correo : 'Guardado'); pintaCuerpo(x.d);
+          toast(x.d.correo ? 'Guardado: tu respaldo es ' + x.d.correo : 'Guardado: sin correo de respaldo'); pintaCuerpo(x.d);
         }, function () { falta.textContent = 'Sin conexión.'; });
       };
-      var pr = document.getElementById('avPrueba');
-      if (pr) pr.onclick = function () {
-        pr.disabled = true;
-        api('/avisos/prueba', { metodo: 'POST' }).then(function (x) {
-          pr.disabled = false;
-          if (x.status !== 200) { toast(x.d.error || 'No se pudo'); return; }
-          toast(x.d.push || x.d.correo ? 'Listo: revisa tu ' + (x.d.push ? 'celular' : '') + (x.d.push && x.d.correo ? ' y tu ' : '') + (x.d.correo ? 'correo' : '') : 'No se pudo mandar. Vuelve a activar los avisos.');
-        }, function () { pr.disabled = false; toast('Sin conexión'); });
+      var prueba = function (b, canal) {
+        if (!b) return;
+        b.onclick = function () {
+          b.disabled = true;
+          api('/avisos/prueba', { metodo: 'POST', body: { canal: canal } }).then(function (x) {
+            b.disabled = false;
+            if (x.status !== 200) { toast(x.d.error || 'No se pudo'); return; }
+            if (canal === 'correo') toast(x.d.correo ? 'Listo: revisa tu correo (y la carpeta de spam)' : 'No se pudo mandar el correo. Avísale a Solida.');
+            else toast(x.d.push ? 'Listo: revisa tu celular' : 'No se pudo mandar. Apaga y vuelve a activar los avisos.');
+          }, function () { b.disabled = false; toast('Sin conexión'); });
+        };
       };
+      prueba(document.getElementById('avPrueba'), 'celular');
+      prueba(document.getElementById('avPruebaCorreo'), 'correo');
     };
     if (DEMO) { pintaCuerpo({ vapid: '', telefonos: 0, correo: '', avisoCorreo: false, correoDisponible: true }); return; }
     revisaSuscripcion().then(function () { return api('/avisos'); }).then(function (x) {
@@ -743,6 +762,36 @@
     };
   }
 
+  // ───── el detalle de una cita (lo que abre el aviso) ─────
+  function abreCita(folio) {
+    var c = ultimo && ultimo.citas.filter(function (x) { return x.folio === folio; })[0];
+    if (!c) { toast('Esa cita ya no está en tu agenda'); return; }
+    var man = sumaDia(ultimo.hoy, 1), quien = nombreDe(c.persona), ini = hora12(c.inicio_min);
+    var conf = 'Hola ' + c.nombre + ' 👋 Tu cita en ' + perfil.nombre + ' del ' + fechaLarga(c.fecha) + ' a las ' + ini + ' está confirmada. ¡Te esperamos!';
+    var filas = [['Servicio', c.diseno ? c.diseno + ' (' + c.servicio + ')' : c.servicio], c.detalle ? ['Detalle', c.detalle] : null,
+      ['Cuándo', fechaLarga(c.fecha).charAt(0).toUpperCase() + fechaLarga(c.fecha).slice(1) + ' · ' + ini + ' a ' + hora12(c.fin_min)], quien ? ['Con', quien] : null,
+      ['Precio', pesos(c.precio)], ['Anticipo', c.anticipo ? pesos(c.anticipo) : 'Todavía no'], ['WhatsApp', c.tel], ['Folio', c.folio]].filter(Boolean);
+    var hoja = abreHoja('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">' + esc(c.nombre) + '</h2>' + CERRAR + '</div>' +
+      '<span class="pill ' + esc(c.estado) + '">' + esc(ESTADO[c.estado] || c.estado) + (c.origen === 'pagina' ? ' · llegó de tu página' : ' · la capturaste tú') + '</span>' +
+      '<div class="filas">' + filas.map(function (x) { return '<div class="fila-dato"><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>'; }).join('') + '</div>' +
+      (c.estado === 'cancelada' ? '' : '<div class="acc" style="margin-top:14px">' +
+        (c.estado === 'apartada' ? '<button class="btn negro" type="button" id="dcConfirma">Confirmar</button>' : '') +
+        '<a class="btn" href="' + esc(wa(c.tel, c.fecha === man ? mensajeRecordar(c) : 'Hola ' + c.nombre + ' 👋 ')) + '" target="_blank" rel="noopener"' + (c.fecha === man ? ' data-recfolio="' + esc(c.folio) + '"' : '') + '>' + (c.fecha === man ? 'Recordar' : 'Escribirle') + '</a>' +
+        '<button class="btn quitar" type="button" id="dcCancela">Cancelar cita</button></div>'));
+    var cambia = function (est, aviso) {
+      var ventana = aviso ? window.open('', '_blank') : null;
+      envia('/citas/' + encodeURIComponent(c.folio) + '/estado', { metodo: 'POST', body: { estado: est } }).then(function (x) {
+        if (x.status === 401) return salir();
+        if (x.status !== 200) { if (ventana) ventana.close(); toast(x.d.error || 'No se pudo'); return; }
+        if (ventana) ventana.location = aviso;
+        cierraHoja(); toast(est === 'confirmada' ? 'Confirmada. Avísale por WhatsApp.' : 'Cancelada. La hora quedó libre.'); carga();
+      }, function () { if (ventana) ventana.close(); toast('Sin conexión'); });
+    };
+    var bc = document.getElementById('dcConfirma'); if (bc) bc.onclick = function () { bc.disabled = true; cambia('confirmada', wa(c.tel, conf)); };
+    var bx = document.getElementById('dcCancela'); if (bx) bx.onclick = function () { if (confirm('¿Cancelar esta cita? Su hora vuelve a quedar libre en tu página.')) cambia('cancelada', ''); };
+    var rc = hoja.querySelector('[data-recfolio]'); if (rc) rc.addEventListener('click', function () { marcaRecordada(c.folio); });
+  }
+
   // ───── apartar una cita que pidieron por teléfono ─────
   var DURACIONES = [30, 45, 60, 90, 120, 150, 180];
   function abreNuevaCita(d, pre) {
@@ -839,7 +888,7 @@
         function (e) { iSi.disabled = false; toast(e.message || 'No se pudo'); });
     };
     var iNo = document.getElementById('invitaNo');
-    if (iNo) iNo.onclick = function () { try { localStorage.setItem('agenda:noavisos:' + ID, '1'); } catch (e) {} pinta(ultimo); };
+    if (iNo) iNo.onclick = function () { try { localStorage.setItem('agenda:noavisos:' + ID, String(Date.now())); } catch (e) {} pinta(ultimo); };
     raiz.querySelectorAll('[data-libre]').forEach(function (b) {
       b.onclick = function () { var p = b.getAttribute('data-libre').split('|'); abreNuevaCita(ultimo, { fecha: p[0], ini: +p[1], persona: p[2] }); };
     });
@@ -986,8 +1035,10 @@
       if (x.status !== 200) throw new Error(x.d.error || 'No existe');
       perfil = x.d; document.title = 'Agenda · ' + perfil.nombre;
       // Al abrir desde un aviso: el día de esa cita
-      var dq = new URLSearchParams(location.search).get('dia');
-      if (dq && /^\d{4}-\d{2}-\d{2}$/.test(dq)) { diaSel = dq; vista = 'hoy'; history.replaceState(null, '', location.pathname); }
+      var qs = new URLSearchParams(location.search), dq = qs.get('dia'), cq = qs.get('cita');
+      if (dq && /^\d{4}-\d{2}-\d{2}$/.test(dq)) { diaSel = dq; vista = 'hoy'; }
+      if (cq && /^[A-Z0-9-]{4,20}$/.test(cq)) { citaPendiente = cq; vista = 'hoy'; }
+      if (dq || cq) history.replaceState(null, '', location.pathname);
       revisaSuscripcion().then(function () { if (token && ultimo) pinta(ultimo); });
       if (token) carga(); else pintaEntrar();
     }).catch(function () {
