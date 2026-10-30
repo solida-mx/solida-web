@@ -42,6 +42,10 @@ sin clave); en la portada, el paquete que la incluye enseña «Su página» y «
 enteros). El servidor de citas no deja apartar fuera de eso, y la página de uñas pide el horario al servidor (`horario` en
 `/ocupado`): si la dueña abre un domingo, la página lo ofrece sola. Sin horario guardado, la página usa el de su `datos.js`.
 
+**Hoy y Semana.** La agenda abre en «Hoy»: el día hora por hora con sus citas, sus tiempos y los huecos libres de cada quien
+(tocar uno aparta ahí una cita por teléfono, ya confirmada). «Semana» resume los próximos 7 días. «Para mañana» lista a quién
+falta recordarle; mandar el recordatorio queda marcado en el servidor (`recordada`), así se ve desde cualquier teléfono.
+
 Pendientes de convertir: profesional, taller, nutriólogo, invitación, uniformes y barbería.
 
 ## Direcciones viejas
