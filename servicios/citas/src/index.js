@@ -8,12 +8,17 @@
 //   GET  /api/:negocio/agenda?desde=&hasta=               citas y bloqueos con sus datos
 //   POST /api/:negocio/citas/:folio/estado {estado}       confirmar o cancelar
 //   POST /api/:negocio/bloqueos · DELETE /api/:negocio/bloqueos/:id
+//   GET  /api/:negocio/perfil                             nombre, equipo y página (lo que la agenda pinta)
 // De Solida (con la clave maestra):
-//   POST /api/admin/negocios {id, nombre}                 dar de alta un negocio (o cambiarle la clave)
+//   POST /api/admin/negocios {id, nombre, equipo?, pagina?}  dar de alta un negocio (o cambiarle la clave)
+//   POST /api/admin/negocios/:id/perfil {equipo?, pagina?}  cambiar equipo o página sin tocar la clave
 //   GET  /api/admin/negocios
+// La agenda de la dueña (una app instalable, aparte de la página del negocio):
+//   agenda.solidaaplicaciones.com/:negocio/   ·  /ejemplo/ es la de muestra para el catálogo
 // Una vez al día se borran las citas de hace más de 120 días: no guardamos datos de nadie más de lo necesario.
 
 const DIAS_GUARDADO = 120;
+const AGENDA = 'https://agenda.solidaaplicaciones.com';
 const DIAS_MAX_ADELANTE = 90;
 const ahora = () => Math.floor(Date.now() / 1000);
 const enc = new TextEncoder();
@@ -41,12 +46,20 @@ async function enrutar(request, env) {
   const ruta = url.pathname.replace(/\/+$/, '');
   const m = request.method;
   let p;
-  if (ruta === '' || ruta === '/') return json({ servicio: 'citas de Solida', ok: true });
+  if (!url.pathname.startsWith('/api/')) return app(request, env, url);
 
   if (ruta === '/api/admin/negocios') {
     await exigeMaestra(request, env);
     if (m === 'GET') return json((await env.DB.prepare('SELECT id, nombre, zona, activo, creado FROM negocios ORDER BY creado').all()).results);
     if (m === 'POST') return json(await altaNegocio(env, await cuerpo(request)), 201);
+  }
+  if ((p = ruta.match(/^\/api\/admin\/negocios\/([a-z0-9-]{2,40})\/perfil$/)) && m === 'POST') {
+    await exigeMaestra(request, env);
+    const d = await cuerpo(request);
+    const r = await env.DB.prepare('UPDATE negocios SET equipo=COALESCE(?,equipo), pagina=COALESCE(?,pagina) WHERE id=?')
+      .bind(d.equipo !== undefined ? JSON.stringify(limpiaEquipo(d.equipo)) : null, d.pagina !== undefined ? limpiaPagina(d.pagina) : null, p[1]).run();
+    if (!r.meta.changes) throw new ErrorHttp(404, 'Negocio no encontrado');
+    return json(perfilDe(await env.DB.prepare('SELECT * FROM negocios WHERE id=?').bind(p[1]).first()));
   }
 
   if (!(p = ruta.match(/^\/api\/([a-z0-9-]{2,40})(\/.*)?$/))) throw new ErrorHttp(404, 'No existe');
@@ -54,6 +67,7 @@ async function enrutar(request, env) {
   if (!neg) throw new ErrorHttp(404, 'Negocio no encontrado');
   const sub = p[2] || '';
 
+  if (sub === '/perfil' && m === 'GET') return json(perfilDe(neg));
   if (sub === '/ocupado' && m === 'GET') return json(await ocupado(env, neg, url), 200, { 'Cache-Control': 'no-store' });
   if (sub === '/citas' && m === 'POST') {
     const dueña = await tokenValido(request, env, neg.id);
@@ -192,11 +206,37 @@ async function altaNegocio(env, d) {
   if (!nombre) throw new ErrorHttp(400, 'Falta el nombre');
   const zona = texto(d.zona, 40) || 'America/Monterrey';
   try { new Intl.DateTimeFormat('es', { timeZone: zona }); } catch { throw new ErrorHttp(400, 'Zona horaria no válida'); }
+  if (id === 'ejemplo') throw new ErrorHttp(400, '«ejemplo» está reservado para la agenda de muestra');
   const clave = generaClave();
   await env.DB.prepare(`INSERT INTO negocios (id, nombre, clave_hash, zona, activo, creado) VALUES (?,?,?,?,1,?)
       ON CONFLICT(id) DO UPDATE SET nombre=excluded.nombre, clave_hash=excluded.clave_hash, zona=excluded.zona, activo=1`)
     .bind(id, nombre, await sha256(clave), zona, ahora()).run();
-  return { id, nombre, clave, aviso: 'Guarda esta clave y dásela a la dueña. No se vuelve a mostrar; si se pierde, se genera otra.' };
+  // Equipo y página sólo si vienen: darle una clave nueva no borra lo que ya tenía.
+  if (d.equipo !== undefined || d.pagina !== undefined) {
+    await env.DB.prepare('UPDATE negocios SET equipo=COALESCE(?,equipo), pagina=COALESCE(?,pagina) WHERE id=?')
+      .bind(d.equipo !== undefined ? JSON.stringify(limpiaEquipo(d.equipo)) : null, d.pagina !== undefined ? limpiaPagina(d.pagina) : null, id).run();
+  }
+  return { id, nombre, clave, agenda: AGENDA + '/' + id + '/', aviso: 'Guarda esta clave y dásela a la dueña. No se vuelve a mostrar; si se pierde, se genera otra.' };
+}
+
+// Quién atiende: ["Mía", "Fernanda"] o [{id, nombre}]. El id es el que usan las citas (persona).
+export function limpiaEquipo(v) {
+  if (!Array.isArray(v)) return [];
+  const vistos = new Set();
+  return v.slice(0, 20).map((x) => {
+    const nombre = texto(typeof x === 'string' ? x : x && x.nombre, 40);
+    const id = ident(typeof x === 'object' && x && x.id ? x.id : nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-'));
+    return { id, nombre };
+  }).filter((x) => x.id && x.nombre && !vistos.has(x.id) && vistos.add(x.id));
+}
+export function limpiaPagina(v) {
+  const t = String(v || '').trim().slice(0, 200);
+  if (!t) return '';
+  try { const u = new URL(t); return u.protocol === 'https:' ? u.href : ''; } catch { return ''; }
+}
+function perfilDe(neg) {
+  let equipo = []; try { equipo = JSON.parse(neg.equipo || '[]'); } catch {}
+  return { id: neg.id, nombre: neg.nombre, equipo: Array.isArray(equipo) ? equipo : [], pagina: neg.pagina || '' };
 }
 
 // ───────── seguridad ─────────
@@ -244,6 +284,77 @@ async function limpia(env) {
     env.DB.prepare('DELETE FROM bloqueos WHERE fecha < ?').bind(corte),
     env.DB.prepare('DELETE FROM intentos WHERE ventana < ?').bind(Math.floor(ahora() / 3600) - 48),
   ]);
+}
+
+// ───────── la agenda de la dueña (app instalable) ─────────
+// /:negocio/ es la app; los archivos comunes viven en /_app/ (carpeta agenda/). El manifiesto y el icono
+// se arman por negocio para que, instalada, lleve su nombre y sus iniciales.
+
+const SEGURIDAD = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY',
+};
+const EJEMPLO = { id: 'ejemplo', nombre: 'Atelier Mía', activo: 1 };
+
+async function app(request, env, url) {
+  const m = request.method;
+  if (m !== 'GET' && m !== 'HEAD') throw new ErrorHttp(405, 'No permitido');
+  const ruta = url.pathname;
+  if (ruta === '/') {
+    if (url.hostname.startsWith('agenda.')) return Response.redirect('https://solidaaplicaciones.com/', 302);
+    return json({ servicio: 'citas de Solida', ok: true });
+  }
+  if (ruta.startsWith('/_app/')) {
+    if (!env.ASSETS) throw new ErrorHttp(404, 'No existe');
+    const r = await env.ASSETS.fetch(request);
+    const h = new Headers(r.headers); h.set('X-Content-Type-Options', 'nosniff');
+    if (r.ok) h.set('Cache-Control', 'public, max-age=300');
+    return new Response(r.body, { status: r.status, headers: h });
+  }
+  const p = ruta.match(/^\/([a-z0-9-]{2,40})(\/|\/manifest\.webmanifest|\/icono\.svg|\/sw\.js)?$/);
+  if (!p) return paginaNoExiste();
+  const neg = p[1] === 'ejemplo' ? EJEMPLO : await env.DB.prepare('SELECT id, nombre FROM negocios WHERE id=? AND activo=1').bind(p[1]).first();
+  if (!neg) return paginaNoExiste();
+  const que = p[2] || '';
+  if (que === '') return Response.redirect(url.origin + '/' + neg.id + '/', 301);
+  if (que === '/manifest.webmanifest') return new Response(JSON.stringify(manifiesto(neg)), { headers: { 'Content-Type': 'application/manifest+json; charset=utf-8', 'Cache-Control': 'public, max-age=3600', ...SEGURIDAD } });
+  if (que === '/icono.svg') return new Response(iconoSvg(neg.nombre), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400', ...SEGURIDAD } });
+  if (!env.ASSETS) throw new ErrorHttp(500, 'Falta la app');
+  const archivo = que === '/sw.js' ? '/sw.js' : '/index.html';
+  const r = await env.ASSETS.fetch(new Request(url.origin + archivo, request));
+  const h = new Headers(r.headers);
+  for (const [k, v] of Object.entries(SEGURIDAD)) h.set(k, v);
+  h.set('Cache-Control', 'no-cache');
+  if (archivo === '/index.html') h.set('Content-Type', 'text/html; charset=utf-8');
+  return new Response(r.body, { status: r.status, headers: h });
+}
+export function iniciales(nombre) {
+  const p = String(nombre || '').replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+  return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : (p[0] || '')[1] || '')).toUpperCase();
+}
+function manifiesto(neg) {
+  return {
+    name: 'Agenda · ' + neg.nombre, short_name: String(neg.nombre).slice(0, 12), id: '/' + neg.id + '/',
+    start_url: '/' + neg.id + '/', scope: '/' + neg.id + '/', display: 'standalone', orientation: 'portrait',
+    background_color: '#f7f3ec', theme_color: '#161412', lang: 'es-MX',
+    icons: [
+      { src: '/' + neg.id + '/icono.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: '/_app/icono-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: '/_app/icono-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+    ],
+  };
+}
+function iconoSvg(nombre) {
+  const t = iniciales(nombre).replace(/[<>&"']/g, '');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#161412"/>` +
+    `<circle cx="256" cy="256" r="170" fill="none" stroke="#c9a96e" stroke-width="10"/>` +
+    `<text x="256" y="300" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="150" fill="#c9a96e">${t}</text></svg>`;
+}
+function paginaNoExiste() {
+  return new Response('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agenda no encontrada</title>' +
+    '<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f7f3ec;color:#161412;font:16px/1.5 system-ui,sans-serif;padding:24px;text-align:center">' +
+    '<div><h1 style="font:500 30px Georgia,serif;margin:0 0 8px">Esta agenda no existe</h1><p style="margin:0;color:#6b6157">Revisa la dirección que te mandaron. Si no la encuentras, escríbele a Solida Aplicaciones.</p></div></body></html>',
+  { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', ...SEGURIDAD } });
 }
 
 // ───────── utilidades ─────────

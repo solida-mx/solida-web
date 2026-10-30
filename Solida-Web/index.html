@@ -168,6 +168,9 @@
     border:1.5px solid var(--teal-deep);border-radius:999px;transition:background .15s,color .15s}
   .tier-demo:hover{background:var(--teal-deep);color:#fff}
   .tier-demo svg{flex:none}
+  .tier-demos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .tier-demos .tier-demo{margin-bottom:0}
+  .tier-demos-nota{margin:6px 0 9px;font-size:12.5px;color:var(--ink-soft);text-align:center}
   .tier-start{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;min-height:44px;
     text-decoration:none;font-weight:700;font-size:13px;color:var(--teal-deep)}
   .tier-start:hover{text-decoration:underline}
@@ -467,6 +470,7 @@ const waLink = (txt)=>`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(txt)}
 // El ejemplo se abre en el mismo sitio en el que estás (solidaaplicaciones.com, o workers.dev si entras por ahí).
 const rutaDe = (u)=>{ try { return new URL(u).pathname; } catch(e){ return u; } };
 const OJO = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+const CAL = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>';
 const QR_SVG = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>';
 const APARTE = "invitaciones";   // tiene su propia sección; no va en los giros
 const finalCta=document.getElementById('finalCta');
@@ -518,7 +522,8 @@ function pintaPaquetes(key, cont){
       <div class="price"><span class="amt">${t.amount}</span><span class="unit">${t.unit}</span>${t.plus?`<span class="plus">${t.plus}</span>`:''}</div>
       <ul class="feats">${t.feats.map(f=>`<li>${CHECK}<span>${f}</span></li>`).join('')}</ul>
       <div class="tier-acts">
-        ${t.demo?`<a class="tier-demo" href="${rutaDe(t.demo)}" target="_blank" rel="noopener">${OJO}Ver ejemplo</a>`:''}
+        ${t.demo&&t.agenda?`<div class="tier-demos"><a class="tier-demo" href="${rutaDe(t.demo)}" target="_blank" rel="noopener">${OJO}Su página</a><a class="tier-demo" href="${t.agenda}" target="_blank" rel="noopener">${CAL}Su agenda</a></div><p class="tier-demos-nota">La página la ven sus clientas; la agenda es la app de la dueña.</p>`
+          :t.demo?`<a class="tier-demo" href="${rutaDe(t.demo)}" target="_blank" rel="noopener">${OJO}Ver ejemplo</a>`:''}
         <a class="tier-cta" target="_blank" rel="noopener" href="${waLink(`Hola Solida Aplicaciones 👋 Me interesa el paquete "${t.name}" (${s.label}). ¿Me dan más información?`)}">Me interesa este</a>
         <a class="tier-start" href="soporte/levantamiento/?giro=${key}&nivel=${ti}">Quiero empezar ▸</a>
       </div>

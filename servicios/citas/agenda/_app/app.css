@@ -1,0 +1,90 @@
+/* Tu agenda · la app de la dueña. Negro, marfil y dorado: sirve igual a un estudio de uñas que a un consultorio. */
+:root{
+  --negro:#161412; --negro2:#24201c; --marfil:#f7f3ec; --papel:#fffdf9; --linea:#e2d9ca; --linea2:#cdbfa8;
+  --oro:#c9a96e; --oro-txt:#86672f; --oro-suave:#f3ead8; --gris:#6b6157; --gris-claro:#c9bfb1;
+  --verde:#2f6b45; --verde-suave:#e6efe8; --rojo:#9a3b2b;
+  --serif:"Cormorant Garamond",Georgia,serif; --sans:Jost,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--marfil);color:var(--negro);font:400 16px/1.45 var(--sans);min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+a{color:inherit}
+.cargando{padding:60px 20px;text-align:center;color:var(--gris)}
+.envoltura{max-width:640px;margin:0 auto}
+.etq{font:500 10.5px var(--sans);letter-spacing:.24em;text-transform:uppercase}
+.titulo{font:500 34px/1.05 var(--serif);margin:0}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 14px;border:1px solid var(--negro);background:transparent;color:var(--negro);
+  font:500 11.5px var(--sans);letter-spacing:.16em;text-transform:uppercase;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.negro{background:var(--negro);color:var(--marfil)}
+.btn.oro{background:var(--oro);border-color:var(--oro);color:var(--negro)}
+.btn.claro{border-color:rgba(201,169,110,.7);color:var(--oro)}
+.btn.bloque{width:100%}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+
+/* Muestra del catálogo */
+.muestra{background:#1b3d78;color:#fff;padding:10px 16px calc(10px);font:500 13px/1.4 var(--sans);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:center;text-align:center}
+.muestra a{color:#fff;font-weight:600;min-height:32px;display:inline-flex;align-items:center}
+
+/* Entrar */
+.portada{background:var(--negro);color:var(--marfil);padding:44px 22px 30px;text-align:center}
+.sello{width:64px;height:64px;margin:0 auto;border-radius:999px;border:1.5px solid var(--oro);color:var(--oro);display:flex;align-items:center;justify-content:center;font:600 26px var(--serif)}
+.sello.chico{width:42px;height:42px;font-size:17px;margin:0;flex:none}
+.portada p{margin:8px auto 0;max-width:360px;font:300 14px var(--sans);color:var(--gris-claro)}
+.forma{padding:24px 20px 0;display:grid;gap:10px}
+.forma label{display:grid;gap:8px}
+.campo{min-height:52px;padding:0 14px;background:var(--papel);border:1px solid var(--linea2);border-radius:0;width:100%}
+.campo.clave{font:500 19px var(--sans);letter-spacing:.18em;text-transform:uppercase}
+.falta{color:var(--rojo);font-size:14px;margin:0;min-height:1em}
+.nota{margin:0;font:400 13px var(--sans);color:var(--gris);text-align:center}
+
+.instalar{margin:22px 20px 0;padding:16px;border:1px solid #e7d3a8;background:var(--oro-suave);display:flex;gap:12px;align-items:center}
+.instalar b{display:block;font:600 19px var(--serif)}
+.instalar span{font:400 12.5px var(--sans);color:var(--gris)}
+.instalar[hidden]{display:none}
+
+/* Agenda */
+.cab{background:var(--negro);color:var(--marfil);padding:calc(18px + env(safe-area-inset-top)) 18px 18px}
+.cab-fila{display:flex;align-items:center;gap:10px}
+.cab-fila .quien{flex:1;min-width:0}
+.cab-fila .quien div{font:500 26px/1.1 var(--serif)}
+.cifras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:16px}
+.cifra{background:var(--negro2);padding:12px 10px;display:flex;flex-direction:column;gap:3px}
+.cifra b{font:600 26px/1 var(--serif);color:var(--marfil)}
+.cifra span{font:400 11px var(--sans);color:var(--gris-claro);letter-spacing:.04em}
+
+.cuerpo{padding:6px 18px 40px}
+.dia-tit{margin:24px 0 10px;color:var(--oro-txt)}
+.lista{display:flex;flex-direction:column;gap:10px}
+.fila{display:flex;gap:12px;align-items:stretch}
+.hora{width:52px;flex:none;text-align:right;padding-top:12px;font:500 14px var(--sans);color:var(--gris)}
+.cita{flex:1;min-width:0;background:var(--papel);border:1px solid var(--linea);border-left:3px solid var(--negro);padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.cita.apartada{border-left-color:var(--oro)}
+.cita.cancelada{opacity:.6;border-left-color:var(--linea2)}
+.cita b{font:600 20px/1.15 var(--serif)}
+.cita .s{font:400 13px var(--sans);color:var(--gris);overflow-wrap:anywhere}
+.pill{align-self:flex-start;display:inline-flex;align-items:center;min-height:22px;padding:0 8px;font:500 10px var(--sans);letter-spacing:.14em;text-transform:uppercase;background:var(--verde-suave);color:var(--verde)}
+.pill.apartada{background:var(--oro-suave);color:var(--oro-txt)}
+.pill.cancelada{background:#efe6e3;color:var(--rojo)}
+.acc{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-top:8px}
+.acc .btn{padding:0 8px}
+.acc .quitar{grid-column:1/-1;border:0;min-height:40px;color:var(--rojo);justify-self:end;padding:0 4px}
+.vacio{padding:26px 16px;text-align:center;color:var(--gris);border:1px dashed var(--linea2);margin-top:20px}
+
+.seccion{margin-top:40px;border-top:1px solid var(--linea);padding-top:24px}
+.seccion > p{margin:6px 0 10px;color:var(--gris);font-size:14px}
+.dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.bloqueo{background:var(--papel);border:1px solid var(--linea);padding:12px 14px;display:flex;gap:10px;align-items:center}
+.bloqueo div{flex:1;min-width:0}
+.bloqueo b{display:block;font:600 18px var(--serif)}
+.bloqueo span{font-size:13px;color:var(--gris)}
+
+.pie{margin-top:36px;display:grid;gap:8px}
+.pie .nota{margin-top:6px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--negro);color:var(--marfil);
+  padding:12px 18px;font-size:14px;max-width:calc(100% - 32px);transition:.25s;z-index:20}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}

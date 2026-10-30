@@ -31,7 +31,12 @@ Google). Lo que esté vacío no sale: sin fotos la página se ve con iconos, com
 **Uñas y pestañas** (`ejemplos/unas/`) ya nace como plantilla: `datos.js` + `estilo.css` + `plantilla.js`, y cada nivel es una página de
 diez líneas. La agenda (intermedio y avanzado) arma la cita como **ticket en imagen** con el logo del negocio (`logo` en sus datos, o sus
 iniciales en un sello) para mandarla por WhatsApp. En el ejemplo, el avanzado guarda las citas en el propio teléfono; para un cliente real
-la Agenda Total necesita guardarlas en el servidor (pendiente).
+(Agenda Total, `citasApi` en sus datos) se guardan en el servicio de citas (`servicios/citas/`).
+
+**Dos puertas por negocio.** La página la ven sus clientas (su dominio o `/ejemplos/...`). La **agenda de la dueña** vive aparte, en
+`agenda.solidaaplicaciones.com/<negocio>/`: una app instalable que sirve el mismo servicio de citas (archivos en `servicios/citas/agenda/`).
+`/citas/` de la página sólo redirige ahí. La de muestra para el catálogo es `agenda.solidaaplicaciones.com/ejemplo/` (citas inventadas,
+sin clave); en la portada, el paquete que la incluye enseña «Su página» y «Su agenda».
 
 Pendientes de convertir: profesional, taller, nutriólogo, invitación, uniformes y barbería.
 
