@@ -77,7 +77,7 @@ async function mandaCorreo(env, para, asunto, html, texto, adjuntos) {
   try {
     const r = await fetch(env.RESEND_URL || 'https://api.resend.com/emails', { method: 'POST',
       headers: { Authorization: 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: env.CORREO_DE || 'Tu agenda <avisos@solidaaplicaciones.com>', to: [para], subject: asunto, html, text: texto, attachments: adjuntos || [] }) });
+      body: JSON.stringify({ from: env.CORREO_DE || 'Tu agenda <avisos@correo.solidaaplicaciones.com>', to: [para], subject: asunto, html, text: texto, attachments: adjuntos || [] }) });
     if (!r.ok) console.error('correo', r.status, await r.text().catch(() => ''));
     return r.ok;
   } catch (e) { console.error('correo', e); return false; }
