@@ -10,8 +10,8 @@
     { "pattern": "citas.solidaaplicaciones.com", "custom_domain": true },
     { "pattern": "agenda.solidaaplicaciones.com", "custom_domain": true }
   ],
-  // Todo pasa primero por el Worker: él decide qué negocio existe y pone las cabeceras de seguridad.
-  "assets": { "directory": "./agenda", "binding": "ASSETS", "run_worker_first": true, "html_handling": "none" },
+  // Los archivos de la app (agenda/) van empaquetados dentro del Worker: se publica en un solo paso.
+  "build": { "command": "node scripts/empaquetar.mjs", "watch_dir": "agenda" },
   "d1_databases": [
     {
       "binding": "DB",

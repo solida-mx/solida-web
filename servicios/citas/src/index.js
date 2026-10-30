@@ -17,6 +17,8 @@
 //   agenda.solidaaplicaciones.com/:negocio/   ·  /ejemplo/ es la de muestra para el catálogo
 // Una vez al día se borran las citas de hace más de 120 días: no guardamos datos de nadie más de lo necesario.
 
+import ARCHIVOS from './agenda.generados.js';
+
 const DIAS_GUARDADO = 120;
 const AGENDA = 'https://agenda.solidaaplicaciones.com';
 const DIAS_MAX_ADELANTE = 90;
@@ -305,11 +307,8 @@ async function app(request, env, url) {
     return json({ servicio: 'citas de Solida', ok: true });
   }
   if (ruta.startsWith('/_app/')) {
-    if (!env.ASSETS) throw new ErrorHttp(404, 'No existe');
-    const r = await env.ASSETS.fetch(request);
-    const h = new Headers(r.headers); h.set('X-Content-Type-Options', 'nosniff');
-    if (r.ok) h.set('Cache-Control', 'public, max-age=300');
-    return new Response(r.body, { status: r.status, headers: h });
+    if (!ARCHIVOS[ruta]) return paginaNoExiste();
+    return archivo(ruta, { 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' });
   }
   const p = ruta.match(/^\/([a-z0-9-]{2,40})(\/|\/manifest\.webmanifest|\/icono\.svg|\/sw\.js)?$/);
   if (!p) return paginaNoExiste();
@@ -319,14 +318,12 @@ async function app(request, env, url) {
   if (que === '') return Response.redirect(url.origin + '/' + neg.id + '/', 301);
   if (que === '/manifest.webmanifest') return new Response(JSON.stringify(manifiesto(neg)), { headers: { 'Content-Type': 'application/manifest+json; charset=utf-8', 'Cache-Control': 'public, max-age=3600', ...SEGURIDAD } });
   if (que === '/icono.svg') return new Response(iconoSvg(neg.nombre), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400', ...SEGURIDAD } });
-  if (!env.ASSETS) throw new ErrorHttp(500, 'Falta la app');
-  const archivo = que === '/sw.js' ? '/sw.js' : '/index.html';
-  const r = await env.ASSETS.fetch(new Request(url.origin + archivo, request));
-  const h = new Headers(r.headers);
-  for (const [k, v] of Object.entries(SEGURIDAD)) h.set(k, v);
-  h.set('Cache-Control', 'no-cache');
-  if (archivo === '/index.html') h.set('Content-Type', 'text/html; charset=utf-8');
-  return new Response(r.body, { status: r.status, headers: h });
+  return archivo(que === '/sw.js' ? '/sw.js' : '/index.html', { 'Cache-Control': 'no-cache', ...SEGURIDAD });
+}
+function archivo(ruta, cabeceras) {
+  const a = ARCHIVOS[ruta];
+  const cuerpo = a.b64 ? Uint8Array.from(atob(a.b64), (c) => c.charCodeAt(0)) : a.cuerpo;
+  return new Response(cuerpo, { headers: { 'Content-Type': a.tipo, ...cabeceras } });
 }
 export function iniciales(nombre) {
   const p = String(nombre || '').replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
