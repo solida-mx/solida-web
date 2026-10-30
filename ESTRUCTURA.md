@@ -50,10 +50,11 @@ falta recordarle; mandar el recordatorio queda marcado en el servidor (`recordad
 u Outlook). Se guarda cifrada (AES-GCM con una llave sacada de `SECRETO`); cada 15 minutos el servicio la lee (`src/ical.js`)
 y guarda sólo de qué hora a qué hora está ocupada en los próximos 90 días (`cal_ocupado`), nunca títulos ni lugares.
 
-**Avisos.** Cada cita que llega de la página avisa a la dueña (`src/avisos.js`): al celular con Web Push firmado con VAPID
+**Avisos.** Cada cita que llega de la página avisa a la dueña al celular (`src/avisos.js`): Web Push firmado con VAPID
 (secreto `VAPID_PRIVADA`), como una señal sin datos; el teléfono pide el detalle a `/avisos/pendientes` con su propia dirección
-de avisos. Por correo, con Resend (secreto `RESEND_API_KEY`; sale de `avisos@correo.solidaaplicaciones.com`, cuenta de Resend de solidaaplicaciones@gmail.com), con la cita adjunta en `.ics`. A partir de las
-8 pm (hora del negocio) llega «Mañana tienes N citas». Sin esos secretos no se rompe nada: ese aviso simplemente no se manda.
+de avisos, y al tocarlo se abre esa cita (`?cita=FOLIO`). Un solo aviso: el correo (Resend, secreto `RESEND_API_KEY`, sale de
+`avisos@correo.solidaaplicaciones.com`) es sólo respaldo y sale únicamente si ningún teléfono recibió el aviso. A partir de las
+8 pm (hora del negocio) llega «Mañana tienes N citas». Si en un teléfono los avisos están apagados, la agenda lo dice en Hoy.
 
 Pendientes de convertir: profesional, taller, nutriólogo, invitación, uniformes y barbería.
 

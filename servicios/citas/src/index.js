@@ -142,13 +142,15 @@ async function enrutar(request, env, ctx) {
     const d = await cuerpo(request);
     const correo = d.correo === undefined ? neg.correo : correoValido(d.correo);
     if (d.correo !== undefined && String(d.correo).trim() && !correo) throw new ErrorHttp(400, 'Ese correo no se ve bien escrito');
-    const activo = d.activo !== undefined ? (d.activo && correo ? 1 : 0) : (neg.aviso_correo && correo ? 1 : 0);
+    const activo = correo ? 1 : 0;   // el correo de respaldo está activo si hay correo
     await env.DB.prepare('UPDATE negocios SET correo=?, aviso_correo=? WHERE id=?').bind(correo || '', activo, neg.id).run();
     return json(await estadoAvisos(env, { ...neg, correo: correo || '', aviso_correo: activo }));
   }
   if (sub === '/avisos/prueba' && m === 'POST') {
     await limita(env, 'prueba:' + neg.id, 5, 3600, 'Ya mandaste varias pruebas. Espera un rato.');
-    return json(await avisaPrueba(env, neg, AGENDA));
+    const canal = (await cuerpo(request)).canal === 'correo' ? 'correo' : 'celular';
+    if (canal === 'correo' && (!correoDisponible(env) || !neg.correo)) throw new ErrorHttp(400, 'Primero guarda tu correo de respaldo.');
+    return json(await avisaPrueba(env, neg, AGENDA, canal));
   }
   if (sub === '/calendarios' && m === 'POST') return json(await conectaCalendario(env, neg, await cuerpo(request)), 201);
   if ((p = sub.match(/^\/calendarios\/(\d+)$/)) && m === 'DELETE') {
