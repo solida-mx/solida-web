@@ -727,6 +727,9 @@ try {
         const suyas = await cli('/mis-citas', { disp: dispP });
         assert.equal(suyas.d.citas.length, 1); assert.equal(suyas.d.citas[0].nombre, 'Paola Prueba');
         assert.equal((await api('/api/atelier-mia/agenda', { token: tok })).d.citas.find((c) => c.nombre === 'Paola Prueba').correo, 'paola@correo.mx');
+        // Tocar su cita vuelve a enseñar su ticket
+        await pc.click('.cl-fila[data-cl="ticket"]'); await pc.waitForSelector('.ticket-img', { timeout: 20000 });
+        await pc.keyboard.press('Escape'); await pc.waitForFunction(() => !document.getElementById('hoja').classList.contains('on'));
         // Guía de iPhone
         await pc.click('#misCitas [data-cl="guia"]'); await pc.waitForSelector('.cl-paso');
         assert.equal((await pc.$$('.cl-paso')).length, 3); assert.match(await pc.textContent('#hoja'), /Agregar a inicio/);

@@ -197,3 +197,5 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .cl-paso b{display:block;font-family:var(--serif);font-size:18px;font-weight:600}
 .cl-paso span{font-size:13.5px;line-height:1.45;color:var(--suave)}
 .cl-ico{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 4px;border:2px solid #2f6bd6;border-radius:6px;color:#2f6bd6;font-weight:700;font-size:14px;vertical-align:middle}
+.cl-fila[role="button"]{cursor:pointer}
+.cl-fila[role="button"]:focus-visible{outline:2px solid var(--oro);outline-offset:3px}
