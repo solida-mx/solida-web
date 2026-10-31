@@ -26,7 +26,7 @@
 //   GET  /api/:negocio/perfil                             nombre, equipo y página (lo que la agenda pinta)
 // De Solida (con la clave maestra):
 //   POST /api/admin/negocios {id, nombre, equipo?, pagina?}  dar de alta un negocio (o cambiarle la clave)
-//   POST /api/admin/negocios/:id/perfil {equipo?, pagina?}  cambiar equipo o página sin tocar la clave
+//   POST /api/admin/negocios/:id/perfil {equipo?, pagina?, servicios?}  cambiar equipo, página o servicios sin tocar la clave
 //   GET  /api/admin/negocios
 // La agenda de la dueña (una app instalable, aparte de la página del negocio):
 //   agenda.solidaaplicaciones.com/:negocio/   ·  /ejemplo/ es la de muestra para el catálogo
@@ -79,8 +79,9 @@ async function enrutar(request, env, ctx) {
   if ((p = ruta.match(/^\/api\/admin\/negocios\/([a-z0-9-]{2,40})\/perfil$/)) && m === 'POST') {
     await exigeMaestra(request, env);
     const d = await cuerpo(request);
-    const r = await env.DB.prepare('UPDATE negocios SET equipo=COALESCE(?,equipo), pagina=COALESCE(?,pagina) WHERE id=?')
-      .bind(d.equipo !== undefined ? JSON.stringify(limpiaEquipo(d.equipo)) : null, d.pagina !== undefined ? limpiaPagina(d.pagina) : null, p[1]).run();
+    const r = await env.DB.prepare('UPDATE negocios SET equipo=COALESCE(?,equipo), pagina=COALESCE(?,pagina), servicios=COALESCE(?,servicios) WHERE id=?')
+      .bind(d.equipo !== undefined ? JSON.stringify(limpiaEquipo(d.equipo)) : null, d.pagina !== undefined ? limpiaPagina(d.pagina) : null,
+        d.servicios !== undefined ? JSON.stringify(limpiaServicios(d.servicios)) : null, p[1]).run();
     if (!r.meta.changes) throw new ErrorHttp(404, 'Negocio no encontrado');
     return json(perfilDe(await env.DB.prepare('SELECT * FROM negocios WHERE id=?').bind(p[1]).first()));
   }
@@ -90,7 +91,7 @@ async function enrutar(request, env, ctx) {
   if (!neg) throw new ErrorHttp(404, 'Negocio no encontrado');
   const sub = p[2] || '';
 
-  if (sub === '/perfil' && m === 'GET') return json(perfilDe(neg));
+  if (sub === '/perfil' && m === 'GET') return json({ ...perfilDe(neg), servicios: await serviciosDe(env, neg) });
   if (sub === '/ocupado' && m === 'GET') return json(await ocupado(env, neg, url), 200, { 'Cache-Control': 'no-store' });
   if (sub === '/citas' && m === 'POST') {
     const dueña = await tokenValido(request, env, neg.id);
@@ -212,6 +213,11 @@ async function enrutar(request, env, ctx) {
     return json({ ok: true });
   }
   if (sub === '/agenda' && m === 'GET') return json(await agenda(env, neg, url));
+  if (sub === '/servicios' && m === 'PUT') {
+    const l = limpiaServicios((await cuerpo(request)).servicios);
+    await env.DB.prepare('UPDATE negocios SET servicios=? WHERE id=?').bind(JSON.stringify(l), neg.id).run();
+    return json({ servicios: l });
+  }
   if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/enlace$/)) && m === 'POST') return json({ enlace: await enlaceDeCita(env, neg, p[1]) });
   if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/correo$/)) && m === 'POST') {
     const correo = correoValido((await cuerpo(request)).correo);
@@ -547,6 +553,30 @@ async function altaNegocio(env, d) {
   return { id, nombre, clave, agenda: AGENDA + '/' + id + '/', aviso: 'Guarda esta clave y dásela a la dueña. No se vuelve a mostrar; si se pierde, se genera otra.' };
 }
 
+// Los servicios del negocio: [{nombre, min, precio, cat}]. Los repetidos (mismo nombre) se quedan una vez.
+export function limpiaServicios(v) {
+  if (!Array.isArray(v)) return [];
+  const vistos = new Set(), l = [];
+  for (const x of v.slice(0, 80)) {
+    const nombre = texto(x && x.nombre, 80), k = nombre.toLowerCase();
+    if (!nombre || vistos.has(k)) continue;
+    vistos.add(k);
+    const min = entero(x.min, 10, 600);
+    l.push({ nombre, min: min ? Math.round(min / 5) * 5 : 60, precio: entero(x.precio, 0, 1000000) || 0, cat: texto(x.cat, 40) });
+  }
+  return l;
+}
+// La lista que ve la dueña: la que guardó, o si no hay, la que se arma sola con lo que han apartado en su página
+// (ahí los nombres vienen del catálogo, así que ya están escritos igual siempre).
+async function serviciosDe(env, neg) {
+  let l = []; try { l = JSON.parse(neg.servicios || '[]'); } catch {}
+  if (Array.isArray(l) && l.length) return { lista: l, aprendidos: false };
+  const filas = (await env.DB.prepare("SELECT servicio, fin_min - inicio_min AS dur, precio FROM citas WHERE negocio_id=? AND origen='pagina' AND creada>? ORDER BY creada DESC LIMIT 400")
+    .bind(neg.id, ahora() - 180 * 86400).all()).results;
+  const por = new Map();
+  for (const f of filas) { if (!por.has(f.servicio)) por.set(f.servicio, { nombre: f.servicio, min: f.dur, precio: f.precio, cat: '' }); }
+  return { lista: limpiaServicios([...por.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))), aprendidos: true };
+}
 // Quién atiende: ["Mía", "Fernanda"] o [{id, nombre}]. El id es el que usan las citas (persona).
 export function limpiaEquipo(v) {
   if (!Array.isArray(v)) return [];
