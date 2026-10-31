@@ -523,3 +523,8 @@ body.ancha.en-entrar .nueva-version{left:50%}
 .nt-sis{cursor:default;align-items:center}
 .nt-sis .btn{flex:none;min-height:42px;padding:0 14px}
 #ntAjustes{margin-top:12px}
+
+/* Sin zoom con doble toque (como una app) */
+body{touch-action:pan-x pan-y}
+button,a,input,select,textarea,label{touch-action:manipulation}
+.nc-horas{text-align:left;margin:4px 0 0}.nc-horas:empty{display:none}

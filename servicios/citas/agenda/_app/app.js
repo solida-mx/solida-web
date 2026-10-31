@@ -4,6 +4,10 @@
    Todo texto que viene del servidor pasa por esc() antes de pintarse. */
 (function () {
   'use strict';
+  // Sin zoom (como una app): Safari de iPhone ignora user-scalable, así que también se cancelan sus gestos y el doble toque.
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
+  var ultimoToque = 0;
+  document.addEventListener("touchend", function (e) { var t = Date.now(); if (t - ultimoToque < 320) e.preventDefault(); ultimoToque = t; }, { passive: false });
   var ID = (location.pathname.split('/')[1] || '').toLowerCase();
   var DEMO = ID === 'ejemplo';
   var LLAVE = 'agenda:token:' + ID;
@@ -1555,6 +1559,26 @@
     };
   }
 
+  // Las horas en que puede empezar una cita de «dur» minutos con esa persona ese día (cada media hora).
+  // Con horario: dentro de él; sin horario guardado todavía: de 9 am a 8 pm. Nunca antes de la hora de ahora.
+  function ahoraRedondeada() { var n = new Date(); return Math.ceil((n.getHours() * 60 + n.getMinutes() + 1) / 30) * 30; }
+  function horasLibres(d, f, persona, dur) {
+    var p = persona || (personas()[0] || {}).id || '', sem = semanaDe(d, p), x = sem ? sem[dsem(f)] : [540, 1200];
+    if (!x || f < d.hoy) return [];
+    var ocup = new Uint8Array(1440), marca = function (a, b) { for (var m = Math.max(0, a); m < Math.min(1440, b); m++) ocup[m] = 1; };
+    d.citas.forEach(function (c) { if (c.fecha === f && c.estado !== 'cancelada' && tocaA(c.persona, p)) marca(c.inicio_min, c.fin_min); });
+    tiemposDelDia(d, f).forEach(function (t) { if (tocaA(t.persona, p)) marca(t.ini, t.fin); });
+    var l = [], desde = Math.max(x[0], f === d.hoy ? ahoraRedondeada() : 0);
+    for (var m = Math.ceil(desde / 30) * 30; m + dur <= x[1]; m += 30) {
+      var libre = true; for (var k = m; k < m + dur; k++) if (ocup[k]) { libre = false; break; }
+      if (libre) l.push(m);
+    }
+    return l;
+  }
+  function primeraLibre(d, persona, dur, desdeF) {
+    for (var i = 0; i < 60; i++) { var f = sumaDia(desdeF || d.hoy, i), l = horasLibres(d, f, persona, dur); if (l.length) return { fecha: f, ini: l[0] }; }
+    return null;
+  }
   function abreNuevaCita(d, pre) {
     pre = pre || {};
     var st = { min: 60, persona: pre.persona != null ? pre.persona : (equipo().length ? (personaSel || equipo()[0].id) : '') };
@@ -1566,13 +1590,41 @@
       '<span class="etq">Dura</span><div class="chips" role="group" aria-label="Cuánto dura" id="ncDuras">' + chipsDuracion(st.min) + '</div>' +
       '<label class="etq" for="ncPrecio">Precio</label><input class="campo" id="ncPrecio" inputmode="numeric" maxlength="7" placeholder="$">' +
       (cartera().anticipo ? '<button type="button" class="chip" id="ncAnt" aria-pressed="false">Ya pagó su anticipo · ' + esc(pesos(cartera().anticipo)) + '</button>' : '') + '</div>' +
-      '<div class="campo-h"><div class="dos"><label><span class="etq">Día</span><input class="campo" type="date" id="ncFecha" value="' + esc(pre.fecha || diaSel || d.hoy) + '" min="' + esc(d.hoy) + '"></label>' +
-      '<label><span class="etq">Hora</span><select class="campo" id="ncHora">' + opcionesHora(hhmm(pre.ini != null ? pre.ini : 600), 360, 1380) + '</select></label></div></div>' +
+      '<div class="campo-h"><div class="dos"><label><span class="etq">Día</span><input class="campo" type="date" id="ncFecha" value="' + esc(pre.fecha || d.hoy) + '" min="' + esc(d.hoy) + '"></label>' +
+      '<label><span class="etq">Hora</span><select class="campo" id="ncHora"></select></label></div><p class="nota nc-horas" id="ncHoraNota"></p></div>' +
       (equipo().length ? '<div class="campo-h"><span class="etq">¿Con quién?</span><div class="chips" role="group" aria-label="Con quién">' +
         equipo().map(function (x) { return '<button type="button" class="chip" data-con="' + esc(x.id) + '" aria-pressed="' + (x.id === st.persona) + '">' + esc(x.nombre) + '</button>'; }).join('') + '</div></div>' : '') +
       '<p class="falta" id="ncFalta" role="alert"></p><button class="btn negro bloque grande" id="ncOk">Apartar cita</button></form>');
-    eligeEn(hoja, 'data-dur', function (m) { st.min = +m; });
-    eligeEn(hoja, 'data-con', function (p) { st.persona = p; });
+    eligeEn(hoja, 'data-dur', function (m) { st.min = +m; refrescaHoras(); });
+    eligeEn(hoja, 'data-con', function (p) { st.persona = p; refrescaHoras(); });
+    // Día y hora: sólo las horas en que de verdad hay lugar (su horario, sus citas, sus tiempos y la hora de ahora).
+    // Abre en la primera libre; «Otra hora» deja poner cualquiera, porque a veces la dueña sí puede aunque no esté en su horario.
+    var todas = false;
+    var refrescaHoras = function (primera) {
+      var fe = document.getElementById('ncFecha'), sh = document.getElementById('ncHora'), nota = document.getElementById('ncHoraNota');
+      if (primera && pre.fecha == null) { var pl = primeraLibre(d, st.persona, st.min); if (pl) fe.value = pl.fecha; }
+      var f = fe.value || d.hoy, antes = primera && pre.ini != null ? pre.ini : aMin(sh.value || '');
+      var lista = horasLibres(d, f, st.persona, st.min), desde = f === d.hoy ? ahoraRedondeada() : 360;
+      var ops = todas ? (function () { var l = []; for (var m = desde; m <= 1380; m += 30) l.push(m); return l; })() : lista.slice();
+      if (antes >= 0 && ops.indexOf(antes) < 0 && (todas || (primera && pre.ini != null))) ops.push(antes);
+      ops.sort(function (a, b) { return a - b; });
+      var sel = ops.indexOf(antes) >= 0 ? antes : ops[0];
+      sh.innerHTML = (ops.length ? ops.map(function (m) { return '<option value="' + hhmm(m) + '"' + (m === sel ? ' selected' : '') + '>' + esc(corta(m)) + '</option>'; }).join('') : '<option value="">Sin horas libres</option>') +
+        (todas ? '<option value="__libres">Sólo las horas libres</option>' : '<option value="__todas">Otra hora…</option>');
+      nota.textContent = '';
+      if (!todas && !lista.length) {
+        var sig = primeraLibre(d, st.persona, st.min, sumaDia(f, 1));
+        nota.innerHTML = (f === d.hoy ? 'Ya no hay horas libres hoy' : 'No hay horas libres ese día') + (equipo().length > 1 && st.persona ? ' para ' + esc(nombreDe(st.persona)) : '') + '.' +
+          (sig ? ' <button type="button" class="enlace" id="ncSig">La siguiente: ' + esc(fechaCorta(sig.fecha) + ' · ' + corta(sig.ini)) + '</button>' : '');
+        var b = document.getElementById('ncSig'); if (b) b.onclick = function () { fe.value = sig.fecha; refrescaHoras(); sh.value = hhmm(sig.ini); };
+      }
+    };
+    document.getElementById('ncFecha').onchange = function () { refrescaHoras(); };
+    document.getElementById('ncHora').onchange = function () {
+      var v = this.value; if (v !== '__todas' && v !== '__libres') return;
+      todas = v === '__todas'; refrescaHoras();
+    };
+    refrescaHoras(true);
     // Al elegir un servicio salen sus diseños y largos; la duración, el precio (el más reciente de su cartera) y quién lo hace se ponen solos.
     // Si ella escribe otro precio a mano, se respeta.
     var sel = document.getElementById('ncServSel'), otro = document.getElementById('ncServ'), precioAuto = '';
@@ -1581,7 +1633,7 @@
       var s = st.serv; if (!s) return;
       var v = variantesDe(s.id).filter(function (x) { return x.id === st.vari; })[0], l = largosDe(s).filter(function (x) { return x.nombre === st.largo; })[0];
       st.min = s.min + (v ? v.extraMin : 0);
-      document.getElementById('ncDuras').innerHTML = chipsDuracion(st.min); eligeEn(hoja, 'data-dur', function (m) { st.min = +m; });
+      document.getElementById('ncDuras').innerHTML = chipsDuracion(st.min); eligeEn(hoja, 'data-dur', function (m) { st.min = +m; refrescaHoras(); }); refrescaHoras();
       var pr = document.getElementById('ncPrecio'), total = s.precio + (v ? v.extra : 0) + (l ? l.extra : 0);
       if (!pr.value || pr.value === precioAuto) { pr.value = total ? '$' + total : ''; precioAuto = pr.value; }
     };
@@ -1625,6 +1677,7 @@
       if (c.tel.length !== 10) { falta.textContent = 'Su WhatsApp debe tener 10 dígitos (para recordarle su cita).'; return; }
       if (!c.servicio) { falta.textContent = listaServicios().length ? 'Elige el servicio.' : 'Escribe qué servicio es.'; return; }
       if (!c.fecha) { falta.textContent = 'Elige el día.'; return; }
+      if (!/^\d{2}:\d{2}$/.test(c.hora)) { falta.textContent = 'Elige la hora.'; return; }
       var b = document.getElementById('ncOk'); b.disabled = true;
       envia('/citas', { metodo: 'POST', body: c }).then(function (x) {
         if (x.status === 401) return salir(false);

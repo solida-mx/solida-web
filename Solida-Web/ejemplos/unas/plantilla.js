@@ -7,6 +7,10 @@
    Todo lo que viene de datos.js se escapa antes de pintarse. */
 (function () {
   var N = window.NEGOCIO;
+  // Sin zoom (como una app): Safari de iPhone ignora user-scalable, así que también se cancelan sus gestos y el doble toque.
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
+  var ultimoToque = 0;
+  document.addEventListener("touchend", function (e) { var t = Date.now(); if (t - ultimoToque < 320) e.preventDefault(); ultimoToque = t; }, { passive: false });
   if (!N) { console.error('Falta datos.js'); return; }
   // Los archivos de esta página (se toman antes de pintar, porque al pintar se reemplaza el <body>): con ellos se sabe si hay versión nueva
   var ARCHIVOS_PAGINA = [location.pathname].concat([].slice.call(document.querySelectorAll('script[src],link[rel="stylesheet"][href]')).map(function (e) { return e.src || e.href; }))
