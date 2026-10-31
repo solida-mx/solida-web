@@ -1795,6 +1795,24 @@
     return { status: 404, d: { error: 'No existe' } };
   }
 
+  // ───── versión nueva: si la publicamos mientras la tiene abierta, se le avisa (sólo eso; no se le dice nada al actualizar) ─────
+  var MI_VERSION = (document.querySelector('meta[name="version"]') || {}).content || '';
+  var versionAplazada = 0;
+  function revisaVersion() {
+    if (!MI_VERSION || document.visibilityState !== 'visible' || Date.now() < versionAplazada || document.getElementById('nuevaVersion')) return;
+    fetch('/_app/version.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (x) {
+      if (!x.v || x.v === MI_VERSION || document.getElementById('nuevaVersion')) return;
+      var b = document.createElement('div'); b.id = 'nuevaVersion'; b.className = 'nueva-version'; b.setAttribute('role', 'status');
+      b.innerHTML = '<span>Hay una nueva versión disponible</span><button type="button" class="btn oro" id="nvSi">Actualizar</button><button type="button" class="nv-no" id="nvNo" aria-label="Ahora no">✕</button>';
+      document.body.appendChild(b);
+      document.getElementById('nvSi').onclick = function () { location.reload(); };
+      document.getElementById('nvNo').onclick = function () { b.remove(); versionAplazada = Date.now() + 3600000; };
+    }, function () {});
+  }
+  setInterval(revisaVersion, 5 * 60000);
+  document.addEventListener('visibilitychange', revisaVersion);
+  setTimeout(revisaVersion, 15000);
+
   // ───── arranque ─────
   if (DEMO) {
     perfil = { nombre: 'Atelier Mía', equipo: [{ id: 'mia', nombre: 'Mía' }, { id: 'fer', nombre: 'Fernanda' }], pagina: 'https://solidaaplicaciones.com/ejemplos/unas/avanzado/',

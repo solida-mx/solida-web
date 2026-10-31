@@ -199,3 +199,10 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .cl-ico{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 4px;border:2px solid #2f6bd6;border-radius:6px;color:#2f6bd6;font-weight:700;font-size:14px;vertical-align:middle}
 .cl-fila[role="button"]{cursor:pointer}
 .cl-fila[role="button"]:focus-visible{outline:2px solid var(--oro);outline-offset:3px}
+
+/* Aviso de versión nueva */
+.nueva-version{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));z-index:130;display:flex;align-items:center;gap:10px;
+  width:calc(100% - 24px);max-width:460px;padding:10px 8px 10px 16px;background:var(--tinta);color:var(--marfil);box-shadow:0 10px 30px rgba(22,20,18,.25);font-size:14px}
+.nueva-version span{flex:1}
+.nueva-version .btn{min-height:42px;padding:0 14px}
+.nv-no{width:40px;height:42px;border:0;background:transparent;color:#c9bfb1;font-size:16px}

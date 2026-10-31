@@ -32,7 +32,7 @@
 //   agenda.solidaaplicaciones.com/:negocio/   ·  /ejemplo/ es la de muestra para el catálogo
 // Una vez al día se borran las citas de hace más de 120 días: no guardamos datos de nadie más de lo necesario.
 
-import ARCHIVOS from './agenda.generados.js';
+import ARCHIVOS, { VERSION as VERSION_APP } from './agenda.generados.js';
 import { horasOcupadas, aInstante } from './ical.js';
 import { validaEndpoint, vapidPublica, avisa, pendientes, correoValido, correoDisponible, avisaCitaNueva, avisaPrueba, mandaCorreo } from './avisos.js';
 import { correoPropuesta, correoCancelada, correoTuCita } from './correos.js';
@@ -1066,6 +1066,8 @@ async function app(request, env, url) {
     if (url.hostname.startsWith('agenda.')) return Response.redirect('https://solidaaplicaciones.com/', 302);
     return json({ servicio: 'citas de Solida', ok: true });
   }
+  // La versión de la app: la que tiene abierta la dueña la compara cada rato para avisarle que hay una nueva
+  if (ruta === '/_app/version.json') return new Response(JSON.stringify({ v: VERSION_APP }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...SEGURIDAD } });
   if (ruta.startsWith('/_app/')) {
     if (!ARCHIVOS[ruta]) return paginaNoExiste();
     return archivo(ruta, { 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' });
@@ -1089,7 +1091,9 @@ async function app(request, env, url) {
   if (que.startsWith('/cita/')) return archivo('/cita.html', { 'Cache-Control': 'no-cache', ...SEGURIDAD });
   if (que === '/sw.js') return archivo('/sw.js', { 'Cache-Control': 'no-cache', ...SEGURIDAD });
   // La app: el mismo index.html para todos, con el ícono de este negocio
-  return new Response(ARCHIVOS['/index.html'].cuerpo.split('/_app/icono-180.png').join('/' + neg.id + '/icono-180.png'),
+  // y con la versión: así el teléfono no usa un app.js viejo de su memoria, y la app sabe cuál tiene
+  return new Response(ARCHIVOS['/index.html'].cuerpo.split('/_app/icono-180.png').join('/' + neg.id + '/icono-180.png')
+    .replace(/(\/_app\/(?:app\.js|app\.css|qr\.js))"/g, '$1?v=' + VERSION_APP + '"').replace('</head>', '<meta name="version" content="' + VERSION_APP + '">\n</head>'),
     { headers: { 'Content-Type': ARCHIVOS['/index.html'].tipo, 'Cache-Control': 'no-cache', ...SEGURIDAD } });
 }
 function archivo(ruta, cabeceras) {
