@@ -92,10 +92,19 @@ WhatsApp de la dueña con el mensaje listo, sin costo), por correo (Resend, sól
 pantalla para que lo escanee ahí. El enlace es la página del negocio con `?cita=<folio>&t=<token>`; `app-clienta.js` lo
 manda a `POST /mis-citas/<folio>/guardar` y la cita queda en SU celular («Mis citas», avisos, instalar la app).
 
-**Servicios para apartar sin escribir.** `negocios.servicios` guarda la lista (nombre, duración, precio y grupo). Al apartar,
-la dueña elige de una lista desplegable y se ponen solos la duración y el precio; «Otro (escribirlo)» queda para lo raro.
-Si no hay lista guardada, se arma sola con los servicios que han llegado de su página. La dueña la edita en «Mis servicios»
-(`PUT /servicios`) y Solida puede cargarla con `POST /api/admin/negocios/<id>/perfil {servicios}`.
+**La cartera de servicios** (`negocios.servicios`, JSON): servicios (nombre, grupo, duración, precio, «desde», quién lo
+hace), diseños o variantes (van con un servicio y suman precio y tiempo), largos (suman en los grupos que se elijan) y anticipo.
+- **Al apartar en la agenda** se elige el servicio de una lista; salen sus diseños y largos, el precio se suma solo, se pone
+  quién lo hace si es una sola persona y se puede marcar «ya pagó su anticipo». Si ella escribe otro precio, se respeta.
+  Las citas quedan con los mismos nombres que las de la página (servicio, diseño, largo).
+- **La dueña la edita** en «Mis servicios» (`PUT /servicios`); lo que guarda vale desde ese momento. Las citas que ya
+  estaban no cambian.
+- **Su página toma los precios de ahí**: `plantilla.js` pide `/perfil`, guarda la cartera en el teléfono y la aplica antes de
+  pintar (precio, duración, «desde», extras de diseños y largos, anticipo). Fotos y descripciones siguen en `datos.js`.
+- **Para cargarla** (Solida): la plantilla `servicios/citas/plantillas/cartera-de-servicios.xlsx` se le manda al cliente y se lee
+  con `python3 scripts/cartera.py leer archivo.xlsx <negocio>`; o desde su página con
+  `node scripts/cartera-de-pagina.mjs <datos.js> <negocio>`. Los dos dejan un `.sql` para `wrangler d1 execute --remote --file`.
+- Sin cartera guardada, la lista se arma sola con lo que ha llegado de su página.
 
 **Tu código QR** (sección de la agenda): cartel para imprimir o guardar en PDF (carta, 2 por hoja o 8 tarjetitas; negro
 y dorado o blanco y negro; con una línea propia abajo), en pantalla, o imagen de 1080×1350 para redes. Lleva a la página con

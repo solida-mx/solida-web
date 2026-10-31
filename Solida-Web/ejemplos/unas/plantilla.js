@@ -15,6 +15,19 @@
   // Agenda Total de un cliente real: las citas viven en el servicio de citas de Solida (citasApi en datos.js).
   // En el ejemplo se quedan en el propio teléfono, para que nadie deje sus datos en un negocio que no existe.
   var SERVIDOR = (NIVEL === 'avanzado' || NIVEL === 'citas') && N.citasApi && !N.ejemplo ? String(N.citasApi).replace(/\/+$/, '') : '';
+  // La cartera de la dueña (sus precios más recientes, guardados desde su agenda) manda sobre los de datos.js.
+  // Se aplica lo último que vio este teléfono antes de pintar, y lo nuevo en cuanto llega del servidor.
+  var LLAVE_CARTERA = 'citas:cartera:' + SERVIDOR;
+  function aplicaCartera(c) {
+    if (!c || c.aprendidos || !c.servicios || !c.servicios.length) return;
+    var norm = function (t) { return String(t || '').toLowerCase().trim(); };
+    var busca = function (l, x) { return (l || []).filter(function (y) { return y.id === x.id; })[0] || (l || []).filter(function (y) { return norm(y.nombre) === norm(x.nombre); })[0]; };
+    N.servicios.forEach(function (s) { var x = busca(c.servicios, s); if (x) { s.precio = x.precio; s.min = x.min; s.desde = !!x.desde; } });
+    (N.disenos || []).forEach(function (d) { var x = busca(c.variantes, d); if (x) d.extra = x.extra; });
+    (N.largos || []).forEach(function (l) { var x = (c.largos || []).filter(function (y) { return norm(y.nombre) === norm(l[0]); })[0]; if (x) l[1] = x.extra; });
+    if (typeof c.anticipo === 'number') N.anticipo = c.anticipo;
+  }
+  if (SERVIDOR) { try { aplicaCartera(JSON.parse(localStorage.getItem(LLAVE_CARTERA) || 'null')); } catch (e) {} }
   var ocupadoSrv = null, horarioSrv = null;   // horarioSrv: el que la dueña puso en su agenda («Mis tiempos»), si puso uno
   var AGENDA_DUENA = (function () {   // la dirección de la agenda de la dueña (otra cosa que AGENDA, que dice si el paquete trae agenda)
     if (N.agendaUrl) return N.agendaUrl;
@@ -119,7 +132,7 @@
   }
   h += '<div class="galeria">' + disenos.map(function (d) {
     var s = servicioDe(d.servicio) || { precio: 0 };
-    var inner = foto(d.foto, d.nombre) + '<div class="t"><b>' + esc(d.nombre) + '</b><span>' + esc(d.tecnica) + ' · ' + pesos(s.precio + (d.extra || 0)) + '</span></div>';
+    var inner = foto(d.foto, d.nombre) + '<div class="t"><b>' + esc(d.nombre) + '</b><span data-pr-dis="' + esc(d.id) + '">' + esc(d.tecnica) + ' · ' + pesos(s.precio + (d.extra || 0)) + '</span></div>';
     return AGENDA ? '<button class="diseno reveal" data-diseno="' + esc(d.id) + '" data-tecnica="' + esc(d.tecnica) + '">' + inner + '</button>'
       : '<a class="diseno reveal" target="_blank" rel="noopener" href="' + esc(wa('Hola ' + N.nombre + ' 👋 Me interesa el diseño «' + d.nombre + '». ¿Qué día tienen lugar?')) + '">' + inner + '</a>';
   }).join('') + '</div></div></section>';
@@ -127,8 +140,8 @@
   h += '<section class="sec" id="servicios"><div class="envoltura" style="max-width:760px"><div class="sec-cab reveal"><span class="etq">Menú de servicios</span><h2 class="titulo">Servicios</h2><div class="filete"></div></div>' +
     cats.map(function (c) {
       return '<div class="cat reveal"><h3>' + esc(c) + '</h3>' + N.servicios.filter(function (s) { return s.categoria === c; }).map(function (s) {
-        return '<div class="serv"><div><b>' + esc(s.nombre) + '</b><p>' + esc(s.desc) + '</p><div class="min">' + esc(duracion(s.min)) + '</div></div>' +
-          '<div class="pr">' + (s.desde ? '<small>desde</small>' : '') + pesos(s.precio) + '</div></div>';
+        return '<div class="serv"><div><b>' + esc(s.nombre) + '</b><p>' + esc(s.desc) + '</p><div class="min" data-min-serv="' + esc(s.id) + '">' + esc(duracion(s.min)) + '</div></div>' +
+          '<div class="pr" data-pr-serv="' + esc(s.id) + '">' + (s.desde ? '<small>desde</small>' : '') + pesos(s.precio) + '</div></div>';
       }).join('') + '</div>';
     }).join('') + '</div></section>';
 
@@ -164,6 +177,21 @@
     esc(N.nombre) + ' · ' + esc(N.giro) + '<br>Página hecha por <a href="https://solidaaplicaciones.com" target="_blank" rel="noopener">Solida Aplicaciones</a></footer>';
   h += '<div class="velo" id="velo"></div><section class="hoja" id="hoja" role="dialog" aria-modal="true" aria-labelledby="hojaTit"></section><div class="toast" id="toast" role="status" aria-live="polite"></div>';
   document.body.innerHTML = h;
+  // Los precios más recientes de la dueña: se guardan para la próxima visita y se ponen en la página ya pintada
+  if (SERVIDOR) pide('/perfil').then(function (x) {
+    var c = x.status === 200 && x.d && x.d.servicios;
+    if (!c || c.aprendidos || !c.servicios || !c.servicios.length) return;
+    try { localStorage.setItem(LLAVE_CARTERA, JSON.stringify(c)); } catch (e) {}
+    aplicaCartera(c);
+    N.servicios.forEach(function (s) {
+      var p = document.querySelector('[data-pr-serv="' + s.id + '"]'); if (p) p.innerHTML = (s.desde ? '<small>desde</small>' : '') + pesos(s.precio);
+      var m = document.querySelector('[data-min-serv="' + s.id + '"]'); if (m) m.textContent = duracion(s.min);
+    });
+    (N.disenos || []).forEach(function (d) {
+      var e = document.querySelector('[data-pr-dis="' + d.id + '"]'), s = servicioDe(d.servicio);
+      if (e && s) e.textContent = d.tecnica + ' · ' + pesos(s.precio + (d.extra || 0));
+    });
+  }, function () {});
 
   // aparecer al bajar
   if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
