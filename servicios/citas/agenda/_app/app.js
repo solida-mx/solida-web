@@ -74,6 +74,7 @@
 
   // ───── entrar ─────
   function pintaEntrar() {
+    document.body.classList.remove('con-lado'); document.body.classList.add('en-entrar');
     raiz.innerHTML = '<section class="portada"><span class="sello">' + esc(iniciales(perfil.nombre)) + '</span>' +
       '<div class="etq" style="color:var(--oro);margin-top:14px">' + esc(perfil.nombre) + '</div><h1 class="titulo" style="margin-top:6px">Tu agenda</h1>' +
       '<p>Sólo para ti. Tus clientas apartan en tu página; aquí ves y manejas todo.</p></section>' +
@@ -411,6 +412,7 @@
       '<button type="button" class="mas campana" id="abreAvisos" aria-label="Avisos de citas nuevas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></button>' +
       (vista !== 'tiempos' ? '<button type="button" class="mas" id="nuevaCita" aria-label="Apartar una cita que te pidieron por teléfono">+</button>' : '') + '</div>' + cifras + '</div></header>';
     h += '<main class="envoltura cuerpo">' + (vista === 'tiempos' ? htmlTiempos(d) : vista === 'semana' ? htmlSemana(d) : vista === 'qr' ? htmlQr() : htmlHoy(d)) + pie() + '</main>' + tarjetaInstalar() + (ancha() ? ladoHtml() : navHtml());
+    document.body.classList.remove('en-entrar'); document.body.classList.toggle('con-lado', ancha());
     var mismo = raiz.getAttribute('data-vista') === vista;
     raiz.setAttribute('data-vista', vista);
     raiz.innerHTML = h;
