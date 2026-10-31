@@ -213,6 +213,11 @@ async function enrutar(request, env, ctx) {
     return json({ ok: true });
   }
   if (sub === '/agenda' && m === 'GET') return json(await agenda(env, neg, url));
+  // Sus notificaciones: lo que le ha llegado (citas nuevas, cambios, respuestas) de los últimos 30 días
+  if (sub === '/avisos/historial' && m === 'GET') {
+    const l = (await env.DB.prepare("SELECT id, titulo, cuerpo, url, creado FROM avisos WHERE negocio_id=? AND disp='' AND creado>? ORDER BY id DESC LIMIT 60").bind(neg.id, ahora() - 30 * 86400).all()).results;
+    return json({ avisos: l });
+  }
   if (sub === '/servicios' && m === 'PUT') {
     const d = await cuerpo(request);
     const c = limpiaCartera(Array.isArray(d.servicios) && !d.variantes ? d.servicios : d);
@@ -715,7 +720,7 @@ async function limpia(env) {
     env.DB.prepare('DELETE FROM citas WHERE fecha < ?').bind(corte),
     env.DB.prepare('DELETE FROM bloqueos WHERE fecha < ?').bind(corte),
     env.DB.prepare("DELETE FROM repetidos WHERE hasta <> '' AND hasta < ?").bind(corte),
-    env.DB.prepare('DELETE FROM avisos WHERE creado < ?').bind(ahora() - 7 * 86400),
+    env.DB.prepare('DELETE FROM avisos WHERE creado < ?').bind(ahora() - 31 * 86400),
     env.DB.prepare('DELETE FROM retos WHERE creado < ?').bind(ahora() - 3600),
     env.DB.prepare('DELETE FROM sesiones WHERE expira < ? OR (revocada=1 AND ultimo < ?)').bind(ahora() - 30 * 86400, ahora() - 30 * 86400),
     env.DB.prepare('DELETE FROM cal_ocupado WHERE fecha < ?').bind(sumaDias(hoyEn('America/Monterrey').fecha, -1)),

@@ -609,20 +609,31 @@ try {
       assert.ok(true);
       // Chromium sin pantalla dice siempre «bloqueado»: se simula un teléfono que todavía no decide
       await pg.evaluate(() => Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true }));
-      await pg.click('button[data-vista="hoy"]'); await pg.click('#abreAvisos'); await pg.waitForSelector('#avCuerpo .campo-h');
+      // La campana dice cuántas hay sin ver; adentro, la actividad y lo pendiente de este teléfono, sin tarjetas grandes en Hoy
+      await pg.reload(); await pg.waitForSelector('#abreAvisos');
+      await pg.waitForFunction(() => { const c = document.querySelector('#abreAvisos [data-cuenta]'); return c && !c.hidden && (c.textContent === '9+' || +c.textContent >= 2); });
+      assert.ok(!(await pg.$('.invita')) && !(await pg.$('#instalar')), 'sin tarjetas grandes en la pantalla');
+      await pg.click('#abreAvisos'); await pg.waitForSelector('#ntCuerpo .nt');
+      assert.match(await pg.textContent('#ntCuerpo'), /(Activa los avisos|Los avisos están bloqueados) en (este teléfono|esta computadora)/);
+      assert.match(await pg.textContent('#ntCuerpo'), /Daniela Soto apartó .*Volumen ruso/);
+      assert.ok((await pg.$$('#ntCuerpo .nt.nueva')).length >= 1, 'las nuevas se marcan');
+      if (CAP) await pg.screenshot({ path: CAP + '/ag-notificaciones.png' });
+      assert.equal(await pg.textContent('#abreAvisos [data-cuenta]'), '1', 'al abrirlas quedan vistas; queda sólo lo pendiente del teléfono');
+      await pg.click('#ntAjustes'); await pg.waitForSelector('#avCuerpo .campo-h');
       const cel = await pg.textContent('#avCuerpo');
       assert.match(await pg.textContent('.hoja'), /Así te llega/);
       assert.equal(await pg.inputValue('#avCorreo'), 'mia@atelier.mx');
-      assert.ok(await pg.$('#avActiva'), 'el botón para activar en este teléfono: ' + cel);
+      assert.ok(await pg.$('#avActiva') || /Bloqueaste los avisos/.test(cel), 'el botón para activar en este teléfono (o cómo desbloquearlos): ' + cel);
       assert.match(await pg.textContent('.hoja'), /Correo de respaldo/); assert.match(await pg.textContent('.hoja'), /Nunca te llegan los dos/);
       await pg.fill('#avCorreo', ''); await pg.click('#avGuarda');
       await pg.waitForFunction(() => /sin correo de respaldo/.test(document.getElementById('toast').textContent));
       assert.equal((await api('/api/atelier-mia/avisos', { token: tok })).d.avisoCorreo, false, 'sin correo no hay respaldo');
       if (CAP) await pg.screenshot({ path: CAP + '/ag-avisos.png', fullPage: true });
       await pg.keyboard.press('Escape');
-      // En Hoy se le dice que en este teléfono están apagados
-      await pg.waitForSelector('.invita'); assert.match(await pg.textContent('.invita'), /apagados en (este teléfono|esta computadora)/);
-      await pg.click('#invitaNo'); await pg.waitForFunction(() => !document.querySelector('.invita'));
+      // Tocar una notificación abre esa cita
+      await pg.click('#abreAvisos'); await pg.waitForSelector('#ntCuerpo [data-ntcita="' + nueva.d.folio + '"]');
+      await pg.click('#ntCuerpo [data-ntcita="' + nueva.d.folio + '"]'); await pg.waitForSelector('#dcCancela');
+      assert.equal(await pg.textContent('#hojaTit'), 'Daniela Soto'); await pg.keyboard.press('Escape');
       // Tocar el aviso: abre esa cita, con sus datos y sus botones
       await pg.goto(URL0 + '/atelier-mia/?cita=' + nueva.d.folio); await pg.waitForSelector('#dcCancela');
       assert.equal(await pg.textContent('#hojaTit'), 'Daniela Soto');
@@ -637,7 +648,7 @@ try {
       await pg.waitForFunction(() => !document.getElementById('velo'));
       assert.equal((await api('/api/atelier-mia/agenda', { token: tok })).d.citas.find((c) => c.folio === nueva.d.folio).estado, 'confirmada');
       assert.deepEqual(errores, []);
-      paso('en el navegador: la hoja «Avisos» (celular y correo de respaldo), el aviso en Hoy si están apagados, y tocar un aviso abre esa cita para confirmarla con un toque');
+      paso('en el navegador: la campana de Notificaciones (cuántas sin ver, la actividad y lo pendiente del teléfono), sus ajustes de avisos, y tocar un aviso abre esa cita para confirmarla con un toque');
     } finally { pushSrv.close(); mailSrv.close(); }
 
     // ───── La app de la clienta y las propuestas de hora nueva ─────
