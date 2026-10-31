@@ -1,3 +1,7 @@
+> **Solida Citas** (el servidor, la agenda de la dueña y la página de la clienta) vive ahora en su propio repositorio,
+> `solida-mx/solida-citas`; lo que dice abajo de la agenda describe ese repositorio. Aquí quedan sólo copias publicadas de
+> `ejemplos/unas/` y `prueba-agenda/`: se cambian en `solida-citas/pagina/` y se copian aquí para publicarlas, hasta que el servidor arme la página de cada negocio.
+>
 > **Catálogo de hoy (31 oct 2026):** sólo Uñas y pestañas (con Agenda Total), y las apps Mi Plan y GDP. Los demás
 > ejemplos, Invitaciones y SGN están guardados en `archivo/` (ver `archivo/LEEME.md`); sus direcciones llevan a la portada.
 
@@ -34,10 +38,10 @@ Google). Lo que esté vacío no sale: sin fotos la página se ve con iconos, com
 **Uñas y pestañas** (`ejemplos/unas/`) ya nace como plantilla: `datos.js` + `estilo.css` + `plantilla.js`, y cada nivel es una página de
 diez líneas. La agenda (intermedio y avanzado) arma la cita como **ticket en imagen** con el logo del negocio (`logo` en sus datos, o sus
 iniciales en un sello) para mandarla por WhatsApp. En el ejemplo, el avanzado guarda las citas en el propio teléfono; para un cliente real
-(Agenda Total, `citasApi` en sus datos) se guardan en el servicio de citas (`servicios/citas/`).
+(Agenda Total, `citasApi` en sus datos) se guardan en el servicio de citas (`solida-citas`).
 
 **Dos puertas por negocio.** La página la ven sus clientas (su dominio o `/ejemplos/...`). La **agenda de la dueña** vive aparte, en
-`agenda.solidaaplicaciones.com/<negocio>/`: una app instalable que sirve el mismo servicio de citas (archivos en `servicios/citas/agenda/`).
+`agenda.solidaaplicaciones.com/<negocio>/`: una app instalable que sirve el mismo servicio de citas (archivos en `solida-citas/agenda/`).
 `/citas/` de la página sólo redirige ahí. La de muestra para el catálogo es `agenda.solidaaplicaciones.com/ejemplo/` (citas inventadas,
 sin clave); en la portada, el paquete que la incluye enseña «Su página» y «Su agenda».
 
@@ -104,7 +108,7 @@ hace), diseños o variantes (van con un servicio y suman precio y tiempo), largo
   estaban no cambian.
 - **Su página toma los precios de ahí**: `plantilla.js` pide `/perfil`, guarda la cartera en el teléfono y la aplica antes de
   pintar (precio, duración, «desde», extras de diseños y largos, anticipo). Fotos y descripciones siguen en `datos.js`.
-- **Para cargarla** (Solida): la plantilla `servicios/citas/plantillas/cartera-de-servicios.xlsx` se le manda al cliente y se lee
+- **Para cargarla** (Solida): la plantilla `solida-citas/plantillas/cartera-de-servicios.xlsx` se le manda al cliente y se lee
   con `python3 scripts/cartera.py leer archivo.xlsx <negocio>`; o desde su página con
   `node scripts/cartera-de-pagina.mjs <datos.js> <negocio>`. Los dos dejan un `.sql` para `wrangler d1 execute --remote --file`.
 - Sin cartera guardada, la lista se arma sola con lo que ha llegado de su página.
