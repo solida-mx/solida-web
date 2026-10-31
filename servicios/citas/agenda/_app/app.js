@@ -321,11 +321,12 @@
   function envia(ruta, op) { return DEMO ? Promise.resolve(demoApi(ruta, op || {})) : api(ruta, op); }
 
   function carga() {
-    if (DEMO) { pinta(demo()); return; }
+    if (DEMO) { pinta(demo()); traeNotificaciones(); return; }
     api('/agenda').then(function (x) {
       if (x.status === 401) return salir(false);
       if (x.status !== 200) throw new Error(x.d.error);
       pinta(x.d);
+      traeNotificaciones();
     }).catch(function () {
       if (ultimo) { toast('Sin conexión: lo que ves puede no estar al día'); return; }
       raiz.innerHTML = '<div class="envoltura cuerpo"><p class="vacio">No se pudo cargar tu agenda. Revisa tu conexión.</p><button class="btn negro bloque" id="reintenta">Intentar de nuevo</button></div>';
@@ -361,7 +362,7 @@
     return '<nav class="lado" aria-label="Menú de tu agenda"><div class="lado-quien"><span class="sello chico">' + esc(iniciales(perfil.nombre)) + '</span><div><span class="etq">' + esc(perfil.nombre) + '</span><b>Tu agenda</b></div></div>' +
       [['hoy', 'Hoy'], ['semana', 'Semana'], ['tiempos', 'Mis tiempos'], ['qr', 'Tu código QR']].map(function (x) { return bot('data-vista="' + x[0] + '"', ICO[x[0]], x[1], vista === x[0]); }).join('') +
       '<span class="lado-raya"></span>' +
-      bot('data-lado="avisos"', '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>', 'Avisos') +
+      bot('data-lado="avisos"', '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>', 'Notificaciones<span class="cuenta" data-cuenta hidden></span>') +
       bot('data-lado="servicios"', '<path d="M5 6h14M5 12h14M5 18h9"/><circle cx="19" cy="18" r="2"/>', 'Mis servicios') +
       (DEMO ? '' : bot('data-lado="seguridad"', '<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/>', 'Seguridad y dispositivos')) +
       (perfil.pagina ? '<a href="' + esc(perfil.pagina) + '" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg>Ver mi página</a>' : '') +
@@ -410,9 +411,9 @@
     var h = (DEMO ? '<div class="muestra"><span>Ejemplo de Solida · así ve su agenda la dueña</span><a href="https://solidaaplicaciones.com/ejemplos/unas/avanzado/">Ver la página de sus clientas ›</a></div>' : '') +
       '<header class="cab"><div class="envoltura"><div class="cab-fila"><span class="sello chico">' + esc(iniciales(perfil.nombre)) + '</span>' +
       '<div class="quien">' + cab + '</div>' +
-      '<button type="button" class="mas campana" id="abreAvisos" aria-label="Avisos de citas nuevas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></button>' +
+      '<button type="button" class="mas campana" id="abreAvisos" aria-label="Notificaciones"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="cuenta" data-cuenta hidden></span></button>' +
       (vista !== 'tiempos' ? '<button type="button" class="mas" id="nuevaCita" aria-label="Apartar una cita que te pidieron por teléfono">+</button>' : '') + '</div>' + cifras + '</div></header>';
-    h += '<main class="envoltura cuerpo">' + (vista === 'tiempos' ? htmlTiempos(d) : vista === 'semana' ? htmlSemana(d) : vista === 'qr' ? htmlQr() : htmlHoy(d)) + pie() + '</main>' + tarjetaInstalar() + (ancha() ? ladoHtml() : navHtml());
+    h += '<main class="envoltura cuerpo">' + (vista === 'tiempos' ? htmlTiempos(d) : vista === 'semana' ? htmlSemana(d) : vista === 'qr' ? htmlQr() : htmlHoy(d)) + pie() + '</main>' + (ancha() ? ladoHtml() : navHtml());
     document.body.classList.remove('en-entrar'); document.body.classList.toggle('con-lado', ancha());
     var mismo = raiz.getAttribute('data-vista') === vista;
     raiz.setAttribute('data-vista', vista);
@@ -475,12 +476,6 @@
       h += '<button type="button" class="dia-chip" data-dia="' + x + '" aria-pressed="' + (x === f) + '">' + esc(nombreDia(x, hoy)) + (n ? '<small>' + n + '</small>' : '') + '</button>';
     }
     h += '</div><button type="button" class="btn bloque atraveso" id="atraveso">Se me atravesó algo</button>';
-    var et = estadoAvisosTel();
-    if (et === 'apagado') h += '<section class="invita"><div><b>Los avisos de citas nuevas están apagados en ' + este + '</b><span>Actívalos y te llega un aviso en cuanto alguien aparte en tu página.</span></div>' +
-      '<div class="dos"><button type="button" class="btn negro" id="invitaSi">Activar</button><button type="button" class="btn" id="invitaNo">Ahora no</button></div></section>';
-    else if (et === 'bloqueado' || et === 'instalar') h += '<section class="invita"><div><b>Los avisos de citas nuevas están apagados en ' + este + '</b><span>' +
-      (et === 'bloqueado' ? 'Los bloqueaste para esta página: actívalos en los ajustes de tu navegador.' : 'En iPhone llegan sólo con tu agenda instalada: Compartir → «Agregar a inicio», y ábrela desde ahí.') +
-      '</span></div><button type="button" class="btn" id="invitaNo">Entendido</button></section>';
     h += '<h2 class="etq dia-tit">' + esc(fechaLarga(f)) + '</h2>';
     var tiempos = tiemposDelDia(d, f), libres = libresDelDia(d, f, tiempos);
     var citas = d.citas.filter(function (c) { return c.fecha === f; });
@@ -765,6 +760,73 @@
       qt.disabled = true;
       envia('/calendarios/' + c.id, { metodo: 'DELETE' }).then(function () { cierraHoja(); toast('Listo: desconectado'); carga(); }, function () { toast('Sin conexión'); qt.disabled = false; });
     };
+  }
+
+  // ───── Notificaciones: lo que le ha llegado (citas nuevas, cambios, respuestas) y lo pendiente del sistema ─────
+  // Sin tarjetas grandes en la pantalla: todo vive aquí, y la campana dice cuántas hay sin ver.
+  var NOTIF_VISTO = 'agenda:notifvisto:' + ID, notifs = [];
+  function traeNotificaciones() {
+    var listo = function (l) { notifs = l || []; pintaCuenta(); var c = document.getElementById('ntCuerpo'); if (c) pintaNotificaciones(c); };
+    if (DEMO) return listo(demoNotifs());
+    api('/avisos/historial').then(function (x) { if (x.status === 200) listo(x.d.avisos); }, function () {});
+  }
+  // Lo pendiente del sistema en ESTE teléfono: avisos apagados, instalarla como app
+  function pendientesSistema() {
+    var l = [], et = DEMO ? 'ok' : (suscrito === null ? 'ok' : (esIos && !instalada ? 'instalar' : !puedePush ? 'sin' : suscrito ? 'ok' : Notification.permission === 'denied' ? 'bloqueado' : 'apagado'));
+    if (et === 'apagado') l.push({ k: 'avisos', t: 'Activa los avisos en ' + este, s: 'Te llega uno en cuanto alguien aparte en tu página.', b: 'Activar' });
+    if (et === 'bloqueado') l.push({ k: 'bloqueado', t: 'Los avisos están bloqueados en ' + este, s: 'Actívalos en los ajustes de tu navegador para esta página.' });
+    if (et === 'instalar') l.push({ k: 'instalar-ios', t: 'Instala tu agenda para recibir avisos', s: 'En Safari: Compartir (el cuadro con la flecha) → «Agregar a inicio», y ábrela desde ahí.' });
+    if (!instalada && aviso) l.push({ k: 'instalar', t: 'Tenla como app', s: 'Con tus iniciales en la pantalla de inicio. Sin tienda de apps.', b: 'Instalar' });
+    return l;
+  }
+  function sinVer() { var v = 0; try { v = +localStorage.getItem(NOTIF_VISTO) || 0; } catch (e) {} return notifs.filter(function (n) { return n.id > v; }).length + pendientesSistema().length; }
+  function pintaCuenta() {
+    var n = sinVer();
+    document.querySelectorAll('[data-cuenta]').forEach(function (e) { e.hidden = !n; e.textContent = n > 9 ? '9+' : String(n); });
+    var b = document.getElementById('abreAvisos'); if (b) b.setAttribute('aria-label', n ? 'Notificaciones: ' + n + ' sin ver' : 'Notificaciones');
+  }
+  function haceRato(seg) {
+    var s = Math.max(0, Math.floor(Date.now() / 1000) - seg);
+    if (s < 60) return 'ahora'; if (s < 3600) return 'hace ' + Math.floor(s / 60) + ' min'; if (s < 86400) return 'hace ' + Math.floor(s / 3600) + ' h';
+    var d = Math.floor(s / 86400); return d === 1 ? 'ayer' : 'hace ' + d + ' días';
+  }
+  function abreNotificaciones() {
+    var hoja = abreHoja('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">Notificaciones</h2>' + CERRAR + '</div><div id="ntCuerpo"></div>' +
+      '<button type="button" class="enlace" id="ntAjustes">Ajustes de avisos: celular, correo y recordatorios a tus clientas</button>');
+    var visto = 0; try { visto = +localStorage.getItem(NOTIF_VISTO) || 0; } catch (e) {}
+    pintaNotificaciones(hoja.querySelector('#ntCuerpo'), visto);
+    // Al abrirlas quedan vistas
+    try { if (notifs.length) localStorage.setItem(NOTIF_VISTO, String(notifs[0].id)); } catch (e) {}
+    pintaCuenta();
+    hoja.querySelector('#ntAjustes').onclick = function () { abreAvisos(); };
+    traeNotificaciones();
+  }
+  function pintaNotificaciones(c, visto) {
+    if (visto == null) visto = +(c.getAttribute('data-visto') || 0); c.setAttribute('data-visto', visto);
+    var sis = pendientesSistema(), h = '';
+    if (sis.length) h += '<section class="nt-sec"><span class="etq">Pendiente en ' + esc(este) + '</span>' + sis.map(function (x) {
+      return '<div class="nt nt-sis"><div><b>' + esc(x.t) + '</b><span>' + esc(x.s) + '</span></div>' + (x.b ? '<button type="button" class="btn negro" data-ntsis="' + x.k + '">' + esc(x.b) + '</button>' : '') + '</div>';
+    }).join('') + '</section>';
+    h += '<section class="nt-sec"><span class="etq">Actividad</span>' + (notifs.length ? notifs.map(function (n) {
+      var f = (String(n.url).match(/[?&]cita=([A-Z0-9-]{4,20})/) || [])[1] || '';
+      return '<button type="button" class="nt' + (n.id > visto ? ' nueva' : '') + '"' + (f ? ' data-ntcita="' + esc(f) + '"' : ' disabled') + '><div><b>' + esc(String(n.titulo).split(' · ' + perfil.nombre).join('')) + '</b><span>' + esc(n.cuerpo) + '</span></div><small>' + esc(haceRato(n.creado)) + '</small></button>';
+    }).join('') : '<p class="vacio">Aquí te van a aparecer las citas nuevas que lleguen de tu página, los cambios y las respuestas de tus clientas.</p>') + '</section>';
+    c.innerHTML = h;
+    c.querySelectorAll('[data-ntcita]').forEach(function (b) { b.onclick = function () { var f = b.getAttribute('data-ntcita'); cierraHoja(); if (ultimo && ultimo.citas.some(function (x) { return x.folio === f; })) abreCita(f); else toast('Esa cita ya no está en tu agenda'); }; });
+    c.querySelectorAll('[data-ntsis]').forEach(function (b) {
+      b.onclick = function () {
+        var k = b.getAttribute('data-ntsis'); b.disabled = true;
+        if (k === 'instalar' && aviso) { aviso.prompt(); aviso.userChoice.then(function () { aviso = null; pintaNotificaciones(c); pintaCuenta(); }); return; }
+        if (k === 'avisos') api('/avisos').then(function (x) { return activaAvisos(x.d && x.d.vapid); }).then(function () { toast('Listo: te vamos a avisar en ' + este); pintaNotificaciones(c); pintaCuenta(); },
+          function (e) { b.disabled = false; toast(e.message || 'No se pudo'); });
+      };
+    });
+  }
+  function demoNotifs() {
+    var a = Math.floor(Date.now() / 1000);
+    return [{ id: 3, titulo: 'Nueva cita · Atelier Mía', cuerpo: 'Daniela Soto apartó Volumen ruso con Fernanda · hoy · 1:00 pm. Sin anticipo todavía.', url: '/ejemplo/?cita=C-EJEM2', creado: a - 900 },
+      { id: 2, titulo: 'Sofía Lara cambió su cita', cuerpo: 'Antes jue · 4:00 pm, ahora hoy · 5:30 pm.', url: '/ejemplo/?cita=C-EJEM4', creado: a - 7200 },
+      { id: 1, titulo: 'Mañana tienes 3 citas', cuerpo: 'La primera a las 10:00 am. Recuérdales por WhatsApp desde tu agenda.', url: '/ejemplo/', creado: a - 86400 }];
   }
 
   // ───── avisos al celular y por correo ─────
@@ -1626,20 +1688,13 @@
     var nc = document.getElementById('nuevaCita'); if (nc) nc.onclick = function () { abreNuevaCita(ultimo); };
     raiz.querySelectorAll('[data-lado]').forEach(function (b) {
       var q = b.getAttribute('data-lado');
-      b.onclick = q === 'avisos' ? abreAvisos : q === 'seguridad' ? abreSeguridad : q === 'servicios' ? function () { abreServicios(); } : q === 'nueva' ? function () { abreNuevaCita(ultimo); }
+      b.onclick = q === 'avisos' ? abreNotificaciones : q === 'seguridad' ? abreSeguridad : q === 'servicios' ? function () { abreServicios(); } : q === 'nueva' ? function () { abreNuevaCita(ultimo); }
         : function () { if (confirm('¿Salir de tu agenda en ' + este + '?')) salir(); };
     });
-    var av = document.getElementById('abreAvisos'); if (av) av.onclick = abreAvisos;
+    var av = document.getElementById('abreAvisos'); if (av) av.onclick = abreNotificaciones;
+    pintaCuenta();
     var atr = document.getElementById('atraveso'); if (atr) atr.onclick = function () { abreMover(ultimo); };
     raiz.querySelectorAll('[data-detalle]').forEach(function (b) { b.onclick = function () { abreCita(b.getAttribute('data-detalle')); }; });
-    var iSi = document.getElementById('invitaSi');
-    if (iSi) iSi.onclick = function () {
-      iSi.disabled = true;
-      api('/avisos').then(function (x) { return activaAvisos(x.d && x.d.vapid); }).then(function () { toast('Listo: te vamos a avisar en ' + este); pinta(ultimo); },
-        function (e) { iSi.disabled = false; toast(e.message || 'No se pudo'); });
-    };
-    var iNo = document.getElementById('invitaNo');
-    if (iNo) iNo.onclick = function () { try { localStorage.setItem('agenda:noavisos:' + ID, String(Date.now())); } catch (e) {} pinta(ultimo); };
     raiz.querySelectorAll('[data-libre]').forEach(function (b) {
       b.onclick = function () { var p = b.getAttribute('data-libre').split('|'); abreNuevaCita(ultimo, { fecha: p[0], ini: +p[1], persona: p[2] }); };
     });
