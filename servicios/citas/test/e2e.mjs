@@ -433,7 +433,10 @@ try {
     await pg.waitForFunction(() => /Rosa Tel/.test(document.querySelector('main').textContent));
     // La misma hora otra vez: ya está ocupada
     await pg.click('#nuevaCita'); await pg.waitForSelector('#fCita');
-    await pg.fill('#ncFecha', MARTES); await pg.selectOption('#ncHora', hhmmDe(rosa.inicio_min)); await pg.click('[data-con="mia"]');
+    await pg.click('[data-con="mia"]'); await pg.fill('#ncFecha', MARTES); await pg.dispatchEvent('#ncFecha', 'change');
+    const ofrecidas = await pg.$$eval('#ncHora option', (l) => l.map((o) => o.value));
+    assert.ok(!ofrecidas.includes(hhmmDe(rosa.inicio_min)), 'la hora ocupada ya no se ofrece: ' + ofrecidas.join(' '));
+    await pg.selectOption('#ncHora', '__todas'); await pg.selectOption('#ncHora', hhmmDe(rosa.inicio_min));
     await pg.fill('#ncNombre', 'Otra'); await pg.fill('#ncTel', '8445550102'); await pg.selectOption('#ncServSel', 'otro'); await pg.fill('#ncServ', 'Retiro de gelish');
     await pg.click('#ncOk'); await pg.waitForFunction(() => /ya hay otra cita/.test(document.getElementById('ncFalta').textContent));
     await pg.keyboard.press('Escape');
@@ -895,7 +898,11 @@ try {
           await pg.click('[data-vari="french"]'); await pg.click('[data-largo="Largo"]');
           assert.equal(await pg.inputValue('#ncPrecio'), '$390', 'servicio + diseño + largo'); assert.equal(await pg.getAttribute('[data-dur="75"]', 'aria-pressed'), 'true', 'y el tiempo extra del diseño');
           await pg.click('#ncAnt');
-          await pg.fill('#ncNombre', 'Lupita Cartera'); await pg.fill('#ncTel', '8440000999'); await pg.fill('#ncFecha', fecha(8)); await pg.selectOption('#ncHora', '12:00');
+          await pg.fill('#ncNombre', 'Lupita Cartera'); await pg.fill('#ncTel', '8440000999');
+          // Abre en la primera hora libre de Fernanda (nunca antes de ahora)
+          const fv = await pg.inputValue('#ncFecha'), hv = await pg.inputValue('#ncHora');
+          assert.match(hv, /^\d{2}:\d{2}$/, 'sugiere una hora libre');
+          if (fv === fecha(0)) { const ah = await pg.evaluate(() => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }); assert.ok(+hv.slice(0, 2) * 60 + +hv.slice(3) > ah, 'no sugiere una hora que ya pasó: ' + hv); }
           await pg.click('#ncOk'); await pg.waitForSelector('.manda.recien'); await pg.keyboard.press('Escape');
           const lu = (await api('/api/atelier-mia/agenda', { token: tkC })).d.citas.find((c) => c.nombre === 'Lupita Cartera');
           assert.deepEqual([lu.servicio, lu.diseno, lu.detalle, lu.precio, lu.anticipo, lu.persona, lu.fin_min - lu.inicio_min], ['Gelish en manos', 'French clásico', 'Largo', 390, 120, 'fer', 75]);

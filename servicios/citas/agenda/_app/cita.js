@@ -3,6 +3,10 @@
    Desde la app de la clienta también sirve con la huella de su teléfono. Todo lo que viene del servidor pasa por esc(). */
 (function () {
   'use strict';
+  // Sin zoom (como una app): Safari de iPhone ignora user-scalable, así que también se cancelan sus gestos y el doble toque.
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
+  var ultimoToque = 0;
+  document.addEventListener("touchend", function (e) { var t = Date.now(); if (t - ultimoToque < 320) e.preventDefault(); ultimoToque = t; }, { passive: false });
   var partes = location.pathname.split('/'), ID = partes[1], FOLIO = decodeURIComponent(partes[3] || '');
   var qs = new URLSearchParams(location.search), T = qs.get('t') || '', R = qs.get('r') || '';
   var raiz = document.getElementById('app');

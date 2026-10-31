@@ -206,3 +206,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .nueva-version span{flex:1}
 .nueva-version .btn{min-height:42px;padding:0 14px}
 .nv-no{width:40px;height:42px;border:0;background:transparent;color:#c9bfb1;font-size:16px}
+
+/* Sin zoom con doble toque (como una app) */
+body{touch-action:pan-x pan-y}
+button,a,input,select,textarea,label{touch-action:manipulation}
