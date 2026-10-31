@@ -1,3 +1,6 @@
+> **Catálogo de hoy (31 oct 2026):** sólo Uñas y pestañas (con Agenda Total), y las apps Mi Plan y GDP. Los demás
+> ejemplos, Invitaciones y SGN están guardados en `archivo/` (ver `archivo/LEEME.md`); sus direcciones llevan a la portada.
+
 # Cómo está ordenado este repositorio
 
 Se publica en **solidaaplicaciones.com** (Cloudflare Worker `solida-web`). Al unir un cambio a `main`, Cloudflare lo publica solo.

@@ -8,6 +8,7 @@
 const OFICIAL = 'solidaaplicaciones.com';
 export const GIROS = ['restaurante', 'profesional', 'taller', 'nutriologo', 'invitacion', 'uniformes', 'barberia'];
 const VIEJA = new RegExp(`^/(${GIROS.join('|')})(/.*)?$`);
+const GUARDADOS = new RegExp(`^/ejemplos/(${GIROS.join('|')})(/.*)?$`);
 
 class PonFranja {
   element(head) {
@@ -23,6 +24,8 @@ export default {
       url.protocol = 'https:';
       return Response.redirect(url.toString(), 301);
     }
+    // Los ejemplos que están guardados (archivo/) ya no se ven: sus direcciones y sus QR impresos llevan a la portada
+    if (url.pathname.match(VIEJA) || url.pathname.match(GUARDADOS) || url.pathname.startsWith('/soporte/pases')) return Response.redirect(`https://${OFICIAL}/`, 302);
     const vieja = url.pathname.match(VIEJA);
     if (vieja) {
       const nueva = new URL(`/ejemplos/${vieja[1]}${vieja[2] || '/'}${url.search}`, `https://${OFICIAL}`);
