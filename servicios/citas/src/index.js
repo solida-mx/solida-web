@@ -81,7 +81,7 @@ async function enrutar(request, env, ctx) {
     const d = await cuerpo(request);
     const r = await env.DB.prepare('UPDATE negocios SET equipo=COALESCE(?,equipo), pagina=COALESCE(?,pagina), servicios=COALESCE(?,servicios) WHERE id=?')
       .bind(d.equipo !== undefined ? JSON.stringify(limpiaEquipo(d.equipo)) : null, d.pagina !== undefined ? limpiaPagina(d.pagina) : null,
-        d.servicios !== undefined ? JSON.stringify(limpiaServicios(d.servicios)) : null, p[1]).run();
+        d.servicios !== undefined ? JSON.stringify(limpiaCartera(d.servicios)) : null, p[1]).run();
     if (!r.meta.changes) throw new ErrorHttp(404, 'Negocio no encontrado');
     return json(perfilDe(await env.DB.prepare('SELECT * FROM negocios WHERE id=?').bind(p[1]).first()));
   }
@@ -214,9 +214,10 @@ async function enrutar(request, env, ctx) {
   }
   if (sub === '/agenda' && m === 'GET') return json(await agenda(env, neg, url));
   if (sub === '/servicios' && m === 'PUT') {
-    const l = limpiaServicios((await cuerpo(request)).servicios);
-    await env.DB.prepare('UPDATE negocios SET servicios=? WHERE id=?').bind(JSON.stringify(l), neg.id).run();
-    return json({ servicios: l });
+    const d = await cuerpo(request);
+    const c = limpiaCartera(Array.isArray(d.servicios) && !d.variantes ? d.servicios : d);
+    await env.DB.prepare('UPDATE negocios SET servicios=? WHERE id=?').bind(JSON.stringify(c), neg.id).run();
+    return json({ servicios: c.servicios, cartera: { ...c, lista: c.servicios, aprendidos: false } });
   }
   if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/enlace$/)) && m === 'POST') return json({ enlace: await enlaceDeCita(env, neg, p[1]) });
   if ((p = sub.match(/^\/citas\/([A-Z0-9-]{4,20})\/correo$/)) && m === 'POST') {
@@ -553,29 +554,55 @@ async function altaNegocio(env, d) {
   return { id, nombre, clave, agenda: AGENDA + '/' + id + '/', aviso: 'Guarda esta clave y dásela a la dueña. No se vuelve a mostrar; si se pierde, se genera otra.' };
 }
 
-// Los servicios del negocio: [{nombre, min, precio, cat}]. Los repetidos (mismo nombre) se quedan una vez.
-export function limpiaServicios(v) {
-  if (!Array.isArray(v)) return [];
-  const vistos = new Set(), l = [];
-  for (const x of v.slice(0, 80)) {
+// La cartera del negocio: lo que la dueña ofrece, con su precio más reciente. Una sola fuente para apartar sin escribir:
+//   servicios  [{id, nombre, cat, min, precio, desde, quien:[persona…]}]   (quien vacío = cualquiera del equipo)
+//   variantes  [{id, nombre, servicio, extra, extraMin}]                  (diseños: van con un servicio y suman al precio)
+//   largos     [{nombre, extra}] y largosEn [categoría…]                  (tamaños: suman al precio en esas categorías)
+//   anticipo   lo que se pide para apartar
+// Una lista sola (el formato de antes) cuenta como los servicios.
+const slug = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
+export function limpiaCartera(v) {
+  const c = Array.isArray(v) ? { servicios: v } : (v && typeof v === 'object' ? v : {});
+  const ids = new Set(), nombres = new Set(), servicios = [];
+  for (const x of (Array.isArray(c.servicios) ? c.servicios : []).slice(0, 80)) {
     const nombre = texto(x && x.nombre, 80), k = nombre.toLowerCase();
-    if (!nombre || vistos.has(k)) continue;
-    vistos.add(k);
+    if (!nombre || nombres.has(k)) continue;
+    let id = ident(x.id) || slug(nombre) || 's'; while (ids.has(id)) id += '2';
+    nombres.add(k); ids.add(id);
     const min = entero(x.min, 10, 600);
-    l.push({ nombre, min: min ? Math.round(min / 5) * 5 : 60, precio: entero(x.precio, 0, 1000000) || 0, cat: texto(x.cat, 40) });
+    servicios.push({ id, nombre, cat: texto(x.cat, 40), min: min ? Math.round(min / 5) * 5 : 60, precio: entero(x.precio, 0, 1000000) || 0,
+      desde: !!x.desde, quien: Array.isArray(x.quien) ? [...new Set(x.quien.map(ident).filter(Boolean))].slice(0, 20) : [] });
   }
-  return l;
+  const porNombre = new Map(servicios.map((s) => [s.nombre.toLowerCase(), s.id]));
+  const vIds = new Set(), variantes = [];
+  for (const x of (Array.isArray(c.variantes) ? c.variantes : []).slice(0, 200)) {
+    const nombre = texto(x && x.nombre, 80);
+    const serv = ids.has(ident(x && x.servicio)) ? ident(x.servicio) : porNombre.get(String((x && x.servicio) || '').toLowerCase().trim());
+    if (!nombre || !serv) continue;
+    let id = ident(x.id) || slug(nombre) || 'v'; while (vIds.has(id)) id += '2'; vIds.add(id);
+    variantes.push({ id, nombre, servicio: serv, extra: entero(x.extra, 0, 1000000) || 0, extraMin: entero(x.extraMin, 0, 300) || 0 });
+  }
+  const largos = [];
+  for (const x of (Array.isArray(c.largos) ? c.largos : []).slice(0, 10)) {
+    const nombre = texto(Array.isArray(x) ? x[0] : x && x.nombre, 40);
+    if (nombre && !largos.some((l) => l.nombre === nombre)) largos.push({ nombre, extra: entero(Array.isArray(x) ? x[1] : x.extra, 0, 1000000) || 0 });
+  }
+  const largosEn = (Array.isArray(c.largosEn) ? c.largosEn : []).map((t) => texto(t, 40)).filter(Boolean).slice(0, 10);
+  return { servicios, variantes, largos, largosEn: largos.length ? largosEn : [], anticipo: entero(c.anticipo, 0, 1000000) || 0 };
 }
-// La lista que ve la dueña: la que guardó, o si no hay, la que se arma sola con lo que han apartado en su página
+export const limpiaServicios = (v) => limpiaCartera(v).servicios;
+// La cartera que ve la dueña: la que guardó, o si no hay, la que se arma sola con lo que han apartado en su página
 // (ahí los nombres vienen del catálogo, así que ya están escritos igual siempre).
 async function serviciosDe(env, neg) {
-  let l = []; try { l = JSON.parse(neg.servicios || '[]'); } catch {}
-  if (Array.isArray(l) && l.length) return { lista: l, aprendidos: false };
+  let g = null; try { g = JSON.parse(neg.servicios || 'null'); } catch {}
+  const c = limpiaCartera(g);
+  if (c.servicios.length) return { ...c, lista: c.servicios, aprendidos: false };
   const filas = (await env.DB.prepare("SELECT servicio, fin_min - inicio_min AS dur, precio FROM citas WHERE negocio_id=? AND origen='pagina' AND creada>? ORDER BY creada DESC LIMIT 400")
     .bind(neg.id, ahora() - 180 * 86400).all()).results;
   const por = new Map();
   for (const f of filas) { if (!por.has(f.servicio)) por.set(f.servicio, { nombre: f.servicio, min: f.dur, precio: f.precio, cat: '' }); }
-  return { lista: limpiaServicios([...por.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))), aprendidos: true };
+  const a = limpiaCartera({ servicios: [...por.values()].sort((x, y) => x.nombre.localeCompare(y.nombre, 'es')) });
+  return { ...a, lista: a.servicios, aprendidos: true };
 }
 // Quién atiende: ["Mía", "Fernanda"] o [{id, nombre}]. El id es el que usan las citas (persona).
 export function limpiaEquipo(v) {

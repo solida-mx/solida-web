@@ -175,7 +175,7 @@ try {
     const tk = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.8.1' })).d.token;
     assert.equal((await api('/api/atelier-mia/servicios', { metodo: 'PUT', body: { servicios: [] } })).status, 401, 'sólo la dueña');
     const sv = await api('/api/atelier-mia/servicios', { metodo: 'PUT', token: tk, body: { servicios: [{ nombre: ' Corte <b>', min: 47, precio: '150' }, { nombre: 'corte <b>', min: 30 }, { nombre: '' }] } });
-    assert.deepEqual(sv.d.servicios, [{ nombre: 'Corte b', min: 45, precio: 150, cat: '' }], 'se limpia: sin repetidos, sin vacíos, duración de 5 en 5');
+    assert.deepEqual(sv.d.servicios, [{ id: 'corte-b', nombre: 'Corte b', cat: '', min: 45, precio: 150, desde: false, quien: [] }], 'se limpia: sin repetidos, sin vacíos, duración de 5 en 5');
     assert.equal((await api('/api/atelier-mia/perfil')).d.servicios.aprendidos, false);
     await api('/api/atelier-mia/servicios', { metodo: 'PUT', token: tk, body: { servicios: [] } });
     assert.equal((await api('/api/atelier-mia/perfil')).d.servicios.aprendidos, true, 'vacía, vuelve a la que se arma sola');
@@ -847,6 +847,52 @@ try {
         assert.ok(cv.html.includes(en1.d.enlace.replace(/&/g, '&amp;')) && cv.text.includes(en1.d.enlace), 'trae su enlace');
         if (CAP) writeFileSync(CAP + '/correo-tu-cita.html', cv.html);
         paso('apartada en el local: su enlace guarda la cita en SU celular (y la invita a la app), por correo le llega con el mismo enlace; las citas que llegan escaneando el QR se cuentan');
+
+        // ───── La cartera completa: diseños, largos, anticipo y quién lo hace; el precio más reciente de la dueña manda en la agenda y en la página ─────
+        {
+          const tkC = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.8.2' })).d.token;
+          const car = await api('/api/atelier-mia/servicios', { metodo: 'PUT', token: tkC, body: {
+            servicios: [{ id: 'gelish', nombre: 'Gelish en manos', cat: 'Uñas', min: 60, precio: 300, quien: ['fer'] }, { id: 'volumen', nombre: 'Volumen ruso', cat: 'Pestañas', min: 150, precio: 900 }],
+            variantes: [{ id: 'french', nombre: 'French clásico', servicio: 'gelish', extra: 40, extraMin: 15 }, { nombre: 'Huérfano', servicio: 'no-existe', extra: 1 }],
+            largos: [{ nombre: 'Corto', extra: 0 }, { nombre: 'Largo', extra: 50 }], largosEn: ['Uñas'], anticipo: 120 } });
+          assert.equal(car.status, 200); assert.equal(car.d.cartera.variantes.length, 1, 'un diseño de un servicio que no existe no entra');
+          // La página de las clientas toma sus precios
+          const cx3 = await nav.newContext({ viewport: { width: 390, height: 844 }, userAgent: IPHONE });
+          await cx3.route('**/prueba-agenda/datos.js', (r2) => r2.fulfill({ contentType: 'text/javascript', body: datosPrueba }));
+          await cx3.route('https://fonts.googleapis.com/**', (r2) => r2.fulfill({ body: '', contentType: 'text/css' }));
+          const pp = await cx3.newPage(); const errs3 = []; pp.on('pageerror', (e) => errs3.push(e.message));
+          await pp.goto('http://127.0.0.1:8817/prueba-agenda/');
+          await pp.waitForFunction(() => /\$300/.test((document.querySelector('[data-pr-serv="gelish"]') || {}).textContent || ''));
+          assert.match(await pp.textContent('[data-pr-dis="french"]'), /\$340/, 'el diseño con el precio nuevo del servicio y su extra');
+          await pp.reload(); assert.match(await pp.textContent('[data-pr-serv="gelish"]'), /\$300/, 'y al volver ya lo pinta así desde el principio');
+          assert.deepEqual(errs3, []); await cx3.close();
+          // En la agenda: elegir servicio, diseño y largo; el precio se suma, se pone quién lo hace y el anticipo
+          await pg.reload(); await pg.waitForSelector('#nuevaCita');
+          await pg.click('#nuevaCita'); await pg.waitForSelector('#ncServSel');
+          await pg.selectOption('#ncServSel', '0');
+          await pg.waitForSelector('[data-vari="french"]'); assert.ok(await pg.$('[data-largo="Largo"]'));
+          assert.equal(await pg.inputValue('#ncPrecio'), '$300'); assert.equal(await pg.getAttribute('[data-con="fer"]', 'aria-pressed'), 'true', 'sólo Fernanda lo hace');
+          await pg.click('[data-vari="french"]'); await pg.click('[data-largo="Largo"]');
+          assert.equal(await pg.inputValue('#ncPrecio'), '$390', 'servicio + diseño + largo'); assert.equal(await pg.getAttribute('[data-dur="75"]', 'aria-pressed'), 'true', 'y el tiempo extra del diseño');
+          await pg.click('#ncAnt');
+          await pg.fill('#ncNombre', 'Lupita Cartera'); await pg.fill('#ncTel', '8440000999'); await pg.fill('#ncFecha', fecha(8)); await pg.selectOption('#ncHora', '12:00');
+          await pg.click('#ncOk'); await pg.waitForSelector('.manda.recien'); await pg.keyboard.press('Escape');
+          const lu = (await api('/api/atelier-mia/agenda', { token: tkC })).d.citas.find((c) => c.nombre === 'Lupita Cartera');
+          assert.deepEqual([lu.servicio, lu.diseno, lu.detalle, lu.precio, lu.anticipo, lu.persona, lu.fin_min - lu.inicio_min], ['Gelish en manos', 'French clásico', 'Largo', 390, 120, 'fer', 75]);
+          // Si escribe otro precio a mano, se respeta
+          await pg.click('#nuevaCita'); await pg.waitForSelector('#ncServSel'); await pg.selectOption('#ncServSel', '1');
+          await pg.fill('#ncPrecio', '$950'); await pg.selectOption('#ncServSel', '0'); assert.equal(await pg.inputValue('#ncPrecio'), '$950', 'su precio a mano no se pisa');
+          // Cambia su precio en «Mis servicios»: desde ahí se usa el nuevo
+          await pg.click('#ncEditaServ'); await pg.waitForSelector('[data-sp="0"]');
+          await pg.fill('[data-sp="0"]', '$320'); await pg.click('#svOk'); await pg.waitForSelector('#ncServSel');
+          await pg.selectOption('#ncServSel', '0'); assert.equal(await pg.inputValue('#ncPrecio'), '$320', 'su precio más reciente');
+          await pg.keyboard.press('Escape');
+          assert.equal((await api('/api/atelier-mia/perfil')).d.servicios.servicios[0].precio, 320);
+          assert.equal((await api('/api/atelier-mia/perfil')).d.servicios.variantes[0].nombre, 'French clásico', 'guardar desde la agenda no pierde los diseños');
+          await api('/api/atelier-mia/salir', { metodo: 'POST', token: tkC });
+          assert.deepEqual(errores, []);
+        }
+        paso('la cartera: al apartar salen sus diseños y largos, el precio se suma solo, se pone quién lo hace y el anticipo; su precio más reciente manda en la agenda y en su página');
 
         // ───── En la compu: menú a un lado, Hoy por columnas, la cita a la derecha con «Mándale su cita»; y Tu código QR ─────
         await pg.setViewportSize({ width: 1280, height: 860 }); await pg.reload();

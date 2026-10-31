@@ -474,9 +474,22 @@ select.campo{appearance:auto}
 }
 
 /* Mis servicios */
-.sv-fila{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;gap:6px;align-items:center;padding:10px 0;border-bottom:1px solid var(--linea)}
-.sv-fila [data-svn]{grid-column:1 / 3}
-.sv-fila .cerrar{grid-column:3;grid-row:1}
-.sv-fila .campo{min-height:46px;padding:0 10px}
+.sv-sec{display:flex;flex-direction:column;gap:6px;padding:14px 0;border-bottom:1px solid var(--linea)}
+.sv-sec .etq{color:var(--oro-txt)}
+.sv-sec > .btn{margin-top:6px}
+.sv-fila{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:center;padding:10px 50px 10px 0;border-bottom:1px dashed var(--linea)}
+.sv-fila .campo{min-height:44px;padding:0 10px}
+.sv-fila > input:first-child{grid-column:1 / -1}
+.sv-fila .cerrar{position:absolute;right:0;top:10px}
+.sv-fila.sv-corta > input:first-child{grid-column:auto}
+.hoja .sv-desde{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--gris);min-height:44px}
+.sv-desde input{width:20px;height:20px;accent-color:var(--negro)}
+.sv-quien{grid-column:1 / -1;align-items:center}
+.sv-quien > span,.sv-en{font-size:12.5px;color:var(--gris);margin-right:4px;align-self:center}
+.sv-quien .chip{min-height:38px}
+.nc-extras{display:flex;flex-direction:column;gap:8px}
+.nc-extras:empty{display:none}
+.chip small{font-weight:400;color:var(--oro-txt)}
+.chip[aria-pressed="true"] small{color:var(--oro)}
 #ncServ[hidden]{display:none}
 .campo-h .enlace{align-self:flex-start}

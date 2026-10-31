@@ -362,6 +362,7 @@
       [['hoy', 'Hoy'], ['semana', 'Semana'], ['tiempos', 'Mis tiempos'], ['qr', 'Tu código QR']].map(function (x) { return bot('data-vista="' + x[0] + '"', ICO[x[0]], x[1], vista === x[0]); }).join('') +
       '<span class="lado-raya"></span>' +
       bot('data-lado="avisos"', '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>', 'Avisos') +
+      bot('data-lado="servicios"', '<path d="M5 6h14M5 12h14M5 18h9"/><circle cx="19" cy="18" r="2"/>', 'Mis servicios') +
       (DEMO ? '' : bot('data-lado="seguridad"', '<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/>', 'Seguridad y dispositivos')) +
       (perfil.pagina ? '<a href="' + esc(perfil.pagina) + '" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg>Ver mi página</a>' : '') +
       (DEMO ? '' : bot('data-lado="salir"', '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>', 'Salir')) +
@@ -426,7 +427,7 @@
   function pie() {
     return '<div class="pie">' + (perfil.pagina ? '<a class="btn" href="' + esc(perfil.pagina) + '" target="_blank" rel="noopener">Ver mi página</a>' : '') +
       (DEMO ? '<a class="btn negro" href="https://wa.me/528443604349?text=' + encodeURIComponent('Hola 👋 Vi la agenda de ejemplo y quiero una para mi negocio.') + '" target="_blank" rel="noopener">Quiero una así</a>'
-        : '<button class="btn" type="button" id="seguridad">Seguridad y dispositivos</button><button class="btn" type="button" id="salir">Salir</button>') +
+        : '<button class="btn" type="button" id="misServ">Mis servicios</button><button class="btn" type="button" id="seguridad">Seguridad y dispositivos</button><button class="btn" type="button" id="salir">Salir</button>') +
       '<p class="nota">' + (DEMO ? 'Es un ejemplo: puedes tocar todo, nada se guarda.' : 'Se actualiza sola cada minuto.') + '</p></div>';
   }
 
@@ -1367,7 +1368,10 @@
   // ───── apartar una cita que pidieron por teléfono ─────
   var DURACIONES = [30, 45, 60, 90, 120, 150, 180];
   // ───── la lista de servicios del negocio (para apartar eligiendo, sin escribir) ─────
-  function listaServicios() { return (perfil.servicios && perfil.servicios.lista) || []; }
+  function cartera() { return perfil.servicios || {}; }
+  function listaServicios() { return cartera().servicios || cartera().lista || []; }
+  function variantesDe(id) { return (cartera().variantes || []).filter(function (v) { return v.servicio === id; }); }
+  function largosDe(s) { var c = cartera(); return s && (c.largos || []).length && (c.largosEn || []).indexOf(s.cat) >= 0 ? c.largos : []; }
   function chipsDuracion(sel) {
     var l = DURACIONES.indexOf(sel) < 0 ? DURACIONES.concat([sel]).sort(function (a, b) { return a - b; }) : DURACIONES;
     return l.map(function (m) { return '<button type="button" class="chip" data-dur="' + m + '" aria-pressed="' + (m === sel) + '">' + esc(duracion(m)) + '</button>'; }).join('');
@@ -1375,13 +1379,13 @@
   function campoServicio() {
     var l = listaServicios();
     if (!l.length) return '<label class="etq" for="ncServ">Servicio</label><input class="campo" id="ncServ" maxlength="80" required placeholder="Gelish, corte, consulta…">' +
-      (DEMO ? '' : '<button type="button" class="enlace" id="ncEditaServ">Guardar mi lista de servicios para elegir sin escribir</button>');
+      '<button type="button" class="enlace" id="ncEditaServ">Guardar mi lista de servicios para elegir sin escribir</button>';
     var grupos = [], porCat = {};
-    l.forEach(function (s, i) { var c = s.cat || ''; if (!porCat[c]) { porCat[c] = []; grupos.push(c); } porCat[c].push('<option value="' + i + '">' + esc(s.nombre + ' · ' + duracion(s.min) + (s.precio ? ' · ' + pesos(s.precio) : '')) + '</option>'); });
+    l.forEach(function (s, i) { var c = s.cat || ''; if (!porCat[c]) { porCat[c] = []; grupos.push(c); } porCat[c].push('<option value="' + i + '">' + esc(s.nombre + ' · ' + duracion(s.min) + (s.precio ? ' · ' + (s.desde ? 'desde ' : '') + pesos(s.precio) : '')) + '</option>'); });
     var ops = grupos.map(function (c) { return c && grupos.length > 1 ? '<optgroup label="' + esc(c) + '">' + porCat[c].join('') + '</optgroup>' : porCat[c].join(''); }).join('');
     return '<label class="etq" for="ncServSel">Servicio</label><select class="campo" id="ncServSel" required><option value="">Elige el servicio…</option>' + ops + '<option value="otro">Otro (escribirlo)</option></select>' +
       '<input class="campo" id="ncServ" maxlength="80" placeholder="¿Qué servicio?" aria-label="Otro servicio" hidden>' +
-      (DEMO ? '' : '<button type="button" class="enlace" id="ncEditaServ">Editar mi lista de servicios</button>');
+      '<button type="button" class="enlace" id="ncEditaServ">Editar mis servicios y precios</button>';
   }
   function servicioElegido() {
     var sel = document.getElementById('ncServSel'), otro = document.getElementById('ncServ');
@@ -1389,46 +1393,106 @@
     if (sel.value === 'otro') return otro.value.trim();
     var s = listaServicios()[+sel.value]; return s ? s.nombre : '';
   }
-  // Editar la lista: nombre, duración y precio. Se guarda en el servidor y la ven todos sus teléfonos.
+  // «Mis servicios»: la cartera entera (servicios, diseños, largos y anticipo). Lo que ella guarde aquí es lo que vale
+  // desde ese momento: al apartar se pone siempre su precio más reciente, y su página también lo toma.
   function abreServicios(luego) {
-    var l = listaServicios().map(function (s) { return { nombre: s.nombre, min: s.min, precio: s.precio, cat: s.cat || '' }; });
-    var aprendidos = perfil.servicios && perfil.servicios.aprendidos && l.length;
+    var c0 = cartera(), aprendidos = c0.aprendidos && (c0.servicios || c0.lista || []).length;
+    var c = { servicios: listaServicios().map(function (x) { return { id: x.id, nombre: x.nombre, cat: x.cat || '', min: x.min, precio: x.precio, desde: !!x.desde, quien: (x.quien || []).slice() }; }),
+      variantes: (c0.variantes || []).map(function (x) { return { id: x.id, nombre: x.nombre, servicio: x.servicio, extra: x.extra, extraMin: x.extraMin || 0 }; }),
+      largos: (c0.largos || []).map(function (x) { return { nombre: x.nombre, extra: x.extra }; }), largosEn: (c0.largosEn || []).slice(), anticipo: c0.anticipo || 0 };
     var hoja = abreHoja('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">Mis servicios</h2>' + CERRAR + '</div>' +
-      '<p class="nota" style="text-align:left;margin-top:2px">' + (aprendidos ? 'Ésta es la lista con lo que han apartado en tu página. Ajústala y guárdala.' : 'Al apartar una cita eliges de esta lista: se ponen solos la duración y el precio.') + '</p>' +
-      '<div id="svLista"></div><button type="button" class="btn bloque" id="svMas" style="margin-top:10px">+ Agregar servicio</button>' +
-      '<p class="falta" id="svFalta" role="alert"></p><button type="button" class="btn negro bloque grande" id="svOk">Guardar mi lista</button>');
-    var pintaL = function () {
-      document.getElementById('svLista').innerHTML = l.map(function (s, i) {
-        return '<div class="sv-fila"><input class="campo" data-svn="' + i + '" maxlength="80" value="' + esc(s.nombre) + '" placeholder="Nombre del servicio" aria-label="Nombre del servicio">' +
-          '<select class="campo" data-svm="' + i + '" aria-label="Cuánto dura">' + DURACIONES.concat(DURACIONES.indexOf(s.min) < 0 ? [s.min] : []).sort(function (a, b) { return a - b; }).map(function (m) { return '<option value="' + m + '"' + (m === s.min ? ' selected' : '') + '>' + esc(duracion(m)) + '</option>'; }).join('') + '</select>' +
-          '<input class="campo" data-svp="' + i + '" inputmode="numeric" maxlength="7" value="' + (s.precio ? '$' + s.precio : '') + '" placeholder="$" aria-label="Precio">' +
-          '<button type="button" class="cerrar" data-svq="' + i + '" aria-label="Quitar ' + esc(s.nombre) + '">✕</button></div>';
-      }).join('') || '<p class="vacio">Todavía no hay servicios. Agrega el primero.</p>';
-      hoja.querySelectorAll('[data-svq]').forEach(function (b) { b.onclick = function () { lee(); l.splice(+b.getAttribute('data-svq'), 1); pintaL(); }; });
-    };
+      '<p class="nota" style="text-align:left;margin-top:2px">' + (aprendidos ? 'Ésta es la lista con lo que han apartado en tu página. Ajústala y guárdala.' :
+        'Lo que guardes aquí vale desde ese momento: al apartar se pone solo tu precio más reciente, y tu página también lo toma. Las citas que ya estaban no cambian.') + '</p>' +
+      '<div id="svCuerpo"></div><p class="falta" id="svFalta" role="alert"></p><button type="button" class="btn negro bloque grande" id="svOk">Guardar</button>');
+    var cuerpo = hoja.querySelector('#svCuerpo');
+    var dinero = function (v) { return +String(v || '').replace(/\D/g, '') || 0; };
+    var cats = function () { var l = []; c.servicios.forEach(function (x) { if (x.cat && l.indexOf(x.cat) < 0) l.push(x.cat); }); return l; };
+    var opDur = function (sel, extra) { var l = (extra ? [0, 15, 30, 45, 60] : DURACIONES).slice(); if (l.indexOf(sel) < 0) l.push(sel); return l.sort(function (a, b) { return a - b; }).map(function (m) { return '<option value="' + m + '"' + (m === sel ? ' selected' : '') + '>' + (extra ? (m ? '+' + esc(duracion(m)) : 'sin tiempo extra') : esc(duracion(m))) + '</option>'; }).join(''); };
     var lee = function () {
-      l.forEach(function (s, i) {
-        var n = hoja.querySelector('[data-svn="' + i + '"]'); if (!n) return;
-        s.nombre = n.value.trim(); s.min = +hoja.querySelector('[data-svm="' + i + '"]').value; s.precio = +String(hoja.querySelector('[data-svp="' + i + '"]').value).replace(/\D/g, '') || 0;
+      c.servicios.forEach(function (x, i) {
+        var q = function (a) { return cuerpo.querySelector('[' + a + '="' + i + '"]'); };
+        if (!q('data-sn')) return;
+        x.nombre = q('data-sn').value.trim(); x.min = +q('data-sm').value; x.precio = dinero(q('data-sp').value); x.cat = q('data-sc').value; x.desde = q('data-sd').checked;
+      });
+      c.variantes.forEach(function (x, i) {
+        var q = function (a) { return cuerpo.querySelector('[' + a + '="' + i + '"]'); };
+        if (!q('data-vn')) return;
+        x.nombre = q('data-vn').value.trim(); x.servicio = q('data-vs').value; x.extra = dinero(q('data-vp').value); x.extraMin = +q('data-vm').value;
+      });
+      c.largos.forEach(function (x, i) { var n = cuerpo.querySelector('[data-ln="' + i + '"]'); if (n) { x.nombre = n.value.trim(); x.extra = dinero(cuerpo.querySelector('[data-lp="' + i + '"]').value); } });
+      var a = cuerpo.querySelector('#svAnt'); if (a) c.anticipo = dinero(a.value);
+    };
+    var pinta = function () {
+      var eq = equipo(), h = '<section class="sv-sec"><span class="etq">Servicios</span>';
+      h += c.servicios.map(function (x, i) {
+        if (!x.id) x.id = 'n' + Date.now().toString(36) + i;
+        return '<div class="sv-fila"><input class="campo" data-sn="' + i + '" maxlength="80" value="' + esc(x.nombre) + '" placeholder="Nombre del servicio" aria-label="Nombre del servicio">' +
+          '<button type="button" class="cerrar" data-sq="' + i + '" aria-label="Quitar ' + esc(x.nombre) + '">✕</button>' +
+          '<select class="campo" data-sm="' + i + '" aria-label="Cuánto dura">' + opDur(x.min) + '</select>' +
+          '<input class="campo" data-sp="' + i + '" inputmode="numeric" maxlength="7" value="' + (x.precio ? '$' + x.precio : '') + '" placeholder="$ precio" aria-label="Precio">' +
+          '<select class="campo sv-cat" data-sc="' + i + '" aria-label="Grupo"><option value="">Sin grupo</option>' + cats().concat(x.cat && cats().indexOf(x.cat) < 0 ? [x.cat] : []).map(function (t) { return '<option' + (t === x.cat ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') + '<option value="__nuevo">+ Grupo nuevo…</option></select>' +
+          '<label class="sv-desde"><input type="checkbox" data-sd="' + i + '"' + (x.desde ? ' checked' : '') + '> Precio «desde»</label>' +
+          (eq.length > 1 ? '<div class="chips sv-quien" role="group" aria-label="Quién lo hace"><span>Lo hace:</span>' + [{ id: '', nombre: 'Cualquiera' }].concat(eq).map(function (p) {
+            var on = p.id ? x.quien.indexOf(p.id) >= 0 : !x.quien.length;
+            return '<button type="button" class="chip" data-sw="' + i + '|' + esc(p.id) + '" aria-pressed="' + on + '">' + esc(p.nombre) + '</button>';
+          }).join('') + '</div>' : '') + '</div>';
+      }).join('') + '<button type="button" class="btn bloque" id="svMas">+ Agregar servicio</button></section>';
+      h += '<section class="sv-sec"><span class="etq">Diseños o variantes</span><p class="nota" style="text-align:left;margin:0">Van con un servicio y suman al precio (y al tiempo, si tardan más).</p>' +
+        c.variantes.map(function (x, i) {
+          return '<div class="sv-fila"><input class="campo" data-vn="' + i + '" maxlength="80" value="' + esc(x.nombre) + '" placeholder="Nombre del diseño" aria-label="Nombre del diseño">' +
+            '<button type="button" class="cerrar" data-vq="' + i + '" aria-label="Quitar ' + esc(x.nombre) + '">✕</button>' +
+            '<select class="campo" data-vs="' + i + '" aria-label="Para qué servicio">' + c.servicios.map(function (sv) { return '<option value="' + esc(sv.id) + '"' + (sv.id === x.servicio ? ' selected' : '') + '>' + esc(sv.nombre || 'Servicio sin nombre') + '</option>'; }).join('') + '</select>' +
+            '<input class="campo" data-vp="' + i + '" inputmode="numeric" maxlength="7" value="' + (x.extra ? '$' + x.extra : '') + '" placeholder="+ $ extra" aria-label="Costo extra">' +
+            '<select class="campo sv-cat" data-vm="' + i + '" aria-label="Tiempo extra">' + opDur(x.extraMin || 0, true) + '</select></div>';
+        }).join('') + (c.servicios.length ? '<button type="button" class="btn bloque" id="svMasV">+ Agregar diseño</button>' : '') + '</section>';
+      h += '<section class="sv-sec"><span class="etq">Largos o tamaños</span><p class="nota" style="text-align:left;margin:0">Suman al precio en los grupos que elijas.</p>' +
+        c.largos.map(function (x, i) {
+          return '<div class="sv-fila sv-corta"><input class="campo" data-ln="' + i + '" maxlength="40" value="' + esc(x.nombre) + '" placeholder="Corto, medio, largo…" aria-label="Largo">' +
+            '<input class="campo" data-lp="' + i + '" inputmode="numeric" maxlength="7" value="' + (x.extra ? '$' + x.extra : '') + '" placeholder="+ $ extra" aria-label="Costo extra">' +
+            '<button type="button" class="cerrar" data-lq="' + i + '" aria-label="Quitar ' + esc(x.nombre) + '">✕</button></div>';
+        }).join('') + '<button type="button" class="btn bloque" id="svMasL">+ Agregar largo</button>' +
+        (c.largos.length && cats().length ? '<div class="chips" role="group" aria-label="En qué grupos aplican"><span class="sv-en">Aplican en:</span>' + cats().map(function (t) {
+          return '<button type="button" class="chip" data-len="' + esc(t) + '" aria-pressed="' + (c.largosEn.indexOf(t) >= 0) + '">' + esc(t) + '</button>';
+        }).join('') + '</div>' : '') + '</section>';
+      h += '<section class="sv-sec"><label class="etq" for="svAnt">Anticipo para apartar</label><input class="campo" id="svAnt" inputmode="numeric" maxlength="7" value="' + (c.anticipo ? '$' + c.anticipo : '') + '" placeholder="$ (vacío si no pides)"></section>';
+      cuerpo.innerHTML = h;
+      var en = function (sel, f) { cuerpo.querySelectorAll(sel).forEach(function (b) { b.onclick = function () { lee(); f(b); pinta(); }; }); };
+      en('[data-sq]', function (b) { var i = +b.getAttribute('data-sq'), id = c.servicios[i].id; c.servicios.splice(i, 1); c.variantes = c.variantes.filter(function (v) { return v.servicio !== id; }); });
+      en('[data-vq]', function (b) { c.variantes.splice(+b.getAttribute('data-vq'), 1); });
+      en('[data-lq]', function (b) { c.largos.splice(+b.getAttribute('data-lq'), 1); });
+      en('[data-sw]', function (b) {
+        var p = b.getAttribute('data-sw').split('|'), x = c.servicios[+p[0]];
+        if (!p[1]) x.quien = []; else { var k = x.quien.indexOf(p[1]); if (k >= 0) x.quien.splice(k, 1); else x.quien.push(p[1]); }
+      });
+      en('[data-len]', function (b) { var t = b.getAttribute('data-len'), k = c.largosEn.indexOf(t); if (k >= 0) c.largosEn.splice(k, 1); else c.largosEn.push(t); });
+      en('#svMas', function () { c.servicios.push({ id: '', nombre: '', cat: cats()[0] || '', min: 60, precio: 0, desde: false, quien: [] }); });
+      en('#svMasV', function () { c.variantes.push({ id: '', nombre: '', servicio: c.servicios[0].id, extra: 0, extraMin: 0 }); });
+      en('#svMasL', function () { c.largos.push({ nombre: '', extra: 0 }); });
+      cuerpo.querySelectorAll('[data-sc]').forEach(function (s) {
+        s.onchange = function () {
+          if (s.value !== '__nuevo') return;
+          var t = (prompt('Nombre del grupo nuevo (por ejemplo: Uñas, Pestañas, Cortes):') || '').trim().slice(0, 40);
+          lee(); c.servicios[+s.getAttribute('data-sc')].cat = t; pinta();
+        };
       });
     };
-    pintaL();
-    document.getElementById('svMas').onclick = function () { lee(); l.push({ nombre: '', min: 60, precio: 0, cat: '' }); pintaL(); var u = hoja.querySelector('[data-svn="' + (l.length - 1) + '"]'); if (u) u.focus(); };
+    pinta();
     document.getElementById('svOk').onclick = function () {
       lee();
       var f = document.getElementById('svFalta'), b = this;
-      var buenos = l.filter(function (s) { return s.nombre; });
+      var buenos = c.servicios.filter(function (x) { return x.nombre; });
       if (!buenos.length) { f.textContent = 'Agrega al menos un servicio.'; return; }
-      b.disabled = true;
-      envia('/servicios', { metodo: 'PUT', body: { servicios: buenos } }).then(function (x) {
+      b.disabled = true; f.textContent = '';
+      envia('/servicios', { metodo: 'PUT', body: { servicios: buenos, variantes: c.variantes.filter(function (x) { return x.nombre; }), largos: c.largos.filter(function (x) { return x.nombre; }), largosEn: c.largosEn, anticipo: c.anticipo } }).then(function (x) {
         b.disabled = false;
         if (x.status === 401) return salir(false);
         if (x.status !== 200) { f.textContent = x.d.error || 'No se pudo guardar'; return; }
-        perfil.servicios = { lista: x.d.servicios, aprendidos: false };
-        toast('Listo: tu lista quedó guardada'); cierraHoja(); if (luego) luego();
+        perfil.servicios = x.d.cartera;
+        toast('Listo: tus servicios quedaron guardados'); cierraHoja(); if (luego) luego();
       }, function () { b.disabled = false; f.textContent = 'Sin conexión.'; });
     };
   }
+
   function abreNuevaCita(d, pre) {
     pre = pre || {};
     var st = { min: 60, persona: pre.persona != null ? pre.persona : (equipo().length ? (personaSel || equipo()[0].id) : '') };
@@ -1436,9 +1500,10 @@
       '<p class="nota" style="text-align:left;margin-top:2px">La que te pidieron por teléfono o en persona. Entra ya confirmada.</p>' +
       '<form id="fCita" novalidate><div class="campo-h"><label class="etq" for="ncNombre">Nombre</label><input class="campo" id="ncNombre" maxlength="60" autocomplete="off" required>' +
       '<label class="etq" for="ncTel">WhatsApp (10 dígitos)</label><input class="campo" id="ncTel" inputmode="tel" maxlength="14" autocomplete="off" required placeholder="844 123 4567"></div>' +
-      '<div class="campo-h">' + campoServicio() +
+      '<div class="campo-h">' + campoServicio() + '<div id="ncExtras" class="nc-extras"></div>' +
       '<span class="etq">Dura</span><div class="chips" role="group" aria-label="Cuánto dura" id="ncDuras">' + chipsDuracion(st.min) + '</div>' +
-      '<label class="etq" for="ncPrecio">Precio (opcional)</label><input class="campo" id="ncPrecio" inputmode="numeric" maxlength="7" placeholder="$"></div>' +
+      '<label class="etq" for="ncPrecio">Precio</label><input class="campo" id="ncPrecio" inputmode="numeric" maxlength="7" placeholder="$">' +
+      (cartera().anticipo ? '<button type="button" class="chip" id="ncAnt" aria-pressed="false">Ya pagó su anticipo · ' + esc(pesos(cartera().anticipo)) + '</button>' : '') + '</div>' +
       '<div class="campo-h"><div class="dos"><label><span class="etq">Día</span><input class="campo" type="date" id="ncFecha" value="' + esc(pre.fecha || diaSel || d.hoy) + '" min="' + esc(d.hoy) + '"></label>' +
       '<label><span class="etq">Hora</span><select class="campo" id="ncHora">' + opcionesHora(hhmm(pre.ini != null ? pre.ini : 600), 360, 1380) + '</select></label></div></div>' +
       (equipo().length ? '<div class="campo-h"><span class="etq">¿Con quién?</span><div class="chips" role="group" aria-label="Con quién">' +
@@ -1446,22 +1511,52 @@
       '<p class="falta" id="ncFalta" role="alert"></p><button class="btn negro bloque grande" id="ncOk">Apartar cita</button></form>');
     eligeEn(hoja, 'data-dur', function (m) { st.min = +m; });
     eligeEn(hoja, 'data-con', function (p) { st.persona = p; });
-    // Al elegir un servicio de la lista se ponen solos su duración y su precio (se pueden cambiar)
+    // Al elegir un servicio salen sus diseños y largos; la duración, el precio (el más reciente de su cartera) y quién lo hace se ponen solos.
+    // Si ella escribe otro precio a mano, se respeta.
     var sel = document.getElementById('ncServSel'), otro = document.getElementById('ncServ'), precioAuto = '';
+    st.serv = null; st.vari = ''; st.largo = ''; st.ant = false;
+    var recalcula = function () {
+      var s = st.serv; if (!s) return;
+      var v = variantesDe(s.id).filter(function (x) { return x.id === st.vari; })[0], l = largosDe(s).filter(function (x) { return x.nombre === st.largo; })[0];
+      st.min = s.min + (v ? v.extraMin : 0);
+      document.getElementById('ncDuras').innerHTML = chipsDuracion(st.min); eligeEn(hoja, 'data-dur', function (m) { st.min = +m; });
+      var pr = document.getElementById('ncPrecio'), total = s.precio + (v ? v.extra : 0) + (l ? l.extra : 0);
+      if (!pr.value || pr.value === precioAuto) { pr.value = total ? '$' + total : ''; precioAuto = pr.value; }
+    };
+    var pintaExtras = function () {
+      var s = st.serv, x = document.getElementById('ncExtras'), h = '';
+      if (s) {
+        var vs = variantesDe(s.id), ls = largosDe(s);
+        if (vs.length) h += '<span class="etq">Diseño</span><div class="chips" role="group" aria-label="Diseño">' + [{ id: '', nombre: 'Sin diseño', extra: 0 }].concat(vs).map(function (v) {
+          return '<button type="button" class="chip" data-vari="' + esc(v.id) + '" aria-pressed="' + (v.id === st.vari) + '">' + esc(v.nombre) + (v.extra ? ' <small>+' + esc(pesos(v.extra)) + '</small>' : '') + '</button>';
+        }).join('') + '</div>';
+        if (ls.length) h += '<span class="etq">Largo</span><div class="chips" role="group" aria-label="Largo">' + ls.map(function (l) {
+          return '<button type="button" class="chip" data-largo="' + esc(l.nombre) + '" aria-pressed="' + (l.nombre === st.largo) + '">' + esc(l.nombre) + (l.extra ? ' <small>+' + esc(pesos(l.extra)) + '</small>' : '') + '</button>';
+        }).join('') + '</div>';
+      }
+      x.innerHTML = h;
+      eligeEn(x, 'data-vari', function (v) { st.vari = v; recalcula(); });
+      eligeEn(x, 'data-largo', function (v) { st.largo = v; recalcula(); });
+    };
     if (sel) sel.onchange = function () {
       var s = listaServicios()[+sel.value];
       otro.hidden = sel.value !== 'otro'; if (!otro.hidden) otro.focus();
-      if (!s) return;
-      st.min = s.min; document.getElementById('ncDuras').innerHTML = chipsDuracion(st.min); eligeEn(hoja, 'data-dur', function (m) { st.min = +m; });
-      var pr = document.getElementById('ncPrecio');
-      if (!pr.value || pr.value === precioAuto) { pr.value = s.precio ? '$' + s.precio : ''; precioAuto = pr.value; }
+      st.serv = s || null; st.vari = ''; st.largo = s && largosDe(s).length ? largosDe(s)[0].nombre : '';
+      pintaExtras(); if (!s) return;
+      // Si sólo una persona del equipo hace ese servicio, ya queda elegida
+      var q = (s.quien || []).filter(function (id) { return equipo().some(function (p) { return p.id === id; }); });
+      if (q.length === 1) { st.persona = q[0]; hoja.querySelectorAll('[data-con]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-con') === q[0]); }); }
+      recalcula();
     };
+    var ant = document.getElementById('ncAnt'); if (ant) ant.onclick = function () { st.ant = !st.ant; ant.setAttribute('aria-pressed', st.ant); };
     var ed = document.getElementById('ncEditaServ'); if (ed) ed.onclick = function () { abreServicios(function () { abreNuevaCita(d, pre); }); };
     document.getElementById('fCita').onsubmit = function (e) {
       e.preventDefault();
       var falta = document.getElementById('ncFalta');
       var c = { nombre: document.getElementById('ncNombre').value.trim(), tel: document.getElementById('ncTel').value.replace(/\D/g, '').slice(-10),
         servicio: servicioElegido(), precio: +String(document.getElementById('ncPrecio').value).replace(/\D/g, '') || 0,
+        diseno: st.serv && st.vari ? (variantesDe(st.serv.id).filter(function (v) { return v.id === st.vari; })[0] || {}).nombre || '' : '',
+        largo: st.serv ? st.largo : '', anticipo: st.ant ? cartera().anticipo : 0,
         fecha: document.getElementById('ncFecha').value, hora: document.getElementById('ncHora').value, min: st.min, persona: st.persona };
       falta.textContent = '';
       if (c.nombre.length < 2) { falta.textContent = 'Escribe su nombre.'; return; }
@@ -1522,6 +1617,7 @@
   function ata(d) {
     var s = document.getElementById('salir'); if (s) s.onclick = function () { if (confirm('¿Salir de tu agenda en ' + este + '?')) salir(); };
     var sg = document.getElementById('seguridad'); if (sg) sg.onclick = abreSeguridad;
+    var ms = document.getElementById('misServ'); if (ms) ms.onclick = function () { abreServicios(); };
     raiz.querySelectorAll('[data-vista]').forEach(function (b) {
       b.onclick = function () { irA(b.getAttribute('data-vista')); };
     });
@@ -1530,7 +1626,7 @@
     var nc = document.getElementById('nuevaCita'); if (nc) nc.onclick = function () { abreNuevaCita(ultimo); };
     raiz.querySelectorAll('[data-lado]').forEach(function (b) {
       var q = b.getAttribute('data-lado');
-      b.onclick = q === 'avisos' ? abreAvisos : q === 'seguridad' ? abreSeguridad : q === 'nueva' ? function () { abreNuevaCita(ultimo); }
+      b.onclick = q === 'avisos' ? abreAvisos : q === 'seguridad' ? abreSeguridad : q === 'servicios' ? function () { abreServicios(); } : q === 'nueva' ? function () { abreNuevaCita(ultimo); }
         : function () { if (confirm('¿Salir de tu agenda en ' + este + '?')) salir(); };
     });
     var av = document.getElementById('abreAvisos'); if (av) av.onclick = abreAvisos;
@@ -1666,6 +1762,7 @@
         nombre: b.nombre, tel: b.tel, estado: 'confirmada', origen: 'negocio', recordada: 0 });
       return { status: 201, d: { folio: 'C-EJEM' + demoId, estado: 'confirmada' } };
     }
+    if (ruta === '/servicios') return { status: 200, d: { cartera: Object.assign({}, b, { lista: b.servicios, aprendidos: false }) } };
     if ((m = ruta.match(/^\/citas\/(.+)\/enlace$/))) return { status: 200, d: { enlace: perfil.pagina + '?cita=' + m[1] + '&t=EJEMPLO' } };
     if ((m = ruta.match(/^\/citas\/(.+)\/correo$/))) return { status: 200, d: { ok: true } };
     if ((m = ruta.match(/^\/citas\/(.+)\/estado$/))) { d.citas.forEach(function (c) { if (c.folio === decodeURIComponent(m[1])) c.estado = b.estado; }); return { status: 200, d: { ok: true } }; }
@@ -1703,7 +1800,10 @@
     perfil = { nombre: 'Atelier Mía', equipo: [{ id: 'mia', nombre: 'Mía' }, { id: 'fer', nombre: 'Fernanda' }], pagina: 'https://solidaaplicaciones.com/ejemplos/unas/avanzado/',
       servicios: { lista: [{ nombre: 'Gelish en manos', min: 60, precio: 280, cat: 'Uñas' }, { nombre: 'Acrílico esculpido', min: 120, precio: 450, cat: 'Uñas' }, { nombre: 'Pedicure spa con gelish', min: 75, precio: 380, cat: 'Uñas' },
         { nombre: 'Pestañas clásicas', min: 120, precio: 650, cat: 'Pestañas' }, { nombre: 'Volumen ruso', min: 150, precio: 850, cat: 'Pestañas' }, { nombre: 'Lifting de pestañas', min: 60, precio: 400, cat: 'Pestañas' },
-        { nombre: 'Diseño de cejas', min: 45, precio: 250, cat: 'Cejas' }], aprendidos: false } };
+        { nombre: 'Diseño de cejas', min: 45, precio: 250, cat: 'Cejas' }].map(function (x) { x.id = x.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-'); x.quien = x.cat === 'Pestañas' ? ['fer'] : x.cat === 'Uñas' ? ['mia'] : []; return x; }),
+        variantes: [{ id: 'french', nombre: 'French clásico', servicio: 'gelish-en-manos', extra: 40, extraMin: 0 }, { id: 'perla', nombre: 'Chrome perla', servicio: 'gelish-en-manos', extra: 80, extraMin: 15 }, { id: 'baby', nombre: 'Baby boomer', servicio: 'acrilico-esculpido', extra: 120, extraMin: 30 }],
+        largos: [{ nombre: 'Corto', extra: 0 }, { nombre: 'Medio', extra: 0 }, { nombre: 'Largo', extra: 50 }], largosEn: ['Uñas'], anticipo: 100, aprendidos: false } };
+    perfil.servicios.lista = perfil.servicios.servicios = perfil.servicios.lista;
     document.title = 'Agenda · ' + perfil.nombre + ' (ejemplo)';
     carga();
   } else {
