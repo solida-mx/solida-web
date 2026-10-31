@@ -195,10 +195,19 @@ try {
   const ico = await crudo('/atelier-mia/icono.svg');
   assert.equal(ico.headers.get('content-type'), 'image/svg+xml'); assert.match(await ico.text(), />AM</);
   for (const f of ['/_app/app.js', '/_app/app.css', '/_app/icono-192.png', '/_app/icono-512.png', '/_app/icono-180.png', '/atelier-mia/sw.js']) assert.equal((await crudo(f)).status, 200, f);
+  // El ícono con su marca: sin hacerlo todavía, el de Tu agenda; ya hecho, el suyo (el index y el manifiesto apuntan ahí)
+  assert.deepEqual(mani.icons.map((i) => i.src), ['/atelier-mia/icono-192.png', '/atelier-mia/icono-512.png']);
+  assert.match(await (await crudo('/atelier-mia/')).text(), /apple-touch-icon" href="\/atelier-mia\/icono-180\.png"/);
+  const generico = Buffer.from(await (await crudo('/_app/icono-180.png')).arrayBuffer());
+  assert.ok(Buffer.from(await (await crudo('/atelier-mia/icono-180.png')).arrayBuffer()).equals(generico), 'sin ícono propio, el genérico');
+  const PIXEL = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  execFileSync('npx', ['wrangler', 'd1', 'execute', 'solida-citas', '--local', '--persist-to', persist, '--command', `UPDATE negocios SET icono='{"180":"${PIXEL}","192":"${PIXEL}","512":"${PIXEL}"}' WHERE id='atelier-mia'`], { stdio: 'ignore' });
+  const suyo = await crudo('/atelier-mia/icono-180.png');
+  assert.equal(suyo.headers.get('content-type'), 'image/png'); assert.equal(Buffer.from(await suyo.arrayBuffer()).toString('base64'), PIXEL, 'con ícono propio, el suyo');
   assert.equal((await crudo('/no-existe/')).status, 404); assert.equal((await crudo('/index.html')).status, 404);
   assert.equal((await crudo('/ejemplo/')).status, 200, 'la muestra del catálogo abre sin estar en la base');
   assert.equal((await crudo('/atelier-mia/', { method: 'POST' })).status, 405);
-  paso('la agenda vive en su propia dirección (/atelier-mia/), con manifiesto e icono con su nombre, para instalarla como app');
+  paso('la agenda vive en su propia dirección (/atelier-mia/), con manifiesto e ícono con su marca, para instalarla como app');
 
   // En un navegador de verdad
   const { createRequire } = await import('node:module');

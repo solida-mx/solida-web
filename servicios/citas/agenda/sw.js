@@ -24,8 +24,8 @@ self.addEventListener('push', (e) => {
     .catch(() => ({ avisos: [] }))
     .then((d) => {
       const l = d.avisos || [];
-      const op = (a) => ({ body: a.cuerpo, icon: '/_app/icono-192.png', badge: '/_app/icono-192.png', tag: 'aviso-' + a.id, data: { url: a.url || '/' + NEGOCIO + '/' } });
-      if (!l.length) return self.registration.showNotification('Tu agenda', { body: 'Tienes novedades en tu agenda.', icon: '/_app/icono-192.png', tag: 'agenda', data: { url: '/' + NEGOCIO + '/' } });
+      const op = (a) => ({ body: a.cuerpo, icon: '/' + NEGOCIO + '/icono-192.png', badge: '/' + NEGOCIO + '/icono-192.png', tag: 'aviso-' + a.id, data: { url: a.url || '/' + NEGOCIO + '/' } });
+      if (!l.length) return self.registration.showNotification('Tu agenda', { body: 'Tienes novedades en tu agenda.', icon: '/' + NEGOCIO + '/icono-192.png', tag: 'agenda', data: { url: '/' + NEGOCIO + '/' } });
       return Promise.all(l.map((a) => self.registration.showNotification(a.titulo, op(a))));
     }));
 });
