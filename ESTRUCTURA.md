@@ -1,6 +1,6 @@
 > **Solida Citas** (el servidor, la agenda de la dueña y la página de la clienta) vive ahora en su propio repositorio,
 > `solida-mx/solida-citas`; lo que dice abajo de la agenda describe ese repositorio. Aquí quedan sólo copias publicadas de
-> `ejemplos/unas/` y `prueba-agenda/` (ver su LEEME.md).
+> `ejemplos/unas/` y `prueba-agenda/`: se cambian en `solida-citas/pagina/` y se copian aquí para publicarlas, hasta que el servidor arme la página de cada negocio.
 >
 > **Catálogo de hoy (31 oct 2026):** sólo Uñas y pestañas (con Agenda Total), y las apps Mi Plan y GDP. Los demás
 > ejemplos, Invitaciones y SGN están guardados en `archivo/` (ver `archivo/LEEME.md`); sus direcciones llevan a la portada.
