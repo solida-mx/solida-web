@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Solida Aplicaciones — Páginas y apps para tu negocio</title>
+<meta name="description" content="Páginas para tu negocio, apps por suscripción e invitaciones de evento. Hecho en Coahuila, con atención por WhatsApp.">
+<link rel="icon" href="/iconos/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/iconos/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/iconos/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Solida">
+<meta name="theme-color" content="#1B396B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B396B;
+    --navy-2:#12274a;
+    --navy-3:#0d1e3a;
+    --teal:#2A9D8E;
+    --teal-bright:#34b9a7;
+    --teal-deep:#1f7f73;
+    --mist:#E8F6F6;
+    --gold:#d8a544;
+    --ink:#0f1f38;
+    --ink-soft:#4a5c78;
+    --paper:#f5f9fb;
+    --card:#ffffff;
+    --line:#e2ebf0;
+    --shadow:0 18px 44px rgba(16,39,74,.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Manrope",system-ui,sans-serif;
+    color:var(--ink);background:var(--paper);
+    -webkit-text-size-adjust:100%;line-height:1.55;
+  }
+  h1,h2,h3,.font-display{font-family:"Sora",sans-serif}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+  [id]{scroll-margin-top:72px}
+
+  /* ---------- HEADER ---------- */
+  header{position:sticky;top:0;z-index:50;background:rgba(27,57,107,.94);backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(255,255,255,.08)}
+  header .wrap{display:flex;align-items:center;gap:10px;padding-top:9px;padding-bottom:9px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0;min-height:44px;text-decoration:none}
+  .brand-mark{width:34px;height:34px;border-radius:9px;background:var(--navy-3);
+    display:flex;align-items:center;justify-content:center;flex:none;padding:6px}
+  .brand-name{display:flex;flex-direction:column;line-height:1.05;min-width:0}
+  .brand-name b{font-family:"Sora";font-weight:700;color:#fff;font-size:14px;letter-spacing:.2px}
+  .brand-name span{font-size:9.5px;letter-spacing:.22em;color:var(--teal-bright);text-transform:uppercase}
+  .nav{margin-left:auto;display:flex;align-items:center;gap:4px}
+  .nav .sec-link{display:none;min-height:44px;align-items:center;padding:0 12px;color:var(--mist);
+    font-weight:700;font-size:14px;text-decoration:none;border-radius:999px}
+  .nav .sec-link:hover{background:rgba(255,255,255,.08)}
+  .cli-mini{display:flex;align-items:center;min-height:44px;color:var(--mist);text-decoration:none;font-weight:700;font-size:12.5px;
+    padding:0 13px;border-radius:999px;border:1px solid rgba(232,246,246,.35);white-space:nowrap}
+  .cli-mini:hover{border-color:var(--teal-bright);color:#fff}
+  .wa-mini{flex:none;background:var(--teal-bright);color:var(--navy-3);text-decoration:none;
+    font-weight:800;font-size:12.5px;min-height:44px;padding:0 14px;border-radius:999px;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;transition:transform .15s,box-shadow .2s}
+  .wa-mini:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(42,157,142,.45)}
+  .wa-mini .wa-t{display:none}
+  @media (min-width:420px){.wa-mini .wa-t{display:inline}}
+  @media (min-width:860px){.nav .sec-link{display:flex}.cli-mini{margin-left:6px}}
+
+  /* ---------- HERO ---------- */
+  .hero{color:#fff;background:radial-gradient(120% 120% at 80% -10%, #244a86 0%, var(--navy) 45%, var(--navy-2) 100%)}
+  .hero .wrap{display:flex;flex-wrap:wrap;gap:28px 48px;align-items:center;padding-top:34px;padding-bottom:36px}
+  .hero-txt{flex:1 1 440px;min-width:0}
+  .eyebrow-pill{display:inline-block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--mist);border:1px solid rgba(232,246,246,.35);border-radius:999px;padding:6px 14px;font-weight:700}
+  .hero h1{margin-top:16px;font-size:clamp(30px,6.4vw,52px);font-weight:800;line-height:1.08;letter-spacing:-.6px}
+  .hero h1 .accent{color:var(--teal-bright)}
+  .hero p.sub{margin-top:14px;font-size:clamp(15px,2vw,18px);color:#d4e2f2;font-weight:500;max-width:46ch}
+  .hero-note{margin-top:20px;font-size:13px;color:#c9d8ea;font-weight:600}
+  .doors{flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:10px}
+  .door{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.16);text-decoration:none;color:#fff;transition:background .18s,transform .12s}
+  .door:hover{background:rgba(255,255,255,.13)}
+  .door:active{transform:scale(.99)}
+  .door-ico{width:48px;height:48px;border-radius:14px;flex:none;background:var(--mist);color:var(--teal-deep);
+    display:flex;align-items:center;justify-content:center}
+  .door-t{flex:1;min-width:0}
+  .door-t b{display:block;font-family:"Sora";font-weight:800;font-size:16px;line-height:1.2}
+  .door-t span{font-size:13px;color:#c9d8ea}
+  .door>svg{flex:none;color:var(--teal-bright)}
+
+  /* ---------- SECCIONES ---------- */
+  .sec{padding-top:44px}
+  .kick{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-deep);margin-bottom:6px}
+  .h2{font-size:clamp(24px,3.6vw,34px);font-weight:800;line-height:1.15;color:var(--navy);letter-spacing:-.3px}
+  .lead{margin-top:8px;font-size:clamp(14.5px,1.8vw,16px);color:var(--ink-soft);font-weight:500;max-width:62ch}
+  @media (min-width:860px){.sec{padding-top:72px}}
+
+  /* ---------- GIROS: cuadros de 2 en 2 (3 en 3 en computadora), un color por giro ---------- */
+  /* Cada cuadro trae su color en --c (tinta), --t (fondo del icono) y --f (relleno al elegirlo). Ver COLORES en el script. */
+  .segments{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+  @media (min-width:760px){.segments{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}}
+  .seg-btn{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:168px;padding:16px 14px 14px;
+    border-radius:18px;border:1.5px solid var(--line);background:var(--card);box-shadow:0 8px 20px rgba(16,39,74,.06);
+    font-family:inherit;color:var(--ink);text-align:left;cursor:pointer;transition:border-color .18s,background .18s,box-shadow .18s,transform .12s}
+  .seg-btn:hover{border-color:var(--c)}
+  .seg-btn:active{transform:scale(.985)}
+  .seg-btn:focus-visible{outline:3px solid var(--c);outline-offset:2px}
+  .seg-ico{width:60px;height:60px;border-radius:16px;background:var(--t);color:var(--c);display:flex;align-items:center;justify-content:center;flex:none}
+  .seg-t{font-family:"Sora";font-weight:800;font-size:15.5px;line-height:1.2}
+  .seg-d{font-size:12.5px;color:var(--ink-soft);font-weight:600;line-height:1.35}
+  .seg-p{margin-top:auto;font-size:12px;font-weight:800;color:var(--c)}
+  .seg-ok{position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:999px;background:var(--c);color:#fff;
+    display:none;align-items:center;justify-content:center}
+  .seg-btn[aria-pressed="true"]{background:var(--f);border:2.5px solid var(--c);padding:15px 13px 13px;box-shadow:0 14px 30px rgba(16,39,74,.14)}
+  .seg-btn[aria-pressed="true"] .seg-ok{display:flex}
+  @media (min-width:760px){.seg-btn{min-height:150px;padding:20px 18px 18px}.seg-btn[aria-pressed="true"]{padding:19px 17px 17px}}
+  .seg-new{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--c);padding:3px 8px;border-radius:999px}
+  .seg-txt{display:flex;flex-direction:column;align-items:flex-start;gap:8px;flex:1;width:100%;min-width:0}
+  .seg-btn.solo{grid-column:1/-1;flex-direction:row;align-items:center;min-height:0}
+  .seg-btn.solo .seg-txt{gap:4px}
+  .seg-btn.solo .seg-p{margin-top:0}
+  .seg-sel{display:flex;align-items:center;gap:10px;margin-top:22px}
+  .seg-sel::before,.seg-sel::after{content:"";height:1px;flex:1;background:#d5e2ea}
+  .seg-sel span{font-size:12px;font-weight:800;color:var(--ink-soft);letter-spacing:.08em;text-transform:uppercase;text-align:center}
+
+  /* ---------- PAQUETES ---------- */
+  .pricing-body{margin-top:18px}
+  .seg-intro{margin-bottom:18px}
+  .seg-intro h3{font-size:20px;font-weight:800;letter-spacing:-.3px}
+  .seg-intro p{margin-top:6px;color:var(--ink-soft);font-size:14px;font-weight:500;max-width:62ch}
+  .tiers{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+  @media (min-width:900px){.tiers{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}}
+  .tier{position:relative;background:var(--card);border:1.5px solid var(--line);border-radius:18px;
+    padding:22px 20px;box-shadow:0 6px 18px rgba(16,39,74,.05);display:flex;flex-direction:column;
+    transition:transform .18s ease,box-shadow .22s ease,border-color .18s ease}
+  .tier:hover{transform:translateY(-4px);box-shadow:0 20px 44px rgba(16,39,74,.14)}
+  .tier.reco{border:2px solid var(--teal-deep);box-shadow:var(--shadow)}
+  .ribbon{position:absolute;top:-11px;right:18px;background:var(--gold);color:#3a2a06;
+    font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:5px 11px;border-radius:999px;box-shadow:0 4px 10px rgba(216,165,68,.4);
+    animation:pop .45s cubic-bezier(.3,1.6,.4,1) both;animation-delay:.35s}
+  @keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+  .tier-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .tier-level{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-deep);font-weight:800}
+  .tier-name{font-family:"Sora";font-weight:700;font-size:18px;margin-top:3px;letter-spacing:-.2px}
+  .rank{display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex:none;padding-top:3px}
+  .rank i{display:block;height:5px;border-radius:999px;background:var(--teal)}
+  .rank i:nth-child(1){width:12px;opacity:.4}
+  .rank i:nth-child(2){width:18px;opacity:.7}
+  .rank i:nth-child(3){width:24px}
+  .rank.lv1 i:nth-child(2),.rank.lv1 i:nth-child(3){opacity:.16}
+  .rank.lv2 i:nth-child(3){opacity:.16}
+  .price{margin:14px 0 4px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .price .amt{font-family:"Sora";font-weight:800;font-size:30px;color:var(--navy);letter-spacing:-.5px}
+  .price .unit{font-size:12.5px;color:var(--ink-soft);font-weight:600}
+  .price .plus{font-size:13px;color:var(--teal-deep);font-weight:700}
+  .feats{list-style:none;margin:14px 0 0;display:flex;flex-direction:column;gap:9px}
+  .feats li{display:flex;gap:9px;font-size:13.5px;color:#2c3d59;font-weight:500;line-height:1.4}
+  .feats li svg{flex:none;margin-top:2px}
+  .tier-acts{margin-top:auto;padding-top:18px}
+  .tier-cta{display:flex;align-items:center;justify-content:center;min-height:48px;width:100%;text-decoration:none;
+    background:var(--navy);color:#fff;font-family:"Sora";font-weight:700;font-size:14px;border-radius:999px;transition:transform .12s}
+  .tier.reco .tier-cta{background:var(--teal-deep)}
+  .tier-cta:active{transform:translateY(1px)}
+  .tier-demo{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;width:100%;margin-bottom:9px;
+    text-decoration:none;font-family:"Sora";font-weight:700;font-size:14px;color:var(--teal-deep);
+    border:1.5px solid var(--teal-deep);border-radius:999px;transition:background .15s,color .15s}
+  .tier-demo:hover{background:var(--teal-deep);color:#fff}
+  .tier-demo svg{flex:none}
+  .tier-demos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .tier-demos .tier-demo{margin-bottom:0}
+  .tier-demos-nota{margin:6px 0 9px;font-size:12.5px;color:var(--ink-soft);text-align:center}
+  .tier-start{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;min-height:44px;
+    text-decoration:none;font-weight:700;font-size:13px;color:var(--teal-deep)}
+  .tier-start:hover{text-decoration:underline}
+  .qr-linea{margin-top:16px;display:flex;gap:12px;align-items:center;background:var(--card);border:1.5px dashed #c7d6df;border-radius:14px;
+    padding:12px 14px;font-size:13.5px;color:#33445f;font-weight:600;line-height:1.45}
+  .qr-linea svg{flex:none;color:var(--navy)}
+  .note{margin-top:16px;background:var(--mist);border-radius:14px;padding:14px 16px;
+    display:flex;gap:11px;align-items:flex-start;font-size:13px;color:#245a52;font-weight:600;line-height:1.45}
+  .note svg{flex:none;margin-top:1px}
+
+  /* ---------- APPS ---------- */
+  .apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:20px}
+  .app{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;
+    box-shadow:0 10px 26px rgba(16,39,74,.07);display:flex;flex-direction:column;gap:12px}
+  .app-top{display:flex;align-items:center;gap:14px}
+  .app-top img{width:56px;height:56px;border-radius:14px;flex:none;display:block}
+  .app-top h3{font-size:19px;font-weight:800;line-height:1.2;margin-top:3px}
+  .pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+  .app p{font-size:14.5px;color:#33445f;font-weight:500}
+  .app ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .app li{display:flex;gap:8px;font-size:13.5px;color:#33445f;font-weight:600}
+  .app li svg{flex:none;margin-top:2px}
+  .app-pie{margin-top:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
+  .app-precio{flex:1;min-width:120px}
+  .app-precio b{font-family:"Sora";font-weight:800;font-size:22px;color:var(--navy)}
+  .app-precio span{font-size:12.5px;color:var(--ink-soft);font-weight:600}
+  .app-cta{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:999px;
+    background:var(--teal-bright);color:var(--navy-3);text-decoration:none;font-family:"Sora";font-weight:800;font-size:14px}
+  .app-cta:active{transform:translateY(1px)}
+
+  /* ---------- INVITACIONES ---------- */
+  .inv{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px 16px;box-shadow:0 10px 26px rgba(16,39,74,.07)}
+  .inv .seg-intro{display:none}
+  @media (min-width:640px){.inv{padding:26px}}
+
+  /* ---------- ASÍ TRABAJAMOS ---------- */
+  .pasos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px;margin-top:18px}
+  .paso{display:flex;gap:12px}
+  .paso>b{width:36px;height:36px;flex:none;border-radius:999px;background:var(--navy);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-family:"Sora";font-weight:800;font-size:15px}
+  .paso strong{display:block;font-family:"Sora";font-weight:800;font-size:15.5px}
+  .paso span{font-size:14px;color:var(--ink-soft);font-weight:500}
+
+  /* ---------- CIERRE ---------- */
+  .cierre{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;padding-bottom:44px}
+  .final-card{background:var(--navy);border-radius:22px;padding:28px 22px;color:#fff;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+  .final-card h2,.client-strip h2{font-size:22px;font-weight:800;letter-spacing:-.3px}
+  .final-card p{font-size:14.5px;color:#d4e2f2;font-weight:500}
+  .final-cta{margin-top:6px;display:inline-flex;align-items:center;gap:9px;background:var(--teal-bright);color:var(--navy-3);min-height:50px;
+    text-decoration:none;font-family:"Sora";font-weight:800;font-size:15px;padding:0 24px;border-radius:999px;transition:transform .15s}
+  .final-cta:hover{transform:translateY(-2px)}
+  .client-strip{background:var(--card);border:1.5px solid var(--line);border-radius:22px;padding:28px 22px}
+  .client-strip h2{color:var(--navy)}
+  .client-strip p{margin-top:6px;font-size:14px;color:var(--ink-soft);font-weight:500}
+  .cs-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:16px}
+  .cs-btn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;min-height:48px;
+    font-family:"Sora";font-weight:700;font-size:13.5px;border-radius:999px;padding:0 14px}
+  .cs-btn.solid{background:var(--navy);color:#fff}
+  .cs-btn.ghost{border:1.5px solid var(--teal-deep);color:var(--teal-deep)}
+  .cs-btn.ghost:hover{background:var(--mist)}
+
+  /* ---------- FOOTER ---------- */
+  footer{background:var(--navy-3);color:#c9d8ea}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:center;padding-top:28px;padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+  footer .brand-name b{font-size:15px}
+  .f-links{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:14px;font-weight:600}
+  .f-links a{color:var(--mist);text-decoration:none;min-height:44px;display:flex;align-items:center}
+  .f-links a:hover{color:#fff;text-decoration:underline}
+  .f-tag{width:100%;font-size:12px;color:#9fb4d3}
+
+  /* ---------- ANIMACIONES ---------- */
+  .anim-in{opacity:0;transform:translateY(18px)}
+  .anim-in.show{opacity:1;transform:none;transition:opacity .5s ease,transform .5s cubic-bezier(.2,.9,.3,1)}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.9,.3,1)}
+  .reveal.on{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .ribbon{animation:none!important}
+    .anim-in,.reveal{opacity:1!important;transform:none!important;transition:none!important}
+    .tier:hover,.wa-mini:hover,.final-cta:hover{transform:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Solida Aplicaciones, inicio">
+      <span class="brand-mark">
+        <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
+          <rect x="30" y="18" width="40" height="15" rx="7.5" fill="#2A9D8E"/>
+          <rect x="22" y="42" width="56" height="15" rx="7.5" fill="#E8F6F6"/>
+          <rect x="14" y="66" width="72" height="15" rx="7.5" fill="#2A9D8E"/>
+        </svg>
+      </span>
+      <span class="brand-name"><b>Solida</b><span>Aplicaciones</span></span>
+    </a>
+    <nav class="nav" aria-label="Secciones">
+      <a class="sec-link" href="#paginas">Páginas</a>
+      <a class="sec-link" href="#apps">Apps</a>
+      <a class="sec-link" href="#invitaciones">Invitaciones</a>
+      <a class="cli-mini" href="soporte/">Soy cliente</a>
+      <a class="wa-mini" href="https://wa.me/528443604349" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 .9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.1.1.3 0 .5-.1.2-.2.3-.3.5l-.4.4c-.1.1-.3.3-.1.5.1.3.6 1 1.3 1.7.9.8 1.6 1 1.9 1.1.2.1.4.1.5-.1.1-.2.6-.7.8-.9.2-.3.3-.2.6-.1.2.1 1.5.7 1.7.9.3.1.4.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
+        <span class="wa-t">WhatsApp</span>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-txt">
+      <span class="eyebrow-pill">Hecho en Coahuila</span>
+      <h1>Páginas y apps para tu negocio <span class="accent">y tu día a día.</span></h1>
+      <p class="sub">Te la dejamos lista, la pagas por mes o en un solo pago, y te atendemos por WhatsApp.</p>
+      <p class="hero-note">Esta misma página es un ejemplo de lo que entregamos.</p>
+    </div>
+    <div class="doors">
+      <a class="door" href="#paginas">
+        <span class="door-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18M7 13h6M7 16h4"/></svg></span>
+        <span class="door-t"><b>Página para tu negocio</b><span>Menú, catálogo o tarjeta · desde $1,290</span></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </a>
+      <a class="door" href="#apps">
+        <span class="door-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></span>
+        <span class="door-t"><b>Apps por suscripción</b><span>Mi Plan, SGN y GDP · pago mensual</span></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </a>
+      <a class="door" href="#invitaciones">
+        <span class="door-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.2"/><path d="m3.5 7 8.5 5.5L20.5 7"/></svg></span>
+        <span class="door-t"><b>Invitación de evento</b><span>Boda, XV años, bautizo · desde $690</span></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="paginas">
+  <div class="wrap">
+    <p class="kick">1 · Páginas para tu negocio</p>
+    <h2 class="h2">¿De qué es tu negocio?</h2>
+    <p class="lead">Tócalo y te enseñamos sus paquetes y un ejemplo real. Un solo pago para dejarla lista; la mensualidad es opcional y cubre cambios y hosting.</p>
+    <div class="segments" id="segments" role="group" aria-label="Giro de tu negocio"></div>
+    <div class="seg-sel" id="segSel" aria-hidden="true"><span></span></div>
+    <div class="pricing-body" id="pricing-body" aria-live="polite"></div>
+  </div>
+</section>
+
+<section class="sec" id="apps">
+  <div class="wrap">
+    <p class="kick">2 · Apps por suscripción</p>
+    <h2 class="h2">Apps listas para usar desde hoy</h2>
+    <p class="lead">Pagas por mes, entras con tu correo y las usas en el celular o la computadora. Cancelas cuando quieras.</p>
+    <div class="apps">
+      <article class="app" data-app="mi-plan">
+        <div class="app-top">
+          <img src="iconos/apps/mi-plan.png" alt="" width="56" height="56">
+          <div><span class="pill" style="background:#e3f4f1;color:#1a6b61">Para ti</span><h3>Mi Plan</h3></div>
+        </div>
+        <p>Tu dieta, tu rutina del gimnasio y tu lista del súper en un solo lugar.</p>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f7f73" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Menú con tus macros y cuánto comprar</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f7f73" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Rutina con pesos, series y descansos</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f7f73" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Respaldo cifrado en la nube</li>
+        </ul>
+        <div class="app-pie">
+          <div class="app-precio" data-precio>Pregúntanos el precio</div>
+          <a class="app-cta" data-cta href="https://miplan.solidaaplicaciones.com" target="_blank" rel="noopener">Abrir Mi Plan</a>
+        </div>
+      </article>
+      <article class="app" data-app="sgn">
+        <div class="app-top">
+          <img src="iconos/apps/sgn.png" alt="" width="56" height="56">
+          <div><span class="pill" style="background:#e6efff;color:#2f5fb3">Para tu negocio</span><h3>SGN · Gestión del Negocio</h3></div>
+        </div>
+        <p>Productos, inventario, ventas y clientes de tu tienda, desde el navegador y sin instalar nada.</p>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2f5fb3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Inventario que baja solo al vender</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2f5fb3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Usuarios para tu equipo</li>
+        </ul>
+        <div class="app-pie">
+          <div class="app-precio" data-precio>Pregúntanos el precio</div>
+          <a class="app-cta" data-cta data-wa="Hola Solida Aplicaciones 👋 Me interesa SGN para mi negocio. ¿Me dan más información?" href="https://wa.me/528443604349" target="_blank" rel="noopener">Lo quiero</a>
+        </div>
+      </article>
+      <article class="app" data-app="gdp">
+        <div class="app-top">
+          <img src="iconos/apps/gdp.png" alt="" width="56" height="56">
+          <div><span class="pill" style="background:#efe9fc;color:#5e40a8">Para tu empresa</span><h3>GDP · Procedimientos</h3></div>
+        </div>
+        <p>Levanta los procesos de cada puesto y saca tus manuales en Word, Excel, PowerPoint y PDF.</p>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6a4bb8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Con el logo y los colores de tu empresa</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6a4bb8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Tu información se queda en tu equipo</li>
+        </ul>
+        <div class="app-pie">
+          <div class="app-precio" data-precio>Pregúntanos el precio</div>
+          <a class="app-cta" data-cta data-wa="Hola Solida Aplicaciones 👋 Me interesa GDP para mi empresa. ¿Me dan más información?" href="https://wa.me/528443604349" target="_blank" rel="noopener">Lo quiero</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="invitaciones">
+  <div class="wrap">
+    <p class="kick">3 · Invitaciones de evento</p>
+    <h2 class="h2">Una invitación que se comparte por WhatsApp</h2>
+    <p class="lead" id="inv-lead"></p>
+    <div class="inv" id="inv-body"></div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <p class="kick">Así trabajamos</p>
+    <h2 class="h2">De la plática a tu enlace</h2>
+    <div class="pasos">
+      <div class="paso"><b>1</b><div><strong>Nos cuentas por WhatsApp</strong><span>Qué vendes y qué necesitas. Sin compromiso.</span></div></div>
+      <div class="paso"><b>2</b><div><strong>Pagas en línea</strong><span>Con tarjeta, de forma segura. Te llega tu recibo al correo.</span></div></div>
+      <div class="paso"><b>3</b><div><strong>Recibes tu enlace</strong><span>Las apps, al momento. Las páginas, en pocos días.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap cierre">
+    <div class="final-card">
+      <h2>¿Listo para verte en línea?</h2>
+      <p>Cuéntanos de tu negocio y te preparamos una propuesta. Sin compromiso.</p>
+      <a class="final-cta" id="finalCta" href="https://wa.me/528443604349" target="_blank" rel="noopener">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 .9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.1.1.3 0 .5-.1.2-.2.3-.3.5l-.4.4c-.1.1-.3.3-.1.5.1.3.6 1 1.3 1.7.9.8 1.6 1 1.9 1.1.2.1.4.1.5-.1.1-.2.6-.7.8-.9.2-.3.3-.2.6-.1.2.1 1.5.7 1.7.9.3.1.4.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
+        Hablar por WhatsApp
+      </a>
+    </div>
+    <div class="client-strip">
+      <h2>¿Ya eres cliente?</h2>
+      <p>Pide cambios, reporta una falla o mándanos la información de tu negocio, todo desde tu celular.</p>
+      <div class="cs-row">
+        <a class="cs-btn solid" href="soporte/cambios/">Pedir un cambio</a>
+        <a class="cs-btn ghost" href="soporte/">Centro de soporte</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
+          <rect x="30" y="18" width="40" height="15" rx="7.5" fill="#2A9D8E"/>
+          <rect x="22" y="42" width="56" height="15" rx="7.5" fill="#E8F6F6"/>
+          <rect x="14" y="66" width="72" height="15" rx="7.5" fill="#2A9D8E"/>
+        </svg>
+      </span>
+      <span class="brand-name"><b>Solida</b><span>Aplicaciones</span></span>
+    </span>
+    <div class="f-links">
+      <a href="https://wa.me/528443604349" target="_blank" rel="noopener">WhatsApp · 844 360 4349</a>
+      <a href="mailto:solidaaplicaciones@gmail.com">solidaaplicaciones@gmail.com</a>
+      <a href="soporte/levantamiento/">Quiero mi página · Enviar mi información</a>
+      <a href="/privacidad.html">Aviso de privacidad</a>
+    </div>
+    <div class="f-tag">Páginas y apps para negocios · Coahuila, México</div>
+  </div>
+</footer>
+
+<script src="datos/paquetes.js"></script>
+<script>
+/* ============================================================
+   CONFIGURACIÓN
+   ============================================================ */
+// Paquetes, precios, WhatsApp y dirección oficial: datos/paquetes.js (lo comparte con la franja de los ejemplos)
+const { SITIO, WHATSAPP, SEGMENTS } = window.SOLIDA;
+// De aquí salen nombre, dirección y precio de cada app (lo que tengas en el panel).
+const CATALOGO = "https://admin.solidaaplicaciones.com/api/catalogo";
+const prefersReduced = ()=> (window.matchMedia? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false);
+
+/* ---- Íconos (line icons) ---- */
+const ICONS = {
+  restaurantes:'<path d="M4 19h16"/><path d="M6 19a6 6 0 0 1 12 0"/><path d="M12 9V6"/>',
+  profesionales:'<rect x="3" y="7.5" width="18" height="12.5" rx="2.2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/><path d="M3 12.5h18"/>',
+  talleres:'<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/>',
+  nutriologos:'<path d="M12 8c-1.6-2.8-6-2.4-6 1.6 0 4 3.4 8.4 6 8.4s6-4.4 6-8.4c0-4-4.4-4.4-6-1.6Z"/><path d="M12 8c0-2 1.2-3.6 3.2-4"/>',
+  invitaciones:'<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><path d="m3.5 7 8.5 5.5L20.5 7"/>',
+  uniformes:'<path d="M4 20 15 9"/><path d="M14 6.5 17.5 10"/><circle cx="18.5" cy="5.5" r="2"/><path d="M17.2 6.8 15 9l-1.5-1.5 2.2-2.2"/><path d="m4 20 1.2-3.2L8 19.5 4 20Z"/>',
+  barberias:'<circle cx="6.5" cy="7" r="2.5"/><circle cx="6.5" cy="17" r="2.5"/><path d="M8.6 8.8 19.5 19"/><path d="M8.6 15.2 19.5 5"/>',
+  unas:'<path d="M9 21v-8.5a3 3 0 0 1 6 0V21"/><path d="M9 15h6"/><path d="M10.4 9.6C10 6.4 11 4 12 3.4c1 .6 2 3 1.6 6.2"/>'
+};
+
+
+/* ---- Helpers ---- */
+const CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f7f73" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>';
+const waLink = (txt)=>`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(txt)}`;
+// El ejemplo se abre en el mismo sitio en el que estás (solidaaplicaciones.com, o workers.dev si entras por ahí).
+const rutaDe = (u)=>{ try { return new URL(u).pathname; } catch(e){ return u; } };
+const OJO = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+const CAL = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>';
+const QR_SVG = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>';
+const APARTE = "invitaciones";   // tiene su propia sección; no va en los giros
+const finalCta=document.getElementById('finalCta');
+
+/* ---- Giros ---- */
+// Un color por giro: tinta (contraste AA sobre blanco y sobre su relleno), fondo del icono y relleno al elegirlo.
+const COLORES = {
+  restaurantes:  { c:'#8c4f10', t:'#fbe3c6', f:'#fdf3e6' },
+  profesionales: { c:'#2f5fb3', t:'#e6efff', f:'#eef4ff' },
+  talleres:      { c:'#3d4b5e', t:'#e6eaf0', f:'#f2f4f7' },
+  nutriologos:   { c:'#2f7a3d', t:'#e3f4e6', f:'#eef8f0' },
+  uniformes:     { c:'#5e40a8', t:'#efe9fc', f:'#f5f1fd' },
+  barberias:     { c:'#a3365a', t:'#fbe8ee', f:'#fdf0f4' },
+  unas:          { c:'#6e5326', t:'#efe6d6', f:'#f7f2e9' }
+};
+const OK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
+const segWrap = document.getElementById('segments');
+Object.entries(SEGMENTS).filter(([key])=>key!==APARTE).forEach(([key,s])=>{
+  const b=document.createElement('button');
+  b.type='button';
+  b.className='seg-btn';
+  b.setAttribute('aria-pressed','false');
+  b.dataset.key=key;
+  const col=COLORES[key]||COLORES.talleres;
+  b.style.setProperty('--c',col.c); b.style.setProperty('--t',col.t); b.style.setProperty('--f',col.f);
+  b.innerHTML=`<span class="seg-ok">${OK_SVG}</span><span class="seg-ico"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[key]}</svg></span>`+
+    `<span class="seg-txt">${s.nuevo?'<span class="seg-new">Nuevo</span>':''}<span class="seg-t">${s.label}</span><span class="seg-d">${s.short}</span><span class="seg-p">desde ${s.tiers[0].amount}</span></span>`;
+  b.addEventListener('click',()=>selectSegment(key,true));
+  segWrap.appendChild(b);
+});
+// Si el último cuadro queda solo en su renglón, ocupa el renglón entero (2 columnas en celular, 3 en computadora).
+function acomodaSolo(){
+  const bs=[...segWrap.children], cols=getComputedStyle(segWrap).gridTemplateColumns.split(' ').length;
+  bs.forEach(b=>b.classList.remove('solo'));
+  if(bs.length%cols===1) bs[bs.length-1].classList.add('solo');
+}
+acomodaSolo(); addEventListener('resize',acomodaSolo);
+
+/* ---- Paquetes de un giro, dentro de la caja que se le pase ---- */
+function pintaPaquetes(key, cont){
+  const s=SEGMENTS[key];
+  const tiersHtml=s.tiers.map((t,ti)=>`
+    <div class="tier${t.reco?' reco':''}">
+      ${t.reco?'<span class="ribbon">Más elegido</span>':''}
+      <div class="tier-top">
+        <div><div class="tier-level">${t.level}</div><div class="tier-name">${t.name}</div></div>
+        <div class="rank lv${t.lv}" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+      <div class="price"><span class="amt">${t.amount}</span><span class="unit">${t.unit}</span>${t.plus?`<span class="plus">${t.plus}</span>`:''}</div>
+      <ul class="feats">${t.feats.map(f=>`<li>${CHECK}<span>${f}</span></li>`).join('')}</ul>
+      <div class="tier-acts">
+        ${t.demo&&t.agenda?`<div class="tier-demos"><a class="tier-demo" href="${rutaDe(t.demo)}" target="_blank" rel="noopener">${OJO}Su página</a><a class="tier-demo" href="${t.agenda}" target="_blank" rel="noopener">${CAL}Su agenda</a></div><p class="tier-demos-nota">La página la ven sus clientas; la agenda es la app de la dueña.</p>`
+          :t.demo?`<a class="tier-demo" href="${rutaDe(t.demo)}" target="_blank" rel="noopener">${OJO}Ver ejemplo</a>`:''}
+        <a class="tier-cta" target="_blank" rel="noopener" href="${waLink(`Hola Solida Aplicaciones 👋 Me interesa el paquete "${t.name}" (${s.label}). ¿Me dan más información?`)}">Me interesa este</a>
+        <a class="tier-start" href="soporte/levantamiento/?giro=${key}&nivel=${ti}">Quiero empezar ▸</a>
+      </div>
+    </div>`).join('');
+
+
+  cont.innerHTML=`
+    <div class="seg-intro"><h3>${s.intro}</h3><p>${s.blurb}</p></div>
+    <div class="tiers">${tiersHtml}</div>
+    <div class="note">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f7f73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <span>${s.note}</span>
+    </div>
+    <div class="qr-linea">${QR_SVG}<span>Cada página trae su <b>código QR</b> listo para imprimir: en tus mesas, mostrador, tarjetas o volantes. Tus clientes la abren con la cámara del celular.</span></div>`;
+
+  if(!prefersReduced()){
+    const cards=cont.querySelectorAll('.tier,.note,.qr-linea');
+    cards.forEach(el=>el.classList.add('anim-in'));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      cards.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),70*i));
+    }));
+  }
+}
+
+function selectSegment(key, conScroll){
+  document.querySelectorAll('.seg-btn').forEach(b=>b.setAttribute('aria-pressed', b.dataset.key===key?'true':'false'));
+  const cont=document.getElementById('pricing-body');
+  pintaPaquetes(key, cont);
+  const sel=document.getElementById('segSel');
+  sel.querySelector('span').textContent=`${SEGMENTS[key].label} · ${SEGMENTS[key].tiers.length} paquetes`;
+  finalCta.href=waLink(`Hola Solida Aplicaciones 👋 Me interesa el servicio para ${SEGMENTS[key].label}. ¿Me pueden ayudar?`);
+  // Con los cuadros, los paquetes quedan abajo: al tocar un giro se baja a ellos.
+  if(conScroll) sel.scrollIntoView({behavior:prefersReduced()?'auto':'smooth',block:'start'});
+}
+
+/* ---- Arranque: el primer giro ya abierto e invitaciones en su sección ---- */
+selectSegment(Object.keys(SEGMENTS).find(k=>k!==APARTE), false);
+document.getElementById('inv-lead').textContent=SEGMENTS[APARTE].blurb;
+pintaPaquetes(APARTE, document.getElementById('inv-body'));
+
+/* ---- Apps: los botones de WhatsApp y el precio que tengas en el panel ---- */
+document.querySelectorAll('.app [data-wa]').forEach(a=>{ a.href=waLink(a.dataset.wa); });
+const pesos=(c)=>'$'+Math.round(c/100).toLocaleString('es-MX');
+fetch(CATALOGO).then(r=>r.ok?r.json():null).then(d=>{
+  if(!d||!Array.isArray(d.productos)) return;
+  d.productos.forEach(p=>{
+    const card=document.querySelector(`.app[data-app="${CSS.escape(String(p.id))}"]`);
+    if(!card) return;
+    if(p.plan&&p.plan.recurrente>0){
+      const precio=card.querySelector('[data-precio]');
+      precio.textContent='';
+      const b=document.createElement('b'); b.textContent=pesos(p.plan.recurrente);
+      const u=document.createElement('span'); u.textContent=p.plan.intervalo==='year'?' /año':' /mes';
+      precio.append(b,u);
+      if(p.plan.inicial>0){ const i=document.createElement('span'); i.textContent=' · inicio '+pesos(p.plan.inicial); precio.append(i); }
+    }
+    const cta=card.querySelector('[data-cta]');
+    if(p.url&&/^https:\/\//.test(p.url)&&!cta.dataset.wa){ cta.href=p.url; }
+  });
+}).catch(()=>{});
+
+/* ---- Aparecen al hacer scroll ---- */
+(function(){
+  const els=[...document.querySelectorAll('.sec .kick,.sec .h2,.app,.paso,.final-card,.client-strip')];
+  if(prefersReduced()||!('IntersectionObserver' in window)) return;
+  els.forEach(e=>e.classList.add('reveal'));
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{if(en.isIntersecting){en.target.classList.add('on');io.unobserve(en.target);}});
+  },{threshold:.12});
+  els.forEach((e,i)=>{e.style.transitionDelay=(i%4)*0.05+'s';io.observe(e);});
+})();
+
+</script>
+</body>
+</html>

@@ -194,160 +194,31 @@ const MATERIALS_BASE = [
 ];
 
 const SEGMENTS = {
- restaurantes:{label:"Restaurantes y cafés", short:"Menú digital con QR",
-  materials:["Fotos de mis platillos"],
+// Sólo lo que hoy se vende. Los demás giros están guardados en archivo/Solida-Web/soporte/levantamiento-completo.html
+ unas:{label:"Uñas y pestañas", short:"Diseños + citas en línea",
+  materials:["Fotos de tus diseños, cada una con su nombre y técnica (gelish, acrílico…)","Fotos del local y del equipo (Agenda Pro y Agenda Total)"],
   tiers:[
-   {level:"Básico", name:"Menú Esencial", price:"$1,490", unit:"pago único", fields:[
-     {id:"menu", l:"Tu menú completo", t:"area", req:true, big:true,
-      ph:"Escribe una categoría y debajo sus platillos, así:\n\nTACOS\n- Taco de bistec — con cebolla y cilantro — $25\n- Taco de tripas — dorada o suave — $28\n\nBEBIDAS\n- Agua del día 1 L — $35",
-      help:"Hasta 30 platillos en el paquete Básico. Nombre — descripción corta — precio."},
-     {id:"waPedidos", l:"¿Los pedidos llegan al mismo WhatsApp de arriba?", t:"input", ph:"Sí / No, usar este otro: ..."},
+   {level:"Básico", name:"Catálogo de Diseños", price:"$1,390", unit:"pago único", fields:[
+     {id:"nombre", l:"Nombre del negocio", t:"input", req:true, ph:"Ej. Atelier Mía"},
+     {id:"servicios", l:"Tus servicios con precio y duración, por grupo", t:"area", req:true, big:true,
+      ph:"UÑAS\n- Gelish en manos · 1 h · $280\n- Acrílico esculpido · 2 h · desde $450\n\nPESTAÑAS\n- Volumen ruso · 2 h 30 min · $850\n\nTambién te podemos mandar una plantilla de Excel para llenarla."},
+     {id:"horario", l:"Horario de atención", t:"input", req:true, ph:"Mar a Sáb 10:00–19:00 · Dom y Lun cerrado"},
+     {id:"contacto", l:"WhatsApp, teléfono y dirección", t:"area", req:true, ph:"WhatsApp, teléfono y liga de Google Maps si la tienes"},
+     {id:"redes", l:"Redes sociales y tu liga de reseñas de Google", t:"input", ph:"Instagram, Facebook, TikTok…"},
    ]},
-   {level:"Intermedio", name:"Menú Pro", price:"$2,490", unit:"pago único", fields:[
-     {id:"secciones", l:"Secciones de tu menú", t:"input", ph:"Entradas, fuertes, bebidas, postres…"},
-     {id:"destacados", l:"Platillos destacados o más vendidos", t:"area", ph:"Los que quieres que resalten primero"},
-     {id:"promos", l:"Promociones del día o de la semana", t:"area", ph:"Ej. Martes de alitas 2x1 después de las 6 pm"},
-     {id:"mapa", l:"Liga de tu ubicación en Google Maps (si la tienes)", t:"input", ph:"https://maps.app.goo.gl/..."},
+   {level:"Intermedio", name:"Agenda Pro", price:"$2,590", unit:"pago único", fields:[
+     {id:"disenos", l:"Diseños y su costo extra sobre el servicio", t:"area", ph:"French clásico +$40 · Chrome perla +$80 · Baby boomer +$120"},
+     {id:"largos", l:"Largos o tamaños y su costo extra", t:"input", ph:"Corto $0 · Medio $0 · Largo +$50"},
+     {id:"equipo", l:"Tu equipo: nombre y especialidad de cada quien", t:"area", ph:"Mía – uñas y diseño\nFernanda – pestañas"},
+     {id:"cuidados", l:"Cuidados antes de la cita", t:"area", ph:"Llegar con las uñas limpias, sin esmalte…"},
+     {id:"marca", l:"Colores y estilo de tu marca", t:"input", ph:"Ej. negro con dorado, elegante"},
    ]},
-   {level:"Premium", name:"Menú Premium", price:"$3,990", unit:"pago único", fields:[
-     {id:"waCocina", l:"WhatsApp de COCINA (recibirá las comandas)", t:"input", req:true},
-     {id:"mesas", l:"Número de mesas y cómo las numeras", t:"input", ph:"Ej. 12 mesas, numeradas del 1 al 12"},
-     {id:"pagos", l:"Formas de pago que aceptas", t:"input", ph:"Efectivo, tarjeta, transferencia"},
-     {id:"propinas", l:"Reglas de propina o cargos extra (si aplican)", t:"input"},
-   ]},
-  ]},
- profesionales:{label:"Profesionales y consultorios", short:"Tarjeta y sitio profesional",
-  materials:["Foto profesional mía","Fotos de mi consultorio / trabajo"],
-  tiers:[
-   {level:"Básico", name:"Tarjeta Digital", price:"$1,290", unit:"pago único", fields:[
-     {id:"especialidad", l:"Tu profesión o especialidad", t:"input", req:true, ph:"Ej. Psicóloga clínica, Dentista, Abogado"},
-     {id:"cedula", l:"Cédula profesional (si aplica)", t:"input"},
-     {id:"servicios", l:"Servicios que ofreces", t:"area", req:true, ph:"Uno por renglón, con precio si quieres mostrarlo"},
-   ]},
-   {level:"Intermedio", name:"Perfil Profesional", price:"$2,390", unit:"pago único", fields:[
-     {id:"sobreMi", l:"Sobre ti / tu trayectoria", t:"area", ph:"Estudios, experiencia, tu enfoque. Si prefieres, pon los datos y nosotros lo redactamos."},
-     {id:"testimonios", l:"3 a 5 testimonios de pacientes o clientes", t:"area", ph:"«Excelente atención…» — María G.\n(Con autorización de quien lo dijo)"},
-     {id:"citas", l:"Días y horarios en que agendas citas", t:"input"},
-   ]},
-   {level:"Premium", name:"Sitio Profesional", price:"$3,890", unit:"pago único", fields:[
-     {id:"contenidoExtra", l:"Contenido para páginas adicionales", t:"area", ph:"Servicios a detalle, preguntas frecuentes o artículos que quieras incluir"},
-     {id:"dominio", l:"Dominio que te gustaría (en orden de preferencia)", t:"input", ph:"1) minegocio.com  2) minegocio.mx", help:"Incluido el primer año."},
-   ]},
-  ]},
- talleres:{label:"Talleres y servicios", short:"Catálogo + cotización",
-  materials:["Fotos de trabajos realizados","Pares de fotos antes / después"],
-  tiers:[
-   {level:"Básico", name:"Catálogo Express", price:"$1,390", unit:"pago único", fields:[
-     {id:"servicios", l:"Tus servicios con precios", t:"area", req:true, big:true,
-      ph:"- Cambio de aceite — desde $450\n- Afinación mayor — desde $1,200\nSi el precio varía, usa «desde $»."},
-   ]},
-   {level:"Intermedio", name:"Catálogo Pro", price:"$2,390", unit:"pago único", fields:[
-     {id:"categorias", l:"Categorías de tus servicios", t:"input", ph:"Ej. Mecánica, eléctrico, suspensión"},
-     {id:"promos", l:"Promociones vigentes", t:"area"},
-     {id:"testimonios", l:"Testimonios de clientes", t:"area"},
-     {id:"datosCot", l:"¿Qué datos quieres que traiga la cotización del cliente?", t:"input", ph:"Ej. Servicio, marca y modelo del auto, notas"},
-   ]},
-   {level:"Premium", name:"Servicio Completo", price:"$3,690", unit:"pago único", fields:[
-     {id:"agenda", l:"Reglas de tu agenda de citas o pedidos", t:"area", ph:"Días, horarios y duración de cada cita"},
-     {id:"sucursales", l:"Datos de tus sucursales", t:"area", ph:"Dirección, teléfono y encargado de cada una"},
-     {id:"dominio", l:"Dominio que te gustaría", t:"input", help:"Incluido el primer año."},
-   ]},
-  ]},
- nutriologos:{label:"Nutriólogos y coaches", short:"Planes dinámicos",
-  materials:["Logo de mi consultorio / marca personal"],
-  tiers:[
-   {level:"Básico", name:"Plan Digital", price:"$2,490 inicio", unit:"+ $399/mes", fields:[
-     {id:"planTipo", l:"Plan tipo de un paciente (comidas con horario y porciones)", t:"area", req:true, big:true,
-      ph:"DESAYUNO 8:00\n- 2 huevos revueltos\n- 1 taza de fruta\nCOLACIÓN 11:00\n- ..."},
-     {id:"sustituciones", l:"Sustituciones permitidas por alimento", t:"area", ph:"Ej. Pollo → pescado o atún en agua"},
-     {id:"agua", l:"Meta de vasos de agua al día", t:"input", ph:"Ej. 8 vasos"},
-   ]},
-   {level:"Intermedio", name:"Práctica Pro", price:"$3,990 inicio", unit:"+ $599/mes", fields:[
-     {id:"macros", l:"Macros del plan", t:"input", ph:"kcal, proteína, carbohidratos y grasas"},
-     {id:"mandado", l:"Lista de mandado semanal con cantidades", t:"area"},
-     {id:"equivalencias", l:"Tabla de equivalencias por alimento", t:"area", ph:"Ej. 100 g pollo = 110 g pescado blanco"},
-     {id:"mealprep", l:"Pasos de preparación semanal (meal prep)", t:"area"},
-   ]},
-   {level:"Premium", name:"Coach Total", price:"$5,990 inicio", unit:"+ $899/mes", fields:[
-     {id:"waCoach", l:"WhatsApp del coach que recibirá los reportes semanales", t:"input", req:true, ph:"52 + número, ej. 528441234567"},
-     {id:"rutina", l:"Rutina por día (ejercicios, series y pesos sugeridos)", t:"area", big:true},
-     {id:"antojos", l:"Presupuesto semanal de antojos (kcal)", t:"input", ph:"Ej. 500 kcal"},
-     {id:"medicion", l:"Medición base del paciente (InBody)", t:"input", ph:"Peso, % grasa, músculo MME, IMC"},
-     {id:"perfil", l:"Perfil del paciente", t:"input", ph:"Altura, edad, metas de % grasa y músculo"},
-   ]},
-  ]},
- invitaciones:{label:"Invitaciones de evento", short:"Bodas, XV, cumpleaños…",
-  materials:["Fotos para la invitación (hasta 3 en Básico)","Fotos para la galería (Pro y Deluxe)","Canción para la invitación: debe ser una versión LIBRE de derechos de autor (Pro y Deluxe)"],
-  tiers:[
-   {level:"Básico", name:"Esencial", price:"$690", unit:"por evento", fields:[
-     {id:"tipoEvento", l:"Tipo de evento", t:"input", req:true, ph:"Boda, XV años, bautizo, cumpleaños…"},
-     {id:"festejados", l:"Nombres de los festejados / anfitriones", t:"input", req:true},
-     {id:"fechaHora", l:"Fecha y hora exactas del evento", t:"input", req:true, ph:"Sábado 14 de noviembre de 2026, 7:00 pm", help:"Con esto arma la cuenta regresiva."},
-     {id:"textos", l:"Textos de tu invitación", t:"area", ph:"Mensaje principal, dedicatoria, nombres de papás o padrinos…"},
-     {id:"ubicacion", l:"Ubicación del evento", t:"input", ph:"Nombre del salón y liga de Google Maps si la tienes"},
-     {id:"tematica", l:"Colores o temática", t:"input"},
-   ]},
-   {level:"Intermedio", name:"Pro", price:"$1,290", unit:"por evento", fields:[
-     {id:"waConfirma", l:"WhatsApp que recibirá las confirmaciones de asistencia", t:"input", req:true},
-     {id:"cancion", l:"Canción para la invitación", t:"input", ph:"Nombre y artista, o la versión exacta que te gusta",
-      help:"⚠️ IMPORTANTE: la música de la invitación debe ser LIBRE DE DERECHOS DE AUTOR. Las canciones comerciales (las de Spotify, YouTube, radio) no se pueden poner tal cual en una página pública porque infringen derechos y la invitación podría ser dada de baja. Dinos cuál te gusta y te proponemos una versión instrumental libre de regalías o una melodía con licencia de estilo parecido."},
-     {id:"itinerario", l:"Itinerario del evento", t:"area", ph:"7:00 Ceremonia · 8:30 Recepción · 9:00 Cena…"},
-     {id:"dressCode", l:"Código de vestimenta", t:"input"},
-     {id:"regalos", l:"Mesa de regalos", t:"area", ph:"Tienda y número de evento, o cuenta para transferencia"},
-   ]},
-   {level:"Premium", name:"Deluxe", price:"$2,290", unit:"por evento", fields:[
-     {id:"referencias", l:"Referencias visuales de la temática única", t:"area", ph:"Describe el estilo; las imágenes de referencia mándalas por WhatsApp"},
-     {id:"cancionDeluxe", l:"Canción que sonará al abrir la invitación", t:"input", ph:"Nombre y artista, o la versión exacta que te gusta",
-      help:"⚠️ IMPORTANTE: debe ser una versión LIBRE DE DERECHOS DE AUTOR. Las canciones comerciales tal cual infringen derechos y la invitación podría ser dada de baja. Te proponemos una versión instrumental libre de regalías de estilo parecido."},
-     {id:"listaAcceso", l:"Lista de invitados con número de pases y mesa (control de acceso)", t:"area", req:true, big:true,
-      ph:"Familia Herrera Luna — 4 pases — Mesa 7\nCarlos Medina — 2 pases — Mesa 3\n…", help:"Con esta lista generamos el QR único de cada invitado para el registro de entradas en la puerta."},
-     {id:"qrUso", l:"¿Dónde imprimirás el QR y a qué tamaño?", t:"input", ph:"Ej. En las invitaciones físicas, 3x3 cm"},
-   ]},
-  ]},
- uniformes:{label:"Uniformes y bordados", short:"Configurador de pedidos",
-  materials:["Fotos de mis prendas por color","Logo de mi negocio en buena calidad"],
-  tiers:[
-   {level:"Básico", name:"Catálogo Digital", price:"$1,690", unit:"pago único", fields:[
-     {id:"prendas", l:"Catálogo de prendas con colores y telas", t:"area", req:true, big:true,
-      ph:"PLAYERA POLO\n- Colores: blanco, negro, marino\n- Telas: piqué, dry-fit\n\nCAMISA OXFORD\n- Colores: ..."},
-     {id:"tecnicas", l:"Técnicas de decorado que manejas", t:"input", ph:"Bordado, serigrafía, DTF, vinil…"},
-     {id:"preciosRef", l:"Precios de referencia por prenda y técnica", t:"area"},
-   ]},
-   {level:"Intermedio", name:"Cotizador", price:"$2,990", unit:"pago único", fields:[
-     {id:"preciosCant", l:"Precios por rangos de cantidad", t:"area", ph:"Polo bordada: 1-11 pzas $180 · 12-49 $150 · 50+ $130"},
-     {id:"reglas", l:"Reglas de precio", t:"area", ph:"Pedido mínimo, recargos por tallas extra, descuentos por volumen"},
-     {id:"camposCot", l:"¿Qué debe pedir la cotización al cliente?", t:"input", ph:"Cantidades, tallas, notas…"},
-   ]},
-   {level:"Premium", name:"Configurador con OT", price:"$5,900", unit:"pago único", fields:[
-     {id:"combinaciones", l:"Combinaciones válidas de color + tela + técnica por prenda", t:"area"},
-     {id:"posiciones", l:"Posiciones y tamaños de logo permitidos", t:"input", ph:"Pecho izquierdo 8 cm, espalda 25 cm…"},
-     {id:"tallas", l:"Curva de tallas que manejas", t:"input", ph:"S–XXL, tallas de niño…"},
-     {id:"waOT", l:"WhatsApp que recibirá la Orden de Trabajo", t:"input", req:true},
-   ]},
-  ]},
- barberias:{label:"Barberías y salones", short:"Carta + reservas en línea",
-  materials:["Logo del negocio (o nombre y colores para proponerte uno)","Fotos del local y de trabajos realizados","Fotos del equipo (Intermedio y Premium)"],
-  tiers:[
-   {level:"Básico", name:"Carta de Servicios", price:"$1,390", unit:"pago único", fields:[
-     {id:"nombre", l:"Nombre del negocio", t:"input", req:true, ph:"Ej. La Central Studio"},
-     {id:"servicios", l:"Carta de servicios con precios, por categorías", t:"area", req:true, big:true,
-      ph:"BARBERÍA\n- Corte clásico $180\n- Corte + barba $280\n\nSALÓN\n- Corte dama $250\n- Color / balayage desde $850\n\nEXTRAS\n- Manicure spa $220"},
-     {id:"horario", l:"Horario de atención", t:"input", req:true, ph:"Mar a Sáb 10:00–20:00 · Dom 10:00–15:00 · Lun cerrado"},
-     {id:"contacto", l:"WhatsApp, teléfono y dirección", t:"area", req:true, ph:"WhatsApp, teléfono para llamadas y liga de Google Maps si la tienes"},
-     {id:"redes", l:"Redes sociales", t:"input", ph:"Instagram, Facebook, TikTok…"},
-   ]},
-   {level:"Intermedio", name:"Estudio Pro", price:"$2,590", unit:"pago único", fields:[
-     {id:"promos", l:"Promociones vigentes", t:"area", ph:"Ej. Martes y miércoles: corte + barba $230"},
-     {id:"equipo", l:"Tu equipo: nombre, puesto y especialidad de cada quien", t:"area", ph:"Marco – Barbero master, fades y barba\nRegina – Estilista senior, color…"},
-     {id:"testimonios", l:"2 o 3 testimonios de clientes", t:"area", ph:"Nombre y comentario; también puedo tomarlos de tus reseñas de Google"},
-     {id:"marca", l:"Colores y estilo de tu marca", t:"input", ph:"Ej. negro con dorado, estilo clásico / moderno"},
-   ]},
-   {level:"Premium", name:"Reserva Total", price:"$4,290", unit:"pago único", fields:[
-     {id:"duraciones", l:"Duración aproximada de cada servicio", t:"area", req:true, ph:"Corte 45 min · Corte + barba 70 min · Color 2 hrs…"},
-     {id:"quienHace", l:"¿Quién de tu equipo realiza cada servicio?", t:"area", req:true, ph:"Cortes y barba: Marco e Iván · Color: Regina · Uñas: Paola"},
-     {id:"reglasAgenda", l:"Reglas de tu agenda", t:"area", ph:"Días de descanso, horas de comida, con cuánta anticipación se puede reservar…"},
-     {id:"waReservas", l:"WhatsApp que recibirá las reservas", t:"input", req:true},
-     {id:"dominio", l:"Dominio deseado (incluido 1 año)", t:"input", ph:"Ej. lacentralstudio.mx"},
+   {level:"Premium", name:"Agenda Total", price:"$4,290", unit:"pago único", fields:[
+     {id:"quienHace", l:"¿Quién de tu equipo hace cada servicio?", t:"area", req:true, ph:"Uñas: Mía · Pestañas: Fernanda"},
+     {id:"horarioEquipo", l:"Horario de cada persona y sus días de descanso", t:"area", req:true, ph:"Mía: Lun a Vie 10–19, Sáb 9–15 · Fernanda: Mar a Sáb 11–19"},
+     {id:"anticipo", l:"Anticipo para apartar y dónde se paga", t:"input", ph:"Ej. $100 por transferencia o con tu enlace de pago"},
+     {id:"avisos", l:"Correo de respaldo para los avisos de citas", t:"input", ph:"Te llegan al celular; el correo es sólo por si acaso"},
+     {id:"dominio", l:"Dominio deseado (incluido 1 año)", t:"input", ph:"Ej. ateliermia.mx"},
    ]},
   ]},
 };
