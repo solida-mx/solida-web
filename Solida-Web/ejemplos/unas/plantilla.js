@@ -8,6 +8,9 @@
 (function () {
   var N = window.NEGOCIO;
   if (!N) { console.error('Falta datos.js'); return; }
+  // Los archivos de esta página (se toman antes de pintar, porque al pintar se reemplaza el <body>): con ellos se sabe si hay versión nueva
+  var ARCHIVOS_PAGINA = [location.pathname].concat([].slice.call(document.querySelectorAll('script[src],link[rel="stylesheet"][href]')).map(function (e) { return e.src || e.href; }))
+    .filter(function (u) { try { return new URL(u, location.href).origin === location.origin; } catch (e) { return false; } });
   var NIVEL = document.documentElement.getAttribute('data-nivel') || 'basico';
   var AGENDA = NIVEL === 'intermedio' || NIVEL === 'avanzado';
   var TOTAL = NIVEL === 'avanzado';
@@ -44,6 +47,33 @@
       try { localStorage.setItem(LLAVE_DISP, t); } catch (e) {}
     }
     return t;
+  }
+  // ───── versión nueva: si la publicamos mientras la tiene abierta, se le avisa (sólo eso; al actualizar no se le dice nada) ─────
+  function vigilaVersion() {
+    if (!window.fetch || !ARCHIVOS_PAGINA.length) return;
+    var huella = function () {
+      return Promise.all(ARCHIVOS_PAGINA.map(function (u) { return fetch(u, { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }); })).then(function (l) {
+        var t = l.join('|'), h = 5381; for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return String(h);
+      });
+    };
+    var base = '', aplazada = 0;
+    var revisa = function () {
+      if (!base || document.visibilityState !== 'visible' || Date.now() < aplazada || document.getElementById('nuevaVersion')) return;
+      huella().then(function (h) {
+        if (!h || h === base || document.getElementById('nuevaVersion')) return;
+        var b = document.createElement('div'); b.id = 'nuevaVersion'; b.className = 'nueva-version'; b.setAttribute('role', 'status');
+        b.innerHTML = '<span>Hay una nueva versión disponible</span><button type="button" class="btn btn-oro">Actualizar</button><button type="button" class="nv-no" aria-label="Ahora no">✕</button>';
+        document.body.appendChild(b);
+        // Antes de recargar se piden los archivos nuevos, para que el teléfono no use los que tenía guardados
+        b.querySelector('.btn').onclick = function () {
+          Promise.all(ARCHIVOS_PAGINA.map(function (u) { return fetch(u, { cache: 'reload' }).catch(function () {}); })).then(function () { location.reload(); });
+        };
+        b.querySelector('.nv-no').onclick = function () { b.remove(); aplazada = Date.now() + 3600000; };
+      }, function () {});
+    };
+    setTimeout(function () { huella().then(function (h) { base = h; }, function () {}); }, 4000);
+    setInterval(revisa, 5 * 60000);
+    document.addEventListener('visibilitychange', revisa);
   }
   function yo() { try { return JSON.parse(localStorage.getItem(LLAVE_YO)) || {}; } catch (e) { return {}; } }
   // Si llegó escaneando el código QR del local (?de=qr), sus citas cuentan como «del QR» para que la dueña vea si el cartel funciona.
@@ -177,6 +207,7 @@
     esc(N.nombre) + ' · ' + esc(N.giro) + '<br>Página hecha por <a href="https://solidaaplicaciones.com" target="_blank" rel="noopener">Solida Aplicaciones</a></footer>';
   h += '<div class="velo" id="velo"></div><section class="hoja" id="hoja" role="dialog" aria-modal="true" aria-labelledby="hojaTit"></section><div class="toast" id="toast" role="status" aria-live="polite"></div>';
   document.body.innerHTML = h;
+  vigilaVersion();
   // Los precios más recientes de la dueña: se guardan para la próxima visita y se ponen en la página ya pintada
   if (SERVIDOR) pide('/perfil').then(function (x) {
     var c = x.status === 200 && x.d && x.d.servicios;

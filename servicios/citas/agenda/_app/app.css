@@ -493,3 +493,13 @@ select.campo{appearance:auto}
 .chip[aria-pressed="true"] small{color:var(--oro)}
 #ncServ[hidden]{display:none}
 .campo-h .enlace{align-self:flex-start}
+
+/* Aviso de versión nueva */
+.nueva-version{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));z-index:45;display:flex;align-items:center;gap:10px;
+  width:calc(100% - 24px);max-width:460px;padding:10px 8px 10px 16px;background:var(--negro);color:var(--marfil);box-shadow:0 10px 30px rgba(22,20,18,.25);font-size:14px}
+.nueva-version span{flex:1}
+.nueva-version .btn{min-height:42px;padding:0 14px}
+.nv-no{width:40px;height:42px;border:0;background:transparent;color:var(--gris-claro);font-size:16px;cursor:pointer}
+body.ancha .nueva-version{bottom:24px;left:calc(50% + 124px)}
+body.en-entrar .nueva-version{bottom:24px}
+body.ancha.en-entrar .nueva-version{left:50%}

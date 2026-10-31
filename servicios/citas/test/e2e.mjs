@@ -232,7 +232,7 @@ try {
     await pg.click('#fEntrar button');
     await pg.waitForSelector('.cab');
     if (CAP) await pg.screenshot({ path: CAP + '/ag-agenda.png', fullPage: true });
-    await pg.click('[data-vista="semana"]'); await pg.waitForSelector('.sem-dia');
+    await pg.click('button[data-vista="semana"]'); await pg.waitForSelector('.sem-dia');
     assert.equal((await pg.$$('.sem-dia')).length, 7, 'la semana son los próximos 7 días');
     assert.match(await pg.textContent('main'), /Bea|Caro/);
     await pg.click(`[data-ir="${F1}"]`); await pg.waitForSelector(`.dia-chip[data-dia="${F1}"][aria-pressed="true"]`);
@@ -242,14 +242,14 @@ try {
     assert.equal(await pg.getAttribute('a.btn[href^="https://ateliermia"]', 'href'), 'https://ateliermia.solidaaplicaciones.com/');
     // Cerrar un horario desde la app y que la página ya no pueda apartarlo
     const F9 = fecha(9);
-    await pg.click('[data-vista="tiempos"]'); await pg.waitForSelector('#apartar');
+    await pg.click('button[data-vista="tiempos"]'); await pg.waitForSelector('#apartar');
     await pg.click('#apartar'); await pg.waitForSelector('#fAp');
     await pg.click('[data-tipo="una"]'); await pg.fill('#apFecha', F9); await pg.selectOption('#apDe', '10:00'); await pg.selectOption('#apA', '12:00');
     await pg.fill('#apMotivo', 'Dentista'); await pg.click('[data-quien=""]'); await pg.click('#apOk');
     await pg.waitForFunction(() => !document.getElementById('velo') || document.getElementById('hojaListo'));
     if (await pg.$('#hojaListo')) await pg.click('#hojaListo');
     await pg.waitForFunction(() => /Dentista/.test(document.querySelector('main').textContent));
-    await pg.click('[data-vista="hoy"]'); await pg.waitForSelector('.cifras');
+    await pg.click('button[data-vista="hoy"]'); await pg.waitForSelector('.cifras');
     await pg.click(`[data-dia="${F1}"]`); await pg.waitForSelector(`.dia-chip[data-dia="${F1}"][aria-pressed="true"]`);
     assert.equal((await api('/api/atelier-mia/citas', { metodo: 'POST', body: { ...cita, fecha: F9, hora: '10:30', persona: 'mia', nombre: 'Iris', tel: '8440000014' }, ip: '8.8.8.20' })).status, 409);
     // Confirmar una cita pendiente
@@ -401,7 +401,7 @@ try {
 
     // ───── Hoy: huecos libres y apartar por teléfono ─────
     const MARTES = elDia(2, 1);
-    await pg.click('[data-vista="hoy"]'); await pg.waitForSelector('.dias-chips');
+    await pg.click('button[data-vista="hoy"]'); await pg.waitForSelector('.dias-chips');
     await pg.click(`[data-dia="${MARTES}"]`); await pg.waitForSelector(`.dia-chip[data-dia="${MARTES}"][aria-pressed="true"]`);
     const libresMia = await pg.$$eval('[data-libre]', (l) => l.map((x) => x.getAttribute('data-libre')));
     assert.ok(libresMia.some((x) => x.endsWith('|mia')), 'enseña los huecos libres de Mía en su horario: ' + libresMia.join(' '));
@@ -454,7 +454,7 @@ try {
     assert.equal(ag6.d.citas.filter((c) => c.fecha === fecha(1) && c.recordada > 0).length, 1, 'queda guardado en el servidor: se ve desde cualquier teléfono');
     paso('Para mañana: lista las citas sin recordar; cada botón abre WhatsApp con su recordatorio y queda marcada como enviada en el servidor');
 
-    if (CAP) { await pg.click('[data-vista="hoy"]'); await pg.click(`[data-dia="${MARTES}"]`); await pg.screenshot({ path: CAP + '/ag-hoy.png', fullPage: true }); await pg.click('[data-vista="semana"]'); await pg.screenshot({ path: CAP + '/ag-semana.png', fullPage: true }); }
+    if (CAP) { await pg.click('button[data-vista="hoy"]'); await pg.click(`[data-dia="${MARTES}"]`); await pg.screenshot({ path: CAP + '/ag-hoy.png', fullPage: true }); await pg.click('button[data-vista="semana"]'); await pg.screenshot({ path: CAP + '/ag-semana.png', fullPage: true }); }
     assert.deepEqual(errores, []);
 
     // ───── Su calendario de Google ─────
@@ -500,7 +500,7 @@ try {
       assert.equal((await api(`/api/atelier-mia/calendarios/${con.d.id}`, { metodo: 'DELETE', token: tok })).status, 200);
       assert.equal((await api('/api/atelier-mia/agenda', { token: tok })).d.calOcupado.length, 0, 'desconectar borra sus horas');
       calHora = '11';
-      await pg.click('[data-vista="tiempos"]'); await pg.waitForSelector('#abreCal');
+      await pg.click('button[data-vista="tiempos"]'); await pg.waitForSelector('#abreCal');
       await pg.click('[data-persona="mia"]'); await pg.waitForSelector('#abreCal');
       assert.match(await pg.textContent('#abreCal'), /Conectar mi calendario/);
       await pg.click('#abreCal'); await pg.waitForSelector('#fCal');
@@ -508,10 +508,10 @@ try {
       await pg.fill('#calUrl', CAL_URL); await pg.click('#calOk');
       await pg.waitForFunction(() => !document.getElementById('velo'));
       await pg.waitForFunction(() => /Conectado/.test(document.getElementById('abreCal').textContent));
-      await pg.click('[data-vista="hoy"]'); await pg.click(`[data-dia="${MIE}"]`);
+      await pg.click('button[data-vista="hoy"]'); await pg.click(`[data-dia="${MIE}"]`);
       await pg.waitForFunction(() => /Ocupada en tu calendario/.test(document.querySelector('main').textContent));
       assert.ok(!/Secreto/.test(await pg.textContent('main')));
-      await pg.click('[data-vista="tiempos"]'); await pg.click('#abreCal'); await pg.waitForSelector('#calRevisa');
+      await pg.click('button[data-vista="tiempos"]'); await pg.click('#abreCal'); await pg.waitForSelector('#calRevisa');
       pg.once('dialog', (dl) => dl.accept());
       await pg.click('#calQuita'); await pg.waitForFunction(() => !document.getElementById('velo') && /Conectar mi calendario/.test(document.getElementById('abreCal').textContent));
       assert.deepEqual(errores, []);
@@ -609,7 +609,7 @@ try {
       assert.ok(true);
       // Chromium sin pantalla dice siempre «bloqueado»: se simula un teléfono que todavía no decide
       await pg.evaluate(() => Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true }));
-      await pg.click('[data-vista="hoy"]'); await pg.click('#abreAvisos'); await pg.waitForSelector('#avCuerpo .campo-h');
+      await pg.click('button[data-vista="hoy"]'); await pg.click('#abreAvisos'); await pg.waitForSelector('#avCuerpo .campo-h');
       const cel = await pg.textContent('#avCuerpo');
       assert.match(await pg.textContent('.hoja'), /Así te llega/);
       assert.equal(await pg.inputValue('#avCorreo'), 'mia@atelier.mx');
@@ -923,9 +923,29 @@ try {
         await pg.click('[data-qrtam="tarjetas"]'); assert.equal((await pg.$$('#qrPrevia .ct')).length, 8);
         if (CAP) await pg.screenshot({ path: CAP + '/ag-compu-qr.png', fullPage: true });
         await pg.setViewportSize({ width: 390, height: 844 }); await pg.waitForSelector('.barra-nav');
-        await pg.click('[data-vista="hoy"]');
+        await pg.click('button[data-vista="hoy"]');
         assert.deepEqual(errores, []);
         paso('en la compu: menú a un lado, Hoy con una columna por persona, la cita a la derecha con «Mándale su cita» y su QR, la semana en columnas y «Tu código QR» con su cartel');
+
+        {
+          // La página de las clientas también avisa si cambió algún archivo mientras estaba abierta
+          let datosV = datosPrueba;
+          const cx4 = await nav.newContext({ viewport: { width: 390, height: 844 }, userAgent: IPHONE });
+          await cx4.route('**/prueba-agenda/datos.js', (r2) => r2.fulfill({ contentType: 'text/javascript', body: datosV }));
+          await cx4.route('https://fonts.googleapis.com/**', (r2) => r2.fulfill({ body: '', contentType: 'text/css' }));
+          const p4 = await cx4.newPage(); const err4 = []; p4.on('pageerror', (e) => err4.push(e.message));
+          await p4.goto('http://127.0.0.1:8817/prueba-agenda/'); await p4.waitForSelector('.hero'); await p4.waitForTimeout(5000);
+          await p4.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await p4.waitForTimeout(800);
+          assert.ok(!(await p4.$('#nuevaVersion')), 'sin cambios no sale nada');
+          datosV = datosPrueba + '\n// cambio';
+          await p4.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await p4.waitForSelector('#nuevaVersion');
+          assert.match(await p4.textContent('#nuevaVersion'), /Hay una nueva versión disponible/);
+          if (CAP) await p4.screenshot({ path: CAP + '/cl-version-nueva.png' });
+          await p4.click('#nuevaVersion .btn'); await p4.waitForSelector('.hero'); await p4.waitForTimeout(300);
+          assert.ok(!(await p4.$('#nuevaVersion')), 'después de actualizar no sale ningún mensaje');
+          assert.deepEqual(err4, []); await cx4.close();
+        }
+        paso('versión nueva en la página de las clientas: si cambió algo mientras la tenían abierta, «Hay una nueva versión disponible» y «Actualizar»');
 
         // Android (Chrome): sin el aviso del navegador todavía, la explicación del menú; desde Instagram: copiar el enlace
         const and = await abreCliente('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36');
@@ -937,7 +957,7 @@ try {
       } finally { web2.close(); }
 
       // En el navegador: la dueña «Se me atravesó algo»
-      await pg.click('[data-vista="hoy"]'); await pg.click(`[data-dia="${fecha(2)}"]`);
+      await pg.click('button[data-vista="hoy"]'); await pg.click(`[data-dia="${fecha(2)}"]`);
       await pg.click('#atraveso'); await pg.waitForSelector('#mvVer');
       await pg.fill('#mvFecha', D30); await pg.click('[data-mvtodo="1"]'); await pg.click('[data-quien="fer"]'); await pg.click('#mvVer');
       await pg.waitForSelector('#mvOk');
@@ -1021,8 +1041,31 @@ try {
     }
     paso('Face ID / huella: se activa después de entrar con la clave, abre la agenda, puede pedirse al abrir, y desde otro teléfono se quita (si te lo roban); una clave nueva borra todos los Face ID');
 
+    // ───── Versión nueva: con la app abierta, si publicamos otra, aparece el aviso (en la agenda y en la página de las clientas) ─────
+    {
+      const vj = await (await crudo('/_app/version.json')).json();
+      const htmlAg = await (await crudo('/atelier-mia/')).text();
+      assert.ok(vj.v && htmlAg.includes('<meta name="version" content="' + vj.v + '">') && htmlAg.includes('/_app/app.js?v=' + vj.v), 'la app sabe su versión');
+      const cxv = await nav.newContext({ viewport: { width: 390, height: 844 } });
+      await cxv.route('https://fonts.googleapis.com/**', (r2) => r2.fulfill({ body: '', contentType: 'text/css' }));
+      let otra = false;
+      await cxv.route('**/_app/version.json', (r2) => r2.fulfill({ contentType: 'application/json', body: JSON.stringify({ v: otra ? 'otra-version' : vj.v }) }));
+      const pv3 = await cxv.newPage(); const errv = []; pv3.on('pageerror', (e) => errv.push(e.message));
+      await pv3.goto(URL0 + '/ejemplo/'); await pv3.waitForSelector('.cab');
+      await pv3.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await pv3.waitForTimeout(500);
+      assert.ok(!(await pv3.$('#nuevaVersion')), 'con la misma versión no sale nada');
+      otra = true; await pv3.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await pv3.waitForSelector('#nuevaVersion'); assert.match(await pv3.textContent('#nuevaVersion'), /Hay una nueva versión disponible/);
+      if (CAP) await pv3.screenshot({ path: CAP + '/ag-version-nueva.png' });
+      otra = false; await pv3.click('#nvSi'); await pv3.waitForSelector('.cab');
+      assert.ok(!(await pv3.$('#nuevaVersion')), 'después de actualizar no sale ningún mensaje');
+      assert.deepEqual(errv, []);
+      await cxv.close();
+    }
+    paso('versión nueva: con la agenda abierta, si se publica otra aparece «Hay una nueva versión disponible» y «Actualizar» la carga, sin más mensajes');
+
     // La muestra también tiene Mis tiempos
-    await ej.click('[data-vista="tiempos"]'); await ej.waitForSelector('#apartar');
+    await ej.click('button[data-vista="tiempos"]'); await ej.waitForSelector('#apartar');
     assert.match(await ej.textContent('main'), /Recoger a Santi/); assert.match(await ej.textContent('main'), /Vacaciones/);
     await ej.click('#apartar'); await ej.click('[data-dia="2"]');
     if (CAP) { await ej.setViewportSize({ width: 320, height: 700 }); await ej.screenshot({ path: CAP + '/ag-apartar-320.png' }); await ej.setViewportSize({ width: 390, height: 844 }); }
