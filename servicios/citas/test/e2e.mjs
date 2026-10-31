@@ -128,7 +128,7 @@ try {
   // ───── la agenda de la dueña, aparte de su página ─────
   const crudo = (ruta, op = {}) => fetch(URL0 + ruta, { redirect: 'manual', ...op });
   const pf0 = await api('/api/atelier-mia/perfil');
-  assert.equal(pf0.status, 200); assert.deepEqual(pf0.d, { id: 'atelier-mia', nombre: 'Atelier Mía', equipo: [], pagina: '' });
+  assert.equal(pf0.status, 200); { const { servicios, ...resto } = pf0.d; assert.deepEqual(resto, { id: 'atelier-mia', nombre: 'Atelier Mía', equipo: [], pagina: '' }); assert.equal(servicios.aprendidos, true); }
   assert.equal((await api('/api/admin/negocios/atelier-mia/perfil', { metodo: 'POST', body: { equipo: ['x'] } })).status, 401);
   const pf = await api('/api/admin/negocios/atelier-mia/perfil', { metodo: 'POST', maestra: true,
     body: { equipo: ['Mía', { id: 'fer', nombre: 'Fernanda' }, 'Mía', '', '<b>Caro</b>'], pagina: 'https://ateliermia.solidaaplicaciones.com/' } });
@@ -168,6 +168,20 @@ try {
     assert.match((await api('/api/atelier-mia/passkey/opciones-entrar', { metodo: 'POST' })).d.error, /^Abre tu agenda en agenda\.solidaaplicaciones\.com/, 'Face ID sólo en la dirección de la agenda');
     assert.equal((await api('/api/atelier-mia/passkey/opciones-alta', { metodo: 'POST' })).status, 401, 'activar Face ID pide sesión');
   }
+  {
+    // La lista de servicios: sin guardar, se arma sola con lo que llegó de la página; la dueña la guarda limpia
+    const pf2 = await api('/api/atelier-mia/perfil');
+    assert.equal(pf2.d.servicios.aprendidos, true); assert.ok(pf2.d.servicios.lista.some((x) => x.nombre === 'Gelish en manos' && x.min === 90 && x.precio === 360), JSON.stringify(pf2.d.servicios));
+    const tk = (await api('/api/atelier-mia/entrar', { metodo: 'POST', body: { clave: CLAVE2 }, ip: '6.6.8.1' })).d.token;
+    assert.equal((await api('/api/atelier-mia/servicios', { metodo: 'PUT', body: { servicios: [] } })).status, 401, 'sólo la dueña');
+    const sv = await api('/api/atelier-mia/servicios', { metodo: 'PUT', token: tk, body: { servicios: [{ nombre: ' Corte <b>', min: 47, precio: '150' }, { nombre: 'corte <b>', min: 30 }, { nombre: '' }] } });
+    assert.deepEqual(sv.d.servicios, [{ nombre: 'Corte b', min: 45, precio: 150, cat: '' }], 'se limpia: sin repetidos, sin vacíos, duración de 5 en 5');
+    assert.equal((await api('/api/atelier-mia/perfil')).d.servicios.aprendidos, false);
+    await api('/api/atelier-mia/servicios', { metodo: 'PUT', token: tk, body: { servicios: [] } });
+    assert.equal((await api('/api/atelier-mia/perfil')).d.servicios.aprendidos, true, 'vacía, vuelve a la que se arma sola');
+    await api('/api/atelier-mia/salir', { metodo: 'POST', token: tk });
+  }
+  paso('la lista de servicios: se arma sola con lo que llega de la página y la dueña la guarda limpia (sin repetidos ni vacíos)');
   paso('la sesión dura 7 días y vive en el servidor: la dueña ve dónde está abierta, quita un teléfono o todos los demás, y «Salir» la cierra de verdad');
 
   let r = await crudo('/atelier-mia');
@@ -386,7 +400,15 @@ try {
     await pg.click(`[data-libre="${hueco.join('|')}"]`); await pg.waitForSelector('#fCita');
     assert.equal(await pg.inputValue('#ncFecha'), MARTES); assert.equal(await pg.inputValue('#ncHora'), String(Math.floor(hueco[1] / 60)).padStart(2, '0') + ':' + String(hueco[1] % 60).padStart(2, '0'));
     await pg.click('#ncOk'); assert.match(await pg.textContent('#ncFalta'), /nombre/);
-    await pg.fill('#ncNombre', 'Rosa Tel'); await pg.fill('#ncTel', '844 555 0101'); await pg.fill('#ncServ', 'Gelish'); await pg.click('[data-dur="90"]'); await pg.fill('#ncPrecio', '$300');
+    // El servicio se elige de la lista (aquí, la que se armó sola con lo que llegó de su página) y se ponen solos duración y precio
+    await pg.fill('#ncNombre', 'Rosa Tel'); await pg.fill('#ncTel', '844 555 0101');
+    assert.ok(!(await pg.isVisible('#ncServ')), 'no hay que escribir el servicio');
+    const opGelish = await pg.$eval('#ncServSel', (s) => [...s.options].find((o) => /^Gelish en manos ·/.test(o.textContent)).value);
+    await pg.selectOption('#ncServSel', opGelish);
+    const gel = (await api('/api/atelier-mia/perfil')).d.servicios.lista.find((x) => x.nombre === 'Gelish en manos');
+    assert.equal(await pg.getAttribute(`[data-dur="${gel.min}"]`, 'aria-pressed'), 'true', 'la duración de ese servicio');
+    assert.equal(await pg.inputValue('#ncPrecio'), '$' + gel.precio, 'y su precio');
+    await pg.click('[data-dur="90"]'); await pg.fill('#ncPrecio', '$300');
     // Al apartar se abre su cita con «Mándale su cita»: por WhatsApp va su enlace
     await pg.click('#ncOk'); await pg.waitForSelector('.manda.recien');
     assert.match(await pg.textContent('.manda-ok'), /Rosa Tel/);
@@ -397,13 +419,13 @@ try {
     await pg.keyboard.press('Escape');
     const ag5 = await api('/api/atelier-mia/agenda', { token: tok });
     const rosa = ag5.d.citas.find((c) => c.nombre === 'Rosa Tel');
-    assert.ok(rosa); assert.equal(rosa.estado, 'confirmada'); assert.equal(rosa.origen, 'negocio'); assert.equal(rosa.persona, 'mia');
+    assert.ok(rosa); assert.equal(rosa.estado, 'confirmada'); assert.equal(rosa.origen, 'negocio'); assert.equal(rosa.persona, 'mia'); assert.equal(rosa.servicio, 'Gelish en manos');
     assert.equal(rosa.fin_min - rosa.inicio_min, 90); assert.equal(rosa.precio, 300); assert.equal(rosa.fecha, MARTES);
     await pg.waitForFunction(() => /Rosa Tel/.test(document.querySelector('main').textContent));
     // La misma hora otra vez: ya está ocupada
     await pg.click('#nuevaCita'); await pg.waitForSelector('#fCita');
     await pg.fill('#ncFecha', MARTES); await pg.selectOption('#ncHora', hhmmDe(rosa.inicio_min)); await pg.click('[data-con="mia"]');
-    await pg.fill('#ncNombre', 'Otra'); await pg.fill('#ncTel', '8445550102'); await pg.fill('#ncServ', 'Gelish');
+    await pg.fill('#ncNombre', 'Otra'); await pg.fill('#ncTel', '8445550102'); await pg.selectOption('#ncServSel', 'otro'); await pg.fill('#ncServ', 'Retiro de gelish');
     await pg.click('#ncOk'); await pg.waitForFunction(() => /ya hay otra cita/.test(document.getElementById('ncFalta').textContent));
     await pg.keyboard.press('Escape');
     paso('Hoy: enseña el día hora por hora con los huecos libres de cada quien; tocar uno aparta ahí la cita que pidieron por teléfono (ya confirmada) y no deja encimarla');

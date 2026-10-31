@@ -92,6 +92,11 @@ WhatsApp de la dueña con el mensaje listo, sin costo), por correo (Resend, sól
 pantalla para que lo escanee ahí. El enlace es la página del negocio con `?cita=<folio>&t=<token>`; `app-clienta.js` lo
 manda a `POST /mis-citas/<folio>/guardar` y la cita queda en SU celular («Mis citas», avisos, instalar la app).
 
+**Servicios para apartar sin escribir.** `negocios.servicios` guarda la lista (nombre, duración, precio y grupo). Al apartar,
+la dueña elige de una lista desplegable y se ponen solos la duración y el precio; «Otro (escribirlo)» queda para lo raro.
+Si no hay lista guardada, se arma sola con los servicios que han llegado de su página. La dueña la edita en «Mis servicios»
+(`PUT /servicios`) y Solida puede cargarla con `POST /api/admin/negocios/<id>/perfil {servicios}`.
+
 **Tu código QR** (sección de la agenda): cartel para imprimir o guardar en PDF (carta, 2 por hoja o 8 tarjetitas; negro
 y dorado o blanco y negro; con una línea propia abajo), en pantalla, o imagen de 1080×1350 para redes. Lleva a la página con
 `?de=qr`; `plantilla.js` manda `via: 'qr'` al apartar y `GET /qr` cuenta las del mes, cuántas son nuevas y cuántas

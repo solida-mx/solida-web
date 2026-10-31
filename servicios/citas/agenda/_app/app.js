@@ -1366,6 +1366,69 @@
 
   // ───── apartar una cita que pidieron por teléfono ─────
   var DURACIONES = [30, 45, 60, 90, 120, 150, 180];
+  // ───── la lista de servicios del negocio (para apartar eligiendo, sin escribir) ─────
+  function listaServicios() { return (perfil.servicios && perfil.servicios.lista) || []; }
+  function chipsDuracion(sel) {
+    var l = DURACIONES.indexOf(sel) < 0 ? DURACIONES.concat([sel]).sort(function (a, b) { return a - b; }) : DURACIONES;
+    return l.map(function (m) { return '<button type="button" class="chip" data-dur="' + m + '" aria-pressed="' + (m === sel) + '">' + esc(duracion(m)) + '</button>'; }).join('');
+  }
+  function campoServicio() {
+    var l = listaServicios();
+    if (!l.length) return '<label class="etq" for="ncServ">Servicio</label><input class="campo" id="ncServ" maxlength="80" required placeholder="Gelish, corte, consulta…">' +
+      (DEMO ? '' : '<button type="button" class="enlace" id="ncEditaServ">Guardar mi lista de servicios para elegir sin escribir</button>');
+    var grupos = [], porCat = {};
+    l.forEach(function (s, i) { var c = s.cat || ''; if (!porCat[c]) { porCat[c] = []; grupos.push(c); } porCat[c].push('<option value="' + i + '">' + esc(s.nombre + ' · ' + duracion(s.min) + (s.precio ? ' · ' + pesos(s.precio) : '')) + '</option>'); });
+    var ops = grupos.map(function (c) { return c && grupos.length > 1 ? '<optgroup label="' + esc(c) + '">' + porCat[c].join('') + '</optgroup>' : porCat[c].join(''); }).join('');
+    return '<label class="etq" for="ncServSel">Servicio</label><select class="campo" id="ncServSel" required><option value="">Elige el servicio…</option>' + ops + '<option value="otro">Otro (escribirlo)</option></select>' +
+      '<input class="campo" id="ncServ" maxlength="80" placeholder="¿Qué servicio?" aria-label="Otro servicio" hidden>' +
+      (DEMO ? '' : '<button type="button" class="enlace" id="ncEditaServ">Editar mi lista de servicios</button>');
+  }
+  function servicioElegido() {
+    var sel = document.getElementById('ncServSel'), otro = document.getElementById('ncServ');
+    if (!sel) return otro.value.trim();
+    if (sel.value === 'otro') return otro.value.trim();
+    var s = listaServicios()[+sel.value]; return s ? s.nombre : '';
+  }
+  // Editar la lista: nombre, duración y precio. Se guarda en el servidor y la ven todos sus teléfonos.
+  function abreServicios(luego) {
+    var l = listaServicios().map(function (s) { return { nombre: s.nombre, min: s.min, precio: s.precio, cat: s.cat || '' }; });
+    var aprendidos = perfil.servicios && perfil.servicios.aprendidos && l.length;
+    var hoja = abreHoja('<div class="hoja-cab"><h2 class="titulo" id="hojaTit">Mis servicios</h2>' + CERRAR + '</div>' +
+      '<p class="nota" style="text-align:left;margin-top:2px">' + (aprendidos ? 'Ésta es la lista con lo que han apartado en tu página. Ajústala y guárdala.' : 'Al apartar una cita eliges de esta lista: se ponen solos la duración y el precio.') + '</p>' +
+      '<div id="svLista"></div><button type="button" class="btn bloque" id="svMas" style="margin-top:10px">+ Agregar servicio</button>' +
+      '<p class="falta" id="svFalta" role="alert"></p><button type="button" class="btn negro bloque grande" id="svOk">Guardar mi lista</button>');
+    var pintaL = function () {
+      document.getElementById('svLista').innerHTML = l.map(function (s, i) {
+        return '<div class="sv-fila"><input class="campo" data-svn="' + i + '" maxlength="80" value="' + esc(s.nombre) + '" placeholder="Nombre del servicio" aria-label="Nombre del servicio">' +
+          '<select class="campo" data-svm="' + i + '" aria-label="Cuánto dura">' + DURACIONES.concat(DURACIONES.indexOf(s.min) < 0 ? [s.min] : []).sort(function (a, b) { return a - b; }).map(function (m) { return '<option value="' + m + '"' + (m === s.min ? ' selected' : '') + '>' + esc(duracion(m)) + '</option>'; }).join('') + '</select>' +
+          '<input class="campo" data-svp="' + i + '" inputmode="numeric" maxlength="7" value="' + (s.precio ? '$' + s.precio : '') + '" placeholder="$" aria-label="Precio">' +
+          '<button type="button" class="cerrar" data-svq="' + i + '" aria-label="Quitar ' + esc(s.nombre) + '">✕</button></div>';
+      }).join('') || '<p class="vacio">Todavía no hay servicios. Agrega el primero.</p>';
+      hoja.querySelectorAll('[data-svq]').forEach(function (b) { b.onclick = function () { lee(); l.splice(+b.getAttribute('data-svq'), 1); pintaL(); }; });
+    };
+    var lee = function () {
+      l.forEach(function (s, i) {
+        var n = hoja.querySelector('[data-svn="' + i + '"]'); if (!n) return;
+        s.nombre = n.value.trim(); s.min = +hoja.querySelector('[data-svm="' + i + '"]').value; s.precio = +String(hoja.querySelector('[data-svp="' + i + '"]').value).replace(/\D/g, '') || 0;
+      });
+    };
+    pintaL();
+    document.getElementById('svMas').onclick = function () { lee(); l.push({ nombre: '', min: 60, precio: 0, cat: '' }); pintaL(); var u = hoja.querySelector('[data-svn="' + (l.length - 1) + '"]'); if (u) u.focus(); };
+    document.getElementById('svOk').onclick = function () {
+      lee();
+      var f = document.getElementById('svFalta'), b = this;
+      var buenos = l.filter(function (s) { return s.nombre; });
+      if (!buenos.length) { f.textContent = 'Agrega al menos un servicio.'; return; }
+      b.disabled = true;
+      envia('/servicios', { metodo: 'PUT', body: { servicios: buenos } }).then(function (x) {
+        b.disabled = false;
+        if (x.status === 401) return salir(false);
+        if (x.status !== 200) { f.textContent = x.d.error || 'No se pudo guardar'; return; }
+        perfil.servicios = { lista: x.d.servicios, aprendidos: false };
+        toast('Listo: tu lista quedó guardada'); cierraHoja(); if (luego) luego();
+      }, function () { b.disabled = false; f.textContent = 'Sin conexión.'; });
+    };
+  }
   function abreNuevaCita(d, pre) {
     pre = pre || {};
     var st = { min: 60, persona: pre.persona != null ? pre.persona : (equipo().length ? (personaSel || equipo()[0].id) : '') };
@@ -1373,10 +1436,8 @@
       '<p class="nota" style="text-align:left;margin-top:2px">La que te pidieron por teléfono o en persona. Entra ya confirmada.</p>' +
       '<form id="fCita" novalidate><div class="campo-h"><label class="etq" for="ncNombre">Nombre</label><input class="campo" id="ncNombre" maxlength="60" autocomplete="off" required>' +
       '<label class="etq" for="ncTel">WhatsApp (10 dígitos)</label><input class="campo" id="ncTel" inputmode="tel" maxlength="14" autocomplete="off" required placeholder="844 123 4567"></div>' +
-      '<div class="campo-h"><label class="etq" for="ncServ">Servicio</label><input class="campo" id="ncServ" maxlength="80" required placeholder="Gelish, corte, consulta…">' +
-      '<span class="etq">Dura</span><div class="chips" role="group" aria-label="Cuánto dura">' + DURACIONES.map(function (m) {
-        return '<button type="button" class="chip" data-dur="' + m + '" aria-pressed="' + (m === st.min) + '">' + esc(duracion(m)) + '</button>';
-      }).join('') + '</div>' +
+      '<div class="campo-h">' + campoServicio() +
+      '<span class="etq">Dura</span><div class="chips" role="group" aria-label="Cuánto dura" id="ncDuras">' + chipsDuracion(st.min) + '</div>' +
       '<label class="etq" for="ncPrecio">Precio (opcional)</label><input class="campo" id="ncPrecio" inputmode="numeric" maxlength="7" placeholder="$"></div>' +
       '<div class="campo-h"><div class="dos"><label><span class="etq">Día</span><input class="campo" type="date" id="ncFecha" value="' + esc(pre.fecha || diaSel || d.hoy) + '" min="' + esc(d.hoy) + '"></label>' +
       '<label><span class="etq">Hora</span><select class="campo" id="ncHora">' + opcionesHora(hhmm(pre.ini != null ? pre.ini : 600), 360, 1380) + '</select></label></div></div>' +
@@ -1385,16 +1446,27 @@
       '<p class="falta" id="ncFalta" role="alert"></p><button class="btn negro bloque grande" id="ncOk">Apartar cita</button></form>');
     eligeEn(hoja, 'data-dur', function (m) { st.min = +m; });
     eligeEn(hoja, 'data-con', function (p) { st.persona = p; });
+    // Al elegir un servicio de la lista se ponen solos su duración y su precio (se pueden cambiar)
+    var sel = document.getElementById('ncServSel'), otro = document.getElementById('ncServ'), precioAuto = '';
+    if (sel) sel.onchange = function () {
+      var s = listaServicios()[+sel.value];
+      otro.hidden = sel.value !== 'otro'; if (!otro.hidden) otro.focus();
+      if (!s) return;
+      st.min = s.min; document.getElementById('ncDuras').innerHTML = chipsDuracion(st.min); eligeEn(hoja, 'data-dur', function (m) { st.min = +m; });
+      var pr = document.getElementById('ncPrecio');
+      if (!pr.value || pr.value === precioAuto) { pr.value = s.precio ? '$' + s.precio : ''; precioAuto = pr.value; }
+    };
+    var ed = document.getElementById('ncEditaServ'); if (ed) ed.onclick = function () { abreServicios(function () { abreNuevaCita(d, pre); }); };
     document.getElementById('fCita').onsubmit = function (e) {
       e.preventDefault();
       var falta = document.getElementById('ncFalta');
       var c = { nombre: document.getElementById('ncNombre').value.trim(), tel: document.getElementById('ncTel').value.replace(/\D/g, '').slice(-10),
-        servicio: document.getElementById('ncServ').value.trim(), precio: +String(document.getElementById('ncPrecio').value).replace(/\D/g, '') || 0,
+        servicio: servicioElegido(), precio: +String(document.getElementById('ncPrecio').value).replace(/\D/g, '') || 0,
         fecha: document.getElementById('ncFecha').value, hora: document.getElementById('ncHora').value, min: st.min, persona: st.persona };
       falta.textContent = '';
       if (c.nombre.length < 2) { falta.textContent = 'Escribe su nombre.'; return; }
       if (c.tel.length !== 10) { falta.textContent = 'Su WhatsApp debe tener 10 dígitos (para recordarle su cita).'; return; }
-      if (!c.servicio) { falta.textContent = 'Escribe qué servicio es.'; return; }
+      if (!c.servicio) { falta.textContent = listaServicios().length ? 'Elige el servicio.' : 'Escribe qué servicio es.'; return; }
       if (!c.fecha) { falta.textContent = 'Elige el día.'; return; }
       var b = document.getElementById('ncOk'); b.disabled = true;
       envia('/citas', { metodo: 'POST', body: c }).then(function (x) {
@@ -1628,7 +1700,10 @@
 
   // ───── arranque ─────
   if (DEMO) {
-    perfil = { nombre: 'Atelier Mía', equipo: [{ id: 'mia', nombre: 'Mía' }, { id: 'fer', nombre: 'Fernanda' }], pagina: 'https://solidaaplicaciones.com/ejemplos/unas/avanzado/' };
+    perfil = { nombre: 'Atelier Mía', equipo: [{ id: 'mia', nombre: 'Mía' }, { id: 'fer', nombre: 'Fernanda' }], pagina: 'https://solidaaplicaciones.com/ejemplos/unas/avanzado/',
+      servicios: { lista: [{ nombre: 'Gelish en manos', min: 60, precio: 280, cat: 'Uñas' }, { nombre: 'Acrílico esculpido', min: 120, precio: 450, cat: 'Uñas' }, { nombre: 'Pedicure spa con gelish', min: 75, precio: 380, cat: 'Uñas' },
+        { nombre: 'Pestañas clásicas', min: 120, precio: 650, cat: 'Pestañas' }, { nombre: 'Volumen ruso', min: 150, precio: 850, cat: 'Pestañas' }, { nombre: 'Lifting de pestañas', min: 60, precio: 400, cat: 'Pestañas' },
+        { nombre: 'Diseño de cejas', min: 45, precio: 250, cat: 'Cejas' }], aprendidos: false } };
     document.title = 'Agenda · ' + perfil.nombre + ' (ejemplo)';
     carga();
   } else {
