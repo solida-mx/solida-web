@@ -1070,17 +1070,27 @@ async function app(request, env, url) {
     if (!ARCHIVOS[ruta]) return paginaNoExiste();
     return archivo(ruta, { 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' });
   }
-  const p = ruta.match(/^\/([a-z0-9-]{2,40})(\/|\/manifest\.webmanifest|\/icono\.svg|\/sw\.js|\/cita\/[A-Z0-9-]{4,20})?$/);
+  const p = ruta.match(/^\/([a-z0-9-]{2,40})(\/|\/manifest\.webmanifest|\/icono\.svg|\/icono-(?:180|192|512)\.png|\/sw\.js|\/cita\/[A-Z0-9-]{4,20})?$/);
   if (!p) return paginaNoExiste();
   const neg = p[1] === 'ejemplo' ? EJEMPLO : await env.DB.prepare('SELECT id, nombre FROM negocios WHERE id=? AND activo=1').bind(p[1]).first();
   if (!neg) return paginaNoExiste();
   const que = p[2] || '';
   if (que === '') return Response.redirect(url.origin + '/' + neg.id + '/', 301);
   if (que === '/manifest.webmanifest') return new Response(JSON.stringify(manifiesto(neg)), { headers: { 'Content-Type': 'application/manifest+json; charset=utf-8', 'Cache-Control': 'public, max-age=3600', ...SEGURIDAD } });
+  // El ícono con su marca (si ya se lo hicimos); si no, el de Tu agenda
+  const ic = que.match(/^\/icono-(180|192|512)\.png$/);
+  if (ic) {
+    let l = {}; try { l = neg.id === 'ejemplo' ? {} : JSON.parse((await env.DB.prepare('SELECT icono FROM negocios WHERE id=?').bind(neg.id).first()).icono || '{}'); } catch {}
+    if (!l[ic[1]]) return archivo('/_app/icono-' + ic[1] + '.png', { 'Cache-Control': 'public, max-age=3600', ...SEGURIDAD });
+    return new Response(Uint8Array.from(atob(l[ic[1]]), (c) => c.charCodeAt(0)), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=3600', ...SEGURIDAD } });
+  }
   if (que === '/icono.svg') return new Response(iconoSvg(neg.nombre), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400', ...SEGURIDAD } });
   // La página donde la clienta contesta «te proponemos otra hora» (o cambia o cancela su cita): sin clave, con el enlace que le llegó.
   if (que.startsWith('/cita/')) return archivo('/cita.html', { 'Cache-Control': 'no-cache', ...SEGURIDAD });
-  return archivo(que === '/sw.js' ? '/sw.js' : '/index.html', { 'Cache-Control': 'no-cache', ...SEGURIDAD });
+  if (que === '/sw.js') return archivo('/sw.js', { 'Cache-Control': 'no-cache', ...SEGURIDAD });
+  // La app: el mismo index.html para todos, con el ícono de este negocio
+  return new Response(ARCHIVOS['/index.html'].cuerpo.split('/_app/icono-180.png').join('/' + neg.id + '/icono-180.png'),
+    { headers: { 'Content-Type': ARCHIVOS['/index.html'].tipo, 'Cache-Control': 'no-cache', ...SEGURIDAD } });
 }
 function archivo(ruta, cabeceras) {
   const a = ARCHIVOS[ruta];
@@ -1097,9 +1107,8 @@ function manifiesto(neg) {
     start_url: '/' + neg.id + '/', scope: '/' + neg.id + '/', display: 'standalone', orientation: 'portrait',
     background_color: '#f7f3ec', theme_color: '#161412', lang: 'es-MX',
     icons: [
-      { src: '/' + neg.id + '/icono.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      { src: '/_app/icono-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-      { src: '/_app/icono-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: '/' + neg.id + '/icono-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: '/' + neg.id + '/icono-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
     ],
   };
 }

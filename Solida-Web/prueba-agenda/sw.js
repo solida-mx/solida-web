@@ -9,7 +9,7 @@ self.addEventListener('push', (e) => {
       .then((r) => (r.ok ? r.json() : { avisos: [] })) : { avisos: [] })
     .catch(() => ({ avisos: [] }))
     .then((d) => {
-      const l = d.avisos || [], icono = 'https://agenda.solidaaplicaciones.com/_app/icono-192.png';
+      const l = d.avisos || [], icono = self.registration.scope + 'icono-192.png?v=2';
       if (!l.length) return self.registration.showNotification('Tu cita', { body: 'Hay novedades en tu cita.', icon: icono, tag: 'cita', data: { url: self.registration.scope } });
       return Promise.all(l.map((a) => self.registration.showNotification(a.titulo, { body: a.cuerpo, icon: icono, badge: icono, tag: 'aviso-' + a.id, data: { url: a.url || self.registration.scope } })));
     }));
