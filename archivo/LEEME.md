@@ -17,6 +17,10 @@ el sitio sólo sube `Solida-Web/`.
 
 Las direcciones de esos ejemplos (y sus QR ya impresos) llevan a la portada: lo hace `worker.js`.
 
-**Para regresar uno** (por ejemplo, barbería): se mueve su carpeta de vuelta a `Solida-Web/ejemplos/`, se copia su
-bloque de `paquetes-completo.js` a `Solida-Web/datos/paquetes.js` y su bloque de `levantamiento-completo.html` al
-formulario, y se quita de la lista de guardados en `worker.js`.
+**Barbería y estética** ya no se regresan de aquí: se rehicieron como giros de Solida Citas (repositorio `solida-citas`,
+muestras en `citas.solidaaplicaciones.com/ejemplo-barberia/` y `/ejemplo-estetica/`).
+
+**Para regresar uno de los otros:** se mueve su carpeta de vuelta a `Solida-Web/ejemplos/`, se copia su bloque de
+`paquetes-completo.js` a `Solida-Web/datos/paquetes.js` y su bloque de `levantamiento-completo.html` al formulario, y se
+ajusta `worker.js` (hoy manda todo `/ejemplos/` a la portada). La franja «Ejemplo de Solida» que les ponía el worker se
+quitó el 1 nov 2026; está en el historial de git (`Solida-Web/ejemplos/franja.js`) si se necesita.

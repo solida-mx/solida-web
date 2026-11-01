@@ -415,7 +415,7 @@
 /* ============================================================
    CONFIGURACIÓN
    ============================================================ */
-// Paquetes, precios, WhatsApp y dirección oficial: datos/paquetes.js (lo comparte con la franja de los ejemplos)
+// Paquetes, precios, WhatsApp y dirección oficial: datos/paquetes.js
 const { SITIO, WHATSAPP, SEGMENTS } = window.SOLIDA;
 // De aquí salen nombre, dirección y precio de cada app (lo que tengas en el panel).
 const CATALOGO = "https://admin.solidaaplicaciones.com/api/catalogo";
@@ -438,7 +438,8 @@ const ICONS = {
 const CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f7f73" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>';
 const waLink = (txt)=>`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(txt)}`;
 // El ejemplo se abre en el mismo sitio en el que estás (solidaaplicaciones.com, o workers.dev si entras por ahí).
-const rutaDe = (u)=>{ try { return new URL(u).pathname; } catch(e){ return u; } };
+// Lo de este sitio, como ruta (sirve igual en workers.dev); lo de otro sitio (las muestras de Solida Citas), tal cual
+const rutaDe = (u)=>{ try { const x = new URL(u); return x.origin === SITIO ? x.pathname : u; } catch(e){ return u; } };
 const OJO = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
 const CAL = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>';
 const QR_SVG = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>';
