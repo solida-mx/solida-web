@@ -1,20 +1,14 @@
 // Portada de Solida Aplicaciones.
 // - Una sola dirección oficial: quien entra por www.solidaaplicaciones.com va a solidaaplicaciones.com
 //   (misma ruta y mismos parámetros).
-// - Los ejemplos para posibles clientes viven en /ejemplos/<giro>/. Las direcciones viejas (/restaurante/basico,
-//   también las de workers.dev que ya están impresas en QR) mandan solas a la nueva, en la dirección oficial.
-// - A cada página de /ejemplos/ se le pone la franja «Ejemplo de Solida» y se le pide a Google que no la indexe.
-//   La franja vive en un solo archivo (ejemplos/franja.js); las páginas de ejemplo no se tocan.
+// - Los ejemplos ya no viven aquí: las páginas de muestra las arma Solida Citas (repositorio solida-citas) en
+//   citas.solidaaplicaciones.com/ejemplo/ (uñas), /ejemplo-barberia/ y /ejemplo-estetica/.
+//   Las direcciones viejas (también las impresas en QR) llevan a la muestra de su giro o a la portada.
 const OFICIAL = 'solidaaplicaciones.com';
+const CITAS = 'https://citas.solidaaplicaciones.com';
 export const GIROS = ['restaurante', 'profesional', 'taller', 'nutriologo', 'invitacion', 'uniformes', 'barberia'];
 const VIEJA = new RegExp(`^/(${GIROS.join('|')})(/.*)?$`);
-const GUARDADOS = new RegExp(`^/ejemplos/(${GIROS.join('|')})(/.*)?$`);
-
-class PonFranja {
-  element(head) {
-    head.append('<script src="/datos/paquetes.js" defer></script><script src="/ejemplos/franja.js" defer></script>', { html: true });
-  }
-}
+const GUARDADOS = new RegExp(`^/ejemplos(/.*)?$`);
 
 export default {
   async fetch(request, env) {
@@ -24,18 +18,13 @@ export default {
       url.protocol = 'https:';
       return Response.redirect(url.toString(), 301);
     }
-    // Los ejemplos que están guardados (archivo/) ya no se ven: sus direcciones y sus QR impresos llevan a la portada
-    if (url.pathname.match(VIEJA) || url.pathname.match(GUARDADOS) || url.pathname.startsWith('/soporte/pases')) return Response.redirect(`https://${OFICIAL}/`, 302);
-    const vieja = url.pathname.match(VIEJA);
-    if (vieja) {
-      const nueva = new URL(`/ejemplos/${vieja[1]}${vieja[2] || '/'}${url.search}`, `https://${OFICIAL}`);
-      return Response.redirect(nueva.toString(), 301);
+    // La página de uñas de antes (con sus tres niveles) y la de barbería: su muestra en Solida Citas
+    if (/^\/ejemplos\/unas(\/.*)?$/.test(url.pathname)) return Response.redirect(CITAS + '/ejemplo/', 301);
+    if (/^\/(ejemplos\/)?barberia(\/.*)?$/.test(url.pathname)) return Response.redirect(CITAS + '/ejemplo-barberia/', 301);
+    // Lo guardado (archivo/), la página de prueba vieja y los pases: a la portada
+    if (url.pathname.match(VIEJA) || url.pathname.match(GUARDADOS) || url.pathname.startsWith('/prueba-agenda') || url.pathname.startsWith('/soporte/pases')) {
+      return Response.redirect(`https://${OFICIAL}/`, 302);
     }
-    const res = await env.ASSETS.fetch(request);
-    if (!url.pathname.startsWith('/ejemplos/')) return res;
-    const r = new Response(res.body, res);
-    r.headers.set('X-Robots-Tag', 'noindex');
-    if (!(r.headers.get('content-type') || '').includes('text/html')) return r;
-    return new HTMLRewriter().on('head', new PonFranja()).transform(r);
+    return env.ASSETS.fetch(request);
   },
 };
